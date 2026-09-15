@@ -644,6 +644,9 @@ public class HarmonyPatchAllSmokeTests
         MethodInfo? interact = AccessTools.Method(
             typeof(BlockSkep),
             nameof(BlockSkep.OnBlockInteractStart));
+        MethodInfo? getDrops = AccessTools.Method(
+            typeof(BlockSkep),
+            nameof(BlockSkep.GetDrops));
         MethodInfo? doPlace = AccessTools.Method(
             typeof(Block),
             nameof(Block.DoPlaceBlock));
@@ -652,6 +655,7 @@ public class HarmonyPatchAllSmokeTests
             nameof(Block.OnBlockPlaced));
         Assert.NotNull(onBroken);
         Assert.NotNull(interact);
+        Assert.NotNull(getDrops);
         Assert.NotNull(doPlace);
         Assert.NotNull(onPlaced);
 
@@ -664,6 +668,7 @@ public class HarmonyPatchAllSmokeTests
             harmony.PatchAll(mod);
             Assert.Contains(onBroken, harmony.GetPatchedMethods());
             Assert.Contains(interact, harmony.GetPatchedMethods());
+            Assert.Contains(getDrops, harmony.GetPatchedMethods());
             Assert.Contains(doPlace, harmony.GetPatchedMethods());
             Assert.Contains(onPlaced, harmony.GetPatchedMethods());
         }

@@ -9,10 +9,24 @@ namespace Prosequor.Ability;
 [HarmonyPatch]
 public static class PlayerInteractionAbilityPatches
 {
-    [HarmonyPostfix]
+    [ThreadStatic]
+    static bool healthSnapshotValid;
+
+    [ThreadStatic]
+    static float healthSnapshotHealth;
+
+    [ThreadStatic]
+    static float healthSnapshotMax;
+
+    /// <summary>
+    /// Snapshot current/max before vanilla recomputes max without Constitution.
+    /// Fill must use the player's actual pool, not the stripped vanilla max.
+    /// </summary>
+    [HarmonyPrefix]
     [HarmonyPatch(typeof(EntityBehaviorHealth), nameof(EntityBehaviorHealth.UpdateMaxHealth))]
-    public static void UpdateMaxHealthPostfix(EntityBehaviorHealth __instance)
+    public static void UpdateMaxHealthPrefix(EntityBehaviorHealth __instance)
     {
+        healthSnapshotValid = false;
         Entity entity = __instance.entity;
         if (entity == null || entity.World.Side != EnumAppSide.Server)
         {
@@ -24,24 +38,49 @@ public static class PlayerInteractionAbilityPatches
             return;
         }
 
-        // Capture fill ratio against vanilla's just-computed max, then re-apply after our delta
-        // so a 10/20 pool becomes 11/22 (etc.) instead of only clamping when over max.
-        float beforeMax = __instance.MaxHealth;
-        float beforeHealth = __instance.Health;
+        healthSnapshotHealth = __instance.Health;
+        healthSnapshotMax = __instance.MaxHealth;
+        healthSnapshotValid = true;
+    }
 
-        int delta = PlayerInteractionStation.ResolveHealthDelta(entityPlayer.Player);
-        if (delta == 0)
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(EntityBehaviorHealth), nameof(EntityBehaviorHealth.UpdateMaxHealth))]
+    public static void UpdateMaxHealthPostfix(EntityBehaviorHealth __instance)
+    {
+        try
         {
-            return;
+            Entity entity = __instance.entity;
+            if (entity == null || entity.World.Side != EnumAppSide.Server)
+            {
+                return;
+            }
+
+            if (entity is not EntityPlayer entityPlayer || entityPlayer.Player == null)
+            {
+                return;
+            }
+
+            int delta = PlayerInteractionStation.ResolveHealthDelta(entityPlayer.Player);
+            if (delta == 0)
+            {
+                return;
+            }
+
+            // Vanilla just wrote the un-boosted max; restore fill against the pre-vanilla pool.
+            float snapshotHealth = healthSnapshotValid ? healthSnapshotHealth : __instance.Health;
+            float snapshotMax = healthSnapshotValid ? healthSnapshotMax : __instance.MaxHealth;
+            float newMax = __instance.MaxHealth + delta;
+            float ratio = snapshotMax > 0.001f
+                ? Math.Clamp(snapshotHealth / snapshotMax, 0f, 1f)
+                : 1f;
+
+            __instance.MaxHealth = newMax;
+            __instance.Health = newMax * ratio;
         }
-
-        float newMax = beforeMax + delta;
-        float ratio = beforeMax > 0.001f
-            ? Math.Clamp(beforeHealth / beforeMax, 0f, 1f)
-            : 1f;
-
-        __instance.MaxHealth = newMax;
-        __instance.Health = newMax * ratio;
+        finally
+        {
+            healthSnapshotValid = false;
+        }
     }
 
     [HarmonyPrefix]

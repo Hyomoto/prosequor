@@ -130,12 +130,13 @@ public static class SkepHarvestXp
         IPlayer? byPlayer,
         ItemStack[]? honeycomb)
     {
+        ICoreAPI? api = byPlayer?.Entity?.World?.Api ?? byPlayer?.Entity?.Api ?? be?.Api;
         if (be == null
             || block == null
             || pos == null
             || byPlayer?.PlayerUID == null
             || byPlayer.Entity?.World?.Side != EnumAppSide.Server
-            || byPlayer.Entity.Api == null)
+            || api == null)
         {
             return;
         }
@@ -159,7 +160,7 @@ public static class SkepHarvestXp
             return;
         }
 
-        Emit(byPlayer.Entity.Api, uid, block, pos, shares, units);
+        Emit(api, uid, block, pos, shares, units);
 
         ProsequorBlockPedigreeStation.ClearContributors(be);
         ProsequorBlockPedigreeStation.AddContributor(be, uid, 1);

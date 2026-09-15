@@ -506,12 +506,14 @@ public class ProsequorModSystem : ModSystem
     void OnPlayerJoin(IServerPlayer byPlayer)
     {
         ProgressPark?.Evict(byPlayer.PlayerUID);
-        FatherXp?.Collect(byPlayer);
         // Reconnect can reuse an entity that already ran AfterInitialized (and was forgotten on leave).
+        // Enroll before mailbox flush so Collect pays a loaded player, not a half-ready one.
         if (TryGetLiveProgress(byPlayer) is EntityBehaviorProgress progress)
         {
             AdmitInitialized(byPlayer, progress);
         }
+
+        FatherXp?.Collect(byPlayer);
     }
 
     void OnPlayerNowPlaying(IServerPlayer byPlayer)

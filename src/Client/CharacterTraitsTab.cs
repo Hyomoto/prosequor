@@ -7,6 +7,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
+using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Client;
@@ -30,6 +31,7 @@ public static class CharacterTraitsTabPatches
     static ElementBounds? clipBounds;
     static ElementBounds? contentBounds;
     static float scrollY;
+    static double contentHeight;
     static EntityBehaviorProgress? observedProgress;
     static Entity? observedEntity;
     static CharacterSystem? activeModSys;
@@ -46,6 +48,7 @@ public static class CharacterTraitsTabPatches
         clipBounds = null;
         contentBounds = null;
         lastHtml = null;
+        contentHeight = 0;
     }
 
     [HarmonyPrefix]
@@ -64,6 +67,7 @@ public static class CharacterTraitsTabPatches
         activeModSys = __instance;
         activeCapi = capi;
         scrollY = 0f;
+        contentHeight = 0;
 
         double width = FallbackWidth;
         double height = FallbackHeight;
@@ -111,12 +115,13 @@ public static class CharacterTraitsTabPatches
         AttachStats(entity);
 
         Refresh();
+        capi.Event.EnqueueMainThreadTask(ApplyScrollbar, "prosequor-traits-scroll");
         return false;
     }
 
     static void OnScroll(float value)
     {
-        scrollY = Math.Max(0f, value);
+        scrollY = GameMath.Clamp(value, 0f, MaxScrollOffset());
         if (contentBounds == null)
         {
             return;
@@ -124,6 +129,16 @@ public static class CharacterTraitsTabPatches
 
         contentBounds.fixedY = -scrollY;
         contentBounds.CalcWorldBounds();
+    }
+
+    static float MaxScrollOffset()
+    {
+        if (clipBounds == null)
+        {
+            return 0f;
+        }
+
+        return (float)Math.Max(0, contentHeight - clipBounds.fixedHeight);
     }
 
     static void AttachProgress(EntityBehaviorProgress? progress)
@@ -186,37 +201,48 @@ public static class CharacterTraitsTabPatches
             return;
         }
 
-        if (html == lastHtml)
+        if (html != lastHtml)
+        {
+            lastHtml = html;
+            body.SetNewText(html, CairoFont.WhiteDetailText().WithLineHeightMultiplier(1.15));
+
+            contentHeight = body.TotalHeight / RuntimeEnv.GUIScale;
+            if (contentHeight < 1)
+            {
+                contentHeight = body.Bounds.fixedHeight;
+            }
+
+            scrollY = 0f;
+            if (contentBounds != null && clipBounds != null)
+            {
+                contentBounds.fixedHeight = Math.Max(clipBounds.fixedHeight, contentHeight);
+                contentBounds.fixedY = 0;
+                contentBounds.CalcWorldBounds();
+            }
+        }
+
+        ApplyScrollbar();
+    }
+
+    static void ApplyScrollbar()
+    {
+        GuiComposer? compo = activeComposer;
+        if (compo == null || clipBounds == null)
         {
             return;
         }
 
-        lastHtml = html;
-        body.SetNewText(html, CairoFont.WhiteDetailText().WithLineHeightMultiplier(1.15));
-
-        double contentH = body.Bounds.fixedHeight;
-        if (contentH < 40)
-        {
-            contentH = 40;
-        }
-
-        scrollY = 0f;
-        if (contentBounds != null && clipBounds != null)
-        {
-            contentBounds.fixedHeight = Math.Max(clipBounds.fixedHeight, contentH);
-            contentBounds.fixedY = 0;
-            contentBounds.CalcWorldBounds();
-        }
-
         GuiElementScrollbar? scrollbar = compo.GetScrollbar(ScrollKey);
-        if (scrollbar != null && clipBounds != null)
+        if (scrollbar == null)
         {
-            scrollbar.SetHeights(
-                (float)clipBounds.fixedHeight,
-                (float)Math.Max(clipBounds.fixedHeight, contentH));
-            // SetHeights can leave / fire a stale offset — pin to top like create-char traits.
-            scrollbar.CurrentYPosition = 0;
+            return;
         }
+
+        scrollbar.Bounds.CalcWorldBounds();
+        double clipH = clipBounds.fixedHeight;
+        double totalH = contentHeight > clipH + 1 ? contentHeight : clipH;
+        scrollbar.SetHeights((float)clipH, (float)totalH);
+        OnScroll(GameMath.Clamp(scrollY, 0f, MaxScrollOffset()));
     }
 
     public static string BuildHtml(CharacterSystem modSys, ICoreClientAPI capi)

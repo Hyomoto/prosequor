@@ -66,4 +66,11 @@ public static class SkepBeeSpawnStation
             vanilla);
         return Math.Clamp(result, 0f, 1f);
     }
+
+    /// <summary>
+    /// IL-callable wrapper for <see cref="BlockSkep.OnBlockBroken"/> chance load
+    /// (<c>ldarg.0</c> skep, <c>ldarg.3</c> player, <c>ldarg.2</c> pos).
+    /// </summary>
+    public static float ResolveSpawnChanceForBreak(BlockSkep skep, IPlayer byPlayer, BlockPos pos) =>
+        ResolveSpawnChance(byPlayer, skep, pos);
 }

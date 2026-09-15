@@ -1,74 +1,93 @@
+using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
-using Prosequor.Ability.Hooks;
 using Vintagestory.API.Common;
-using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Skep break: fold <c>spawn-bees-chance</c> then spawn bees; skip vanilla spawn body.
-/// Also prepares / completes <c>skep-harvest</c> XP around base break.
+/// Skep break: prefix/postfix <c>skep-harvest</c> XP bookends; transpiler folds
+/// <c>spawn-bees-chance</c> over vanilla <c>beemobSpawnChance</c> (spawn body stays vanilla).
 /// </summary>
 [HarmonyPatch(typeof(BlockSkep), nameof(BlockSkep.OnBlockBroken))]
 public static class SkepBeeSpawnPatch
 {
-    static readonly MethodInfo? BaseOnBlockBroken =
-        AccessTools.Method(
-            typeof(Block),
-            nameof(Block.OnBlockBroken),
-            new[] { typeof(IWorldAccessor), typeof(BlockPos), typeof(IPlayer), typeof(float) });
+    public static readonly FieldInfo BeemobSpawnChanceField =
+        AccessTools.Field(typeof(BlockSkep), "beemobSpawnChance")
+        ?? throw new InvalidOperationException("[prosequor] BlockSkep.beemobSpawnChance field missing.");
 
     [HarmonyPrefix]
-    public static bool Prefix(
+    public static void Prefix(
         BlockSkep __instance,
         IWorldAccessor world,
         BlockPos pos,
-        IPlayer byPlayer,
-        float dropQuantityMultiplier)
+        IPlayer byPlayer)
     {
         BlockEntityBeehive? beh = world.BlockAccessor.GetBlockEntity(pos) as BlockEntityBeehive;
         SkepHarvestXp.PrepareBreak(beh, __instance, pos, byPlayer);
+    }
 
-        BaseOnBlockBroken?.Invoke(
-            __instance,
-            [world, pos, byPlayer, dropQuantityMultiplier]);
-
+    [HarmonyPostfix]
+    public static void Postfix(
+        BlockSkep __instance,
+        IWorldAccessor world,
+        BlockPos pos,
+        IPlayer byPlayer)
+    {
         SkepHarvestXp.CompleteBreak(world.Api, byPlayer, __instance, pos);
+    }
 
-        if (world.Side != EnumAppSide.Server || __instance.IsEmpty())
+    [HarmonyTranspiler]
+    public static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
+        TranspileBeemobSpawnChanceLoad(
+            instructions,
+            AccessTools.Method(
+                typeof(SkepBeeSpawnStation),
+                nameof(SkepBeeSpawnStation.ResolveSpawnChanceForBreak)));
+
+    /// <summary>
+    /// Replace <c>ldarg.0; ldfld beemobSpawnChance</c> with
+    /// <c>ldarg.0; ldarg.3; ldarg.2; call ResolveSpawnChanceForBreak</c>.
+    /// </summary>
+    public static IEnumerable<CodeInstruction> TranspileBeemobSpawnChanceLoad(
+        IEnumerable<CodeInstruction> instructions,
+        MethodInfo helper)
+    {
+        FieldInfo field = BeemobSpawnChanceField;
+        List<CodeInstruction> original = [.. instructions];
+        List<CodeInstruction> patched = new(original.Count + 2);
+        int hits = 0;
+
+        for (int i = 0; i < original.Count; i++)
         {
-            return false;
+            CodeInstruction code = original[i];
+            if (i + 1 < original.Count
+                && code.opcode == OpCodes.Ldarg_0
+                && original[i + 1].opcode == OpCodes.Ldfld
+                && Equals(original[i + 1].operand, field))
+            {
+                hits++;
+                patched.Add(new CodeInstruction(OpCodes.Ldarg_0).WithLabels(code.labels).WithBlocks(code.blocks));
+                patched.Add(new CodeInstruction(OpCodes.Ldarg_3));
+                patched.Add(new CodeInstruction(OpCodes.Ldarg_2));
+                patched.Add(new CodeInstruction(OpCodes.Call, helper));
+                i++;
+                continue;
+            }
+
+            patched.Add(code);
         }
 
-        float chance = SkepBeeSpawnStation.ResolveSpawnChance(byPlayer, __instance, pos);
-        if (chance <= 0f || world.Rand.NextDouble() >= chance)
+        if (hits == 1)
         {
-            return false;
+            return patched;
         }
 
-        EntityProperties? type = world.GetEntityType(new AssetLocation("beemob"));
-        if (type == null)
-        {
-            return false;
-        }
-
-        Entity? entity = world.ClassRegistry.CreateEntity(type);
-        if (entity == null)
-        {
-            return false;
-        }
-
-        entity.Pos.X = pos.X + 0.5f;
-        entity.Pos.Y = pos.Y + 0.5f;
-        entity.Pos.Z = pos.Z + 0.5f;
-        entity.Pos.Yaw = (float)world.Rand.NextDouble() * 2 * GameMath.PI;
-        entity.Attributes.SetString("origin", "brokenbeehive");
-        world.SpawnEntity(entity);
-        return false;
+        throw new InvalidOperationException(
+            $"[prosequor] Skep bee-spawn transpiler failed. hits={hits} (want 1).");
     }
 }
 
@@ -142,7 +161,7 @@ public static class SkepHarvestInteractPatch
             }
         }
 
-        // GetDrops already ran DropsStation (Sticky Fingers). Do not mutate again.
+        // GetDrops already ran DropsStation via SkepGetDropsAbilityPatch (Sticky Fingers).
         ItemStack[] mutated = honeycomb.ToArray();
 
         if (mutated.Length > 0)
@@ -169,6 +188,38 @@ public static class SkepHarvestInteractPatch
         world.PlaySoundAt(new AssetLocation("sounds/block/planks"), blockSel.Position, -0.5, byPlayer, false);
         __result = true;
         return false;
+    }
+}
+
+/// <summary>
+/// <see cref="BlockSkep"/> overrides <see cref="Block.GetDrops"/>; run mutate-drops
+/// and note honeycomb for break-path <c>skep-harvest</c> XP (same pattern as coating).
+/// </summary>
+[HarmonyPatch(typeof(BlockSkep), nameof(BlockSkep.GetDrops))]
+public static class SkepGetDropsAbilityPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(
+        BlockSkep __instance,
+        IWorldAccessor world,
+        BlockPos pos,
+        IPlayer byPlayer,
+        float dropQuantityMultiplier,
+        ref ItemStack[] __result)
+    {
+        if (BlockGetDropsAbilityPatch.SuppressMutate)
+        {
+            return;
+        }
+
+        __result = BlockGetDropsAbilityPatch.RunDrops(
+            __instance,
+            world,
+            pos,
+            byPlayer,
+            __result,
+            dropQuantityMultiplier);
+        SkepHarvestXp.NoteBreakDrops(__instance, pos, __result);
     }
 }
 

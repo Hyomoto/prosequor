@@ -145,12 +145,7 @@ public sealed class FatherXp
             return false;
         }
 
-        ProsequorModSystem? mod = ProsequorModSystem.For(sapi);
-        if (mod?.Registry is { } skillRegistry)
-        {
-            progress.EnsureLoaded(player, skillRegistry);
-        }
-
+        // Enroll (AdmitInitialized) owns load + attribute apply. Pay only.
         progress.AddSkillXp(skillId, amount, fact, mode);
         return true;
     }

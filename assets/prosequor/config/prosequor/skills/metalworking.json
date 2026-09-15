@@ -72,7 +72,7 @@
                   "tags": [ "caller:<hammer>" ]
                 },
                 "params": {
-                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15, "skill": "mining" },
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 },
                   "onSuccess": {
                     "action": "prosequor:number",
                     "params": { "op": "set", "value": 0 }

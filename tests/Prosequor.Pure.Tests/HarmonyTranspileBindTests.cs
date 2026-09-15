@@ -209,6 +209,39 @@ public class HarmonyTranspileBindTests
         AssertContainsCall(patched, adjustHeat, expectedCalls: 1);
     }
 
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "TranspileBind")]
+    public void SkepBeeSpawn_Should_RewriteBeemobSpawnChanceLoad()
+    {
+        MethodInfo method = AccessTools.DeclaredMethod(
+            typeof(BlockSkep),
+            nameof(BlockSkep.OnBlockBroken));
+        Assert.NotNull(method);
+
+        MethodInfo helper = AccessTools.Method(
+            typeof(SkepBeeSpawnStation),
+            nameof(SkepBeeSpawnStation.ResolveSpawnChanceForBreak));
+        Assert.NotNull(helper);
+
+        List<CodeInstruction> original = [.. PatchProcessor.GetOriginalInstructions(method)];
+        Assert.Contains(
+            original,
+            code => code.opcode == OpCodes.Ldfld
+                && Equals(code.operand, SkepBeeSpawnPatch.BeemobSpawnChanceField));
+
+        List<CodeInstruction> patched =
+        [
+            .. SkepBeeSpawnPatch.TranspileBeemobSpawnChanceLoad(original, helper!)
+        ];
+
+        AssertContainsCall(patched, helper!, expectedCalls: 1);
+        Assert.DoesNotContain(
+            patched,
+            code => code.opcode == OpCodes.Ldfld
+                && Equals(code.operand, SkepBeeSpawnPatch.BeemobSpawnChanceField));
+    }
+
     static void AssertContainsCall(List<CodeInstruction> instructions, MethodInfo helper, int expectedCalls)
     {
         int calls = 0;

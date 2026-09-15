@@ -11,7 +11,10 @@ using Xunit;
 
 namespace Prosequor.Scenarios;
 
-/// <summary>Calm Hives / Sticky Fingers / Apiary Master pipeline resolves.</summary>
+/// <summary>
+/// Calm Hives / Sticky Fingers / Apiary Master pipeline resolves, plus live
+/// skep break / sneak-RMB paths (crash smoke for populated harvestable skeps).
+/// </summary>
 public class HusbandryApiaryScenarios : AtlasScenarioBase
 {
     const string Skill = HusbandryFriendliness.SkillId;
@@ -168,12 +171,224 @@ public class HusbandryApiaryScenarios : AtlasScenarioBase
         Assert.Single(units);
         Assert.Equal(3, units[0].Count);
 
+        float before = ScenarioXp.TotalSkill(RequireBehavior(player), Skill);
         SkepHarvestXp.SettleExtract(be, skep, pos, player, honeycomb);
+        float gained = ScenarioXp.TotalSkill(RequireBehavior(player), Skill) - before;
+        Assert.True(gained > 0f, $"Expected skep-harvest XP from SettleExtract, got {gained}.");
 
         Assert.True(ProsequorBlockPedigreeStation.TryGetBlob(be, out ProsequorBlob after));
         Assert.False(after.TryGetContributorWeight("placer", out _));
         Assert.True(after.TryGetContributorWeight(player.PlayerUID, out int harvester));
         Assert.Equal(1, harvester);
+    }
+
+    /// <summary>
+    /// Live <see cref="BlockSkep.OnBlockBroken"/> through Harmony (bee spawn +
+    /// skep-harvest XP). A silent client crash on populated break should fail here.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "HusbandryApiary")]
+    public async Task PopulatedSkep_OnBlockBroken_Should_NotCrash_WhenHarvestable()
+    {
+        ITestPlayer joined = await World.JoinPlayer("HSSkepBreak");
+        IPlayer player = joined.Player;
+        EntityBehaviorProgress progress = RequireBehavior(player);
+
+        BlockSkep skep = RequirePopulatedSkep();
+        BlockPos pos = PlaceSkep(player, skep, offset: 2);
+        BlockEntityBeehive hive = RequireHarvestableHive(pos);
+        ProsequorBlockPedigreeStation.AddContributor(hive, player.PlayerUID, 1);
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+
+        ItemStack[]? preview = skep.GetDrops(World.Api.World, pos, player);
+        Assert.True(
+            preview != null && preview.Any(SkepHarvestXp.IsHoneycomb),
+            $"Expected honeycomb drops from a harvestable skep before break. drops={FormatStacks(preview)}");
+
+        float before = ScenarioXp.TotalSkill(progress, Skill);
+        skep.OnBlockBroken(World.Api.World, pos, player);
+
+        Block remaining = World.Api.World.BlockAccessor.GetBlock(pos);
+        Assert.True(
+            remaining.Id == 0 || remaining is not BlockSkep,
+            $"Expected the skep to be gone after OnBlockBroken, got {remaining.Code}.");
+
+        float gained = ScenarioXp.TotalSkill(progress, Skill) - before;
+        Assert.True(
+            gained > 0f,
+            $"Expected skep-harvest husbandry XP from breaking a harvestable skep, got {gained}.");
+    }
+
+    /// <summary>
+    /// Plain right-click (no sneak): Harmony prefix must leave vanilla pickup alone
+    /// without throwing.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "HusbandryApiary")]
+    public async Task PopulatedSkep_RightClick_Should_NotCrash_WithoutSneak()
+    {
+        ITestPlayer joined = await World.JoinPlayer("HSSkepRC");
+        IPlayer player = joined.Player;
+
+        BlockSkep skep = RequirePopulatedSkep();
+        BlockPos pos = PlaceSkep(player, skep, offset: 2);
+        RequireHarvestableHive(pos);
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        SetSneak(player, sneak: false);
+
+        BlockSelection sel = SelectionAt(pos, skep);
+        bool handled = skep.OnBlockInteractStart(World.Api.World, player, sel);
+
+        // Vanilla picks the skep into inventory when there is room (sets air).
+        // Contract: no throw, and sneak-less interact must not run Apiary extract.
+        Block after = World.Api.World.BlockAccessor.GetBlock(pos);
+        if (after.Id == skep.Id)
+        {
+            BlockEntityBeehive? hive = World.Api.World.BlockAccessor.GetBlockEntity(pos) as BlockEntityBeehive;
+            Assert.NotNull(hive);
+            Assert.True(hive!.Harvestable, "Plain right-click must not clear Harvestable.");
+        }
+        else
+        {
+            Assert.True(
+                handled && after.Id == 0,
+                $"Expected vanilla pickup (air) or an intact skep, got handled={handled} block={after.Code}.");
+        }
+    }
+
+    /// <summary>
+    /// Apiary Master sneak+RMB extract (break chance forced to 0 at max tier).
+    /// Exercises <see cref="SkepHarvestInteractPatch"/> without the random break branch.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "HusbandryApiary")]
+    public async Task PopulatedSkep_SneakRightClick_Should_NotCrash_WithApiaryMaster()
+    {
+        ITestPlayer joined = await World.JoinPlayer("HSSkepSneak");
+        IPlayer player = joined.Player;
+        EntityBehaviorProgress progress = RequireBehavior(player);
+        GrantApiaryMasterMax(progress);
+
+        BlockSkep skep = RequirePopulatedSkep();
+        BlockPos pos = PlaceSkep(player, skep, offset: 3);
+        BlockEntityBeehive hive = RequireHarvestableHive(pos);
+        ProsequorBlockPedigreeStation.AddContributor(hive, player.PlayerUID, 1);
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        Assert.True(SkepHarvestStation.ResolveAllowRightClickHarvest(player, skep, pos));
+        Assert.Equal(0f, SkepHarvestStation.ResolveRightClickBreakChance(player, skep, pos), precision: 4);
+
+        ItemStack[]? preview = skep.GetDrops(World.Api.World, pos, player);
+        Assert.True(
+            preview != null && preview.Any(SkepHarvestXp.IsHoneycomb),
+            $"Expected honeycomb drops before Apiary Master extract. drops={FormatStacks(preview)}");
+
+        float before = ScenarioXp.TotalSkill(progress, Skill);
+        SetSneak(player, sneak: true);
+        BlockSelection sel = SelectionAt(pos, skep);
+        bool handled = skep.OnBlockInteractStart(World.Api.World, player, sel);
+
+        Assert.True(handled, "Expected Apiary Master sneak-harvest to handle the interact.");
+        Assert.Equal(skep.Id, World.Api.World.BlockAccessor.GetBlock(pos).Id);
+        BlockEntityBeehive? after = World.Api.World.BlockAccessor.GetBlockEntity(pos) as BlockEntityBeehive;
+        Assert.NotNull(after);
+        Assert.False(after!.Harvestable, "Extract should clear Harvestable until the next cycle.");
+
+        float gained = ScenarioXp.TotalSkill(progress, Skill) - before;
+        Assert.True(
+            gained > 0f,
+            $"Expected skep-harvest husbandry XP from Apiary Master extract, got {gained}. preview={FormatStacks(preview)}");
+    }
+
+    BlockSkep RequirePopulatedSkep()
+    {
+        Block? block = ResolvePopulatedSkepBlock();
+        Assert.NotNull(block);
+        Assert.True(block is BlockSkep skep && !skep.IsEmpty(), $"Expected populated BlockSkep, got {block?.Code}.");
+        return (BlockSkep)block!;
+    }
+
+    BlockPos PlaceSkep(IPlayer player, BlockSkep skep, int offset)
+    {
+        BlockPos pos = player.Entity.Pos.AsBlockPos.AddCopy(offset, 0, 0);
+        EnsureFloor(pos);
+        IWorldAccessor world = World.Api.World;
+        world.BlockAccessor.SetBlock(0, pos);
+        world.BlockAccessor.SetBlock(skep.BlockId, pos, new ItemStack(skep, 1));
+        skep.OnBlockPlaced(world, pos, new ItemStack(skep, 1));
+        Assert.Equal(skep.Id, world.BlockAccessor.GetBlock(pos).Id);
+        return pos;
+    }
+
+    BlockEntityBeehive RequireHarvestableHive(BlockPos pos)
+    {
+        BlockEntity? raw = World.Api.World.BlockAccessor.GetBlockEntity(pos);
+        Assert.NotNull(raw);
+        Assert.IsType<BlockEntityBeehive>(raw);
+        var hive = (BlockEntityBeehive)raw!;
+        hive.Harvestable = true;
+        hive.MarkDirty(true);
+        Assert.True(hive.Harvestable);
+        return hive;
+    }
+
+    static BlockSelection SelectionAt(BlockPos pos, Block block) =>
+        new()
+        {
+            Position = pos,
+            Face = BlockFacing.UP,
+            HitPosition = new Vec3d(0.5, 0.5, 0.5),
+            Block = block
+        };
+
+    static void SetSneak(IPlayer player, bool sneak)
+    {
+        Assert.NotNull(player.Entity?.Controls);
+        player.Entity.Controls.Sneak = sneak;
+        if (player.WorldData?.EntityControls != null)
+        {
+            player.WorldData.EntityControls.Sneak = sneak;
+            player.WorldData.EntityControls.ShiftKey = sneak;
+        }
+    }
+
+    static void GrantApiaryMasterMax(IPlayerProgress progress)
+    {
+        progress.AddUnlockPoints(20);
+        progress.SetPlayerLevel(30);
+        progress.SetSkillLevel(Skill, 100);
+        Assert.True(progress.GrantUnlock(Skill, "calm-hives"));
+        Assert.True(progress.GrantUnlock(Skill, "gentle-spirit"));
+        Assert.True(progress.GrantUnlock(Skill, "feedhand"));
+        Assert.True(progress.GrantUnlock(Skill, "rancher"));
+        Assert.True(progress.GrantUnlock(Skill, "sticky-fingers"));
+        Assert.True(progress.GrantUnlock(Skill, "apiary-master"));
+        Assert.True(progress.GrantUnlock(Skill, "apiary-master"));
+        Assert.True(progress.GrantUnlock(Skill, "apiary-master"));
+        // Drop below the skill cap so later skep-harvest deeds still move TotalSkill.
+        progress.SetSkillLevel(Skill, 5);
+    }
+
+    static string FormatStacks(ItemStack[]? stacks)
+    {
+        if (stacks == null || stacks.Length == 0)
+        {
+            return "(none)";
+        }
+
+        return string.Join(", ", stacks.Select(s => $"{s?.Collectible?.Code}x{s?.StackSize}"));
+    }
+
+    static EntityBehaviorProgress RequireBehavior(IPlayer player)
+    {
+        EntityBehaviorProgress? progress = player.Entity?.GetBehavior<EntityBehaviorProgress>();
+        Assert.NotNull(progress);
+        return progress!;
     }
 
     Block? ResolveSkepBlock() =>

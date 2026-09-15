@@ -468,7 +468,7 @@
 
   // --- Metalworking unlocks ---
   "unlock-metalworking-hammer-care": "Hammer Care",
-  "unlockdesc-metalworking-hammer-care": "During metal working there is a {0} chance, plus {1} per Mining level, not to reduce the hammer's durability. Capped at {2}.",
+  "unlockdesc-metalworking-hammer-care": "During metal working there is a {0} chance, plus {1} per Metalworking level, not to reduce the hammer's durability. Capped at {2}.",
   "unlock-metalworking-hammer-cadence": "Hammer Cadence",
   "unlockdesc-metalworking-hammer-cadence": "Each hammer strike reduces pending temperature decay by {0}.",
   "unlock-metalworking-bloom-brigand": "Bloom Brigand",
