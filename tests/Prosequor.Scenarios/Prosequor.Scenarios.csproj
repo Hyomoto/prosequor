@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Prosequor.Scenarios</RootNamespace>
+    <ProsequorRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..'))</ProsequorRepoRoot>
+    <ProsequorDll>$(ProsequorRepoRoot)\bin\$(Configuration)\Mods\mod\prosequor.dll</ProsequorDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Pixnop.Atlas.XUnit" Version="0.12.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\prosequor.csproj" />
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)\VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib">
+      <HintPath>$(VINTAGE_STORY)\VintagestoryLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSSurvivalMod">
+      <HintPath>$(VINTAGE_STORY)\Mods\VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSEssentials">
+      <HintPath>$(VINTAGE_STORY)\Mods\VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="StageProsequorForAtlas" AfterTargets="CopyFilesToOutputDirectory">
+    <PropertyGroup>
+      <AtlasStagedModDir>$(TargetDir)staged-mod</AtlasStagedModDir>
+      <AtlasStagedHorDir>$(TargetDir)staged-hor</AtlasStagedHorDir>
+      <HorModSourceDir>$(MSBuildThisFileDirectory)third-party\horperformanceoptimizer</HorModSourceDir>
+    </PropertyGroup>
+    <Error
+      Condition="!Exists('$(ProsequorDll)')"
+      Text="Prosequor dll not found at $(ProsequorDll). Build the mod project first." />
+    <MakeDir Directories="$(AtlasStagedModDir)" />
+    <Copy
+      SourceFiles="$(ProsequorDll)"
+      DestinationFolder="$(AtlasStagedModDir)"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="$(ProsequorRepoRoot)\modinfo.json"
+      DestinationFolder="$(AtlasStagedModDir)"
+      SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <_ProsequorAssets Include="$(ProsequorRepoRoot)\assets\**\*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(_ProsequorAssets)"
+      DestinationFiles="@(_ProsequorAssets->'$(AtlasStagedModDir)\assets\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <!-- Optional A/B: HoR craft rematch optimizer (only loaded by ProfileHorScenarios). -->
+    <MakeDir
+      Condition="Exists('$(HorModSourceDir)\HoRPerformanceOptimizer.dll')"
+      Directories="$(AtlasStagedHorDir)" />
+    <ItemGroup Condition="Exists('$(HorModSourceDir)\HoRPerformanceOptimizer.dll')">
+      <_HorModFiles Include="$(HorModSourceDir)\*" />
+    </ItemGroup>
+    <Copy
+      Condition="Exists('$(HorModSourceDir)\HoRPerformanceOptimizer.dll')"
+      SourceFiles="@(_HorModFiles)"
+      DestinationFolder="$(AtlasStagedHorDir)"
+      SkipUnchangedFiles="true" />
+  </Target>
+</Project>

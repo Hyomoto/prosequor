@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Prosequor.Pure.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\prosequor.csproj" />
+      <Reference Include="VintagestoryAPI">
+        <HintPath>$(VINTAGE_STORY)\VintagestoryAPI.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="VSSurvivalMod">
+        <HintPath>$(VINTAGE_STORY)\Mods\VSSurvivalMod.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="VSEssentials">
+        <HintPath>$(VINTAGE_STORY)\Mods\VSEssentials.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="Newtonsoft.Json">
+        <HintPath>$(VINTAGE_STORY)\Lib\Newtonsoft.Json.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="HarmonyLib">
+        <HintPath>$(VINTAGE_STORY)\Lib\0Harmony.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <!-- PatchAll walks every type; some pull VintagestoryLib / protobuf-net. -->
+      <Reference Include="VintagestoryLib">
+        <HintPath>$(VINTAGE_STORY)\VintagestoryLib.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="protobuf-net">
+        <HintPath>$(VINTAGE_STORY)\Lib\protobuf-net.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+      <Reference Include="cairo-sharp">
+        <HintPath>$(VINTAGE_STORY)\Lib\cairo-sharp.dll</HintPath>
+        <Private>true</Private>
+      </Reference>
+    </ItemGroup>
+
+    <!-- Shipped balance files for inferred tests (expects come from these, not hardcoded). -->
+    <ItemGroup>
+      <Content Include="..\..\assets\prosequor\config\prosequor\stats\*.json"
+               Link="fixtures\stats\%(Filename)%(Extension)"
+               CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+  <!-- Test SDK ships its own Newtonsoft; overwrite with the game's copy prosequor was compiled against. -->
+  <Target Name="UseGameNewtonsoft" AfterTargets="CopyFilesToOutputDirectory">
+    <Copy
+      SourceFiles="$(VINTAGE_STORY)\Lib\Newtonsoft.Json.dll"
+      DestinationFolder="$(TargetDir)"
+      OverwriteReadOnlyFiles="true"
+      SkipUnchangedFiles="false" />
+  </Target>
+</Project>

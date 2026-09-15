@@ -1,0 +1,477 @@
+{
+  "id": "husbandry",
+  "nameLang": "skill-husbandry",
+  "descriptionLang": "skilldesc-husbandry",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/animal-husbandry-skill.svg",
+  "xpRules": [
+    {
+      "id": "prosequor:feed-animal",
+      "amount": 0.1,
+      "payee": "contributor",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["fed-animal", "friendly"]
+      }
+    },
+    {
+      "id": "prosequor:milk-friendly",
+      "amount": 1,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["milked", "friendly"]
+      }
+    },
+    {
+      "id": "prosequor:collect-egg",
+      "amount": 0.1,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:collect-xp-item",
+        "tags": ["target:<egg>"]
+      }
+    },
+    {
+      "id": "prosequor:friendly-aged-up",
+      "amount": 5,
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["aged-up", "friendly"]
+      }
+    },
+    {
+      "id": "prosequor:friendly-birth",
+      "amount": 5,
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["gave-birth", "friendly"]
+      }
+    },
+    {
+      "id": "prosequor:skep-harvest",
+      "amount": 0.2,
+      "pay": "quantity",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["skep-harvest"]
+      }
+    },
+    {
+      "id": "prosequor:skep-propagate",
+      "amount": 1,
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["skep-propagate"]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:animal-flee",
+      "phase": "chance",
+      "action": "prosequor:number",
+      "params": { "op": "add", "ofBase": true, "base": 0, "perSkillLevel": 0.005, "cap": 0 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "calm-hives",
+        "nameLang": "unlock-husbandry-calm-hives",
+        "icon": "textures/icons/husbandry/calm-hives.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-husbandry-calm-hives",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:spawn-bees-chance",
+                "action": "prosequor:number",
+                "when": { "tags": [ "target:<skep>" ] },
+                "params": { "op": "scale", "value": -0.10 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 15,
+            "effects": [
+              { "replicate": 0, "params": { "value": -0.20 } }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              { "replicate": 0, "params": { "value": -0.33 } }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "gentle-spirit",
+        "nameLang": "unlock-husbandry-gentle-spirit",
+        "icon": "textures/icons/husbandry/gentle-spirit.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-husbandry-gentle-spirit",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-flee",
+                "phase": "multiplier",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 200 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-husbandry-gentle-spirit-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 300 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "feedhand",
+        "nameLang": "unlock-husbandry-feedhand",
+        "icon": "textures/icons/husbandry/feedhand.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-husbandry-feedhand",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] },
+          { "sum": [ "1.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:trough-fill",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 2 }
+              },
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:trough-eaten",
+                "phase": "chance",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 0.05 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              { "replicate": 0, "params": { "value": 3 } },
+              { "replicate": 1, "params": { "value": 0.05 } }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "sticky-fingers",
+        "nameLang": "unlock-husbandry-sticky-fingers",
+        "icon": "textures/icons/husbandry/sticky-fingers.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "layout": { "layerOffset": 0 },
+        "descriptionLang": "unlockdesc-husbandry-sticky-fingers",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<beehive>", "drop:<honeycomb>" ]
+                },
+                "params": { "op": "scale", "value": 0.10 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              { "replicate": 0, "params": { "value": 0.20 } }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              { "replicate": 0, "params": { "value": 0.33 } }
+            ]
+          }
+        ],
+        "requires": [ "rancher" ]
+      },
+      {
+        "id": "rancher",
+        "nameLang": "unlock-husbandry-rancher",
+        "icon": "textures/icons/husbandry/rancher.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-husbandry-rancher",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "calm-hives", "gentle-spirit", "feedhand" ]
+      },
+      {
+        "id": "animal-whisperer",
+        "nameLang": "unlock-husbandry-animal-whisperer",
+        "icon": "textures/icons/husbandry/animal-whisperer.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-husbandry-animal-whisperer",
+        "descriptionParams": [
+          { "sum": [ "0.minFriendliness" ] },
+          { "sum": [ "1.chance.percent" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-pet",
+                "action": "prosequor:allow-animal-pet",
+                "params": { "minFriendliness": 7 }
+              },
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-pet",
+                "action": "prosequor:chance",
+                "params": {
+                  "chance": { "percent": 5 },
+                  "onSuccess": {
+                    "action": "prosequor:add-friendliness",
+                    "params": { "base": 1 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "minFriendliness": 6 }
+              },
+              {
+                "replicate": 1,
+                "params": { "chance": { "percent": 10 } }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "minFriendliness": 5 }
+              },
+              {
+                "replicate": 1,
+                "params": { "chance": { "percent": 25 } }
+              }
+            ]
+          }
+        ],
+        "requires": [ "feedhand" ]
+      },
+      {
+        "id": "apiary-master",
+        "nameLang": "unlock-husbandry-apiary-master",
+        "icon": "textures/icons/husbandry/apiary-master.svg",
+        "cost": 1,
+        "minSkillLevel": 50,
+        "descriptionLang": "unlockdesc-husbandry-apiary-master",
+        "descriptionParams": [
+          { "sum": [ "1.value" ], "format": "fractionPercent" }
+        ],
+        "layout": { "layerOffset": 0 },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:harvest-skep",
+                "phase": "allow-right-click-harvest",
+                "action": "prosequor:set-true"
+              },
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:harvest-skep",
+                "phase": "right-click-harvest-break-chance",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 75,
+            "effects": [
+              { "replicate": 0 },
+              { "replicate": 1, "params": { "value": 0.10 } }
+            ]
+          },
+          {
+            "minSkillLevel": 100,
+            "effects": [
+              { "replicate": 0 },
+              { "replicate": 1, "params": { "value": 0 } }
+            ]
+          }
+        ],
+        "requires": [ "sticky-fingers" ]
+      },
+      {
+        "id": "calming-presence",
+        "nameLang": "unlock-husbandry-calming-presence",
+        "icon": "textures/icons/husbandry/calming-presence.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-husbandry-calming-presence",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-melee",
+                "phase": "multiplier",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 200 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-husbandry-calming-presence-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 300 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "rancher" ]
+      },
+      {
+        "id": "hen-friend",
+        "nameLang": "unlock-husbandry-hen-friend",
+        "icon": "textures/icons/husbandry/hen-friend.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-husbandry-hen-friend",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-brood",
+                "phase": "multiplier",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 200 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-husbandry-hen-friend-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 300 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "rancher" ]
+      },
+      {
+        "id": "warm-hands",
+        "nameLang": "unlock-husbandry-warm-hands",
+        "icon": "textures/icons/husbandry/warm-hands.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-husbandry-warm-hands",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:animal-milk",
+                "phase": "multiplier",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 150 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 200 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "rancher" ]
+      }
+    ]
+  }
+}

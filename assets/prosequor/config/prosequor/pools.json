@@ -1,0 +1,28 @@
+[
+  {
+    "id": "prosequor:clay-item",
+    "entries": [
+      { "code": "game:clay-blue" },
+      { "code": "game:clay-red" },
+      { "code": "game:clay-fire" }
+    ]
+  },
+  {
+    "id": "prosequor:resin",
+    "entries": [
+      { "code": "game:resin" }
+    ]
+  },
+  {
+    "id": "prosequor:magnetic-treasure",
+    "entries": [
+      { "code": "game:gear-temporal", "weight": 1 },
+      { "code": "game:gear-rusty", "weight": 15 },
+      { "code": "game:bone", "weight": 30 },
+      { "code": "game:cattailroot", "weight": 40 },
+      { "code": "game:cattailtops", "weight": 40 },
+      { "code": "game:stick", "weight": 50 },
+      { "code": "game:flint", "weight": 50 }
+    ]
+  }
+]

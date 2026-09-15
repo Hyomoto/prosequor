@@ -1,0 +1,334 @@
+{
+  "id": "clayforming",
+  "nameLang": "skill-clayforming",
+  "descriptionLang": "skilldesc-clayforming",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/clayforming-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value" : 1.0 },
+    { "id": "inconspicuity", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:clay-form-voxel",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafting", "caller:@hand", "target:<clay-formed>" ]
+      }
+    },
+    {
+      "id": "prosequor:clay-fired",
+      "amount": [1, 5, 10],
+      "pay": "voxels",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "kiln-fired" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:item-interaction",
+      "verb": "prosequor:clay-form",
+      "phase": "place-conservation",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "op:place" ]
+      },
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.001, "cap": 0 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "claysaver",
+        "nameLang": "unlock-clayforming-claysaver",
+        "icon": "textures/icons/clayforming/claysaver.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-clayforming-claysaver",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:voxel-refill",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 6 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 10 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "makersmark",
+        "nameLang": "unlock-clayforming-makersmark",
+        "icon": "textures/icons/clayforming/makersmark.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-clayforming-makersmark",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-process",
+                "phase": "stacks",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "fire-pottery" ]
+                },
+                "params": {
+                  "chance": { "base": 0.1, "perSkillLevel": 0, "cap": 0 },
+                  "onSuccess": {
+                    "action": "prosequor:replace-with-variant",
+                    "params": { "variant": "decorative" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.2 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "claymation",
+        "nameLang": "unlock-clayforming-claymation",
+        "icon": "textures/icons/clayforming/claymation.svg",
+        "cost": 1,
+        "minSkillLevel": 3,
+        "descriptionLang": "unlockdesc-clayforming-claymation",
+        "layout": { "columnBias": "left" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:clay-form",
+                "phase": "assist-radius",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "op:remove" ]
+                },
+                "params": { "op": "set", "value": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 5,
+            "descriptionLang": "unlockdesc-clayforming-claymation-radius",
+            "descriptionParams": [
+              { "sum": [ "0.value" ] }
+            ],
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 8,
+            "descriptionLang": "unlockdesc-clayforming-claymation-radius",
+            "descriptionParams": [
+              { "sum": [ "0.value" ] }
+            ],
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 2 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "claysaver" ]
+      },
+      {
+        "id": "claywright",
+        "nameLang": "unlock-clayforming-claywright",
+        "icon": "textures/icons/clayforming/claywright.svg",
+        "cost": 1,
+        "minSkillLevel": 3,
+        "descriptionLang": "unlockdesc-clayforming-claywright",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:clay-form",
+                "phase": "assist-radius",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "op:place" ]
+                },
+                "params": { "op": "set", "value": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 5,
+            "descriptionLang": "unlockdesc-clayforming-claywright-radius",
+            "descriptionParams": [
+              { "sum": [ "0.value" ] }
+            ],
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 8,
+            "descriptionLang": "unlockdesc-clayforming-claywright-radius",
+            "descriptionParams": [
+              { "sum": [ "0.value" ] }
+            ],
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 2 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "claysaver" ]
+      },
+      {
+        "id": "quicklayer",
+        "nameLang": "unlock-clayforming-quicklayer",
+        "icon": "textures/icons/clayforming/quicklayer.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-clayforming-quicklayer",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] }
+        ],
+        "layout": { "columnBias": "right" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:voxel-copy",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 4 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "claysaver" ]
+      },
+      {
+        "id": "flowstate",
+        "nameLang": "unlock-clayforming-flowstate",
+        "icon": "textures/icons/clayforming/flowstate.svg",
+        "cost": 1,
+        "minSkillLevel": 5,
+        "descriptionLang": "unlockdesc-clayforming-flowstate",
+        "descriptionParams": [
+          { "sum": [ "0.base" ] },
+          { "sum": [ "0.perSkillLevel" ] },
+          { "sum": [ "0.cap" ] }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:clay-form",
+                "phase": "auto-finish",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "op:finish" ]
+                },
+                "params": { "op": "add", "base": 0.01, "perSkillLevel": 0.001, "cap": 0.02 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.02, "perSkillLevel": 0.002, "cap": 0.04 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.02, "perSkillLevel": 0.002, "cap": 0.06 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "claymation", "claywright", "quicklayer" ]
+      }
+    ]
+  }
+}

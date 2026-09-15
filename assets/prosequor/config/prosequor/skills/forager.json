@@ -1,0 +1,44 @@
+{
+  "id": "forager",
+  "nameLang": "skill-forager",
+  "descriptionLang": "skilldesc-forager",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/forager-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:forage-wild-produce",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "harvested", "undomesticated", "target:<berry-bush, crop, mushroom>" ]
+      }
+    },
+    {
+      "id": "prosequor:forage-wild-flat",
+      "amount": 0.05,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "harvested", "undomesticated", "target:<reed, stick, sap>" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:mutate-drops",
+      "phase": "quantity",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "undomesticated", "target:<berry-bush, crop, mushroom, reed, stick, sap>" ]
+      },
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.004, "cap": 0.2 }
+    }
+  ]
+}

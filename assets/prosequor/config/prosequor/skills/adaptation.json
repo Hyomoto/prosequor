@@ -1,0 +1,38 @@
+{
+  "id": "adaptation",
+  "nameLang": "skill-adaptation",
+  "descriptionLang": "skilldesc-adaptation",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ] },
+    { "sum": [ "0.cap" ] },
+    { "sum": [ "1.perSkillLevel" ] }
+  ],
+  "icon": "textures/icons/temporal-adaptation-skill.svg",
+  "attributeScores": [
+    { "id": "resilience", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:adaptation-drain",
+      "rate": 0.001,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "temporal-drain" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:temporal-recover-rate",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 100, "perSkillLevel": 1, "cap": 150 }
+    },
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:temporal-drain-rate",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 100, "perSkillLevel": -0.6 }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "strength",
+  "rules": [
+    {
+      "id": "prosequor:str-armor-walk",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:armor-walk",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": 200,
+        "toScore": 18,
+        "toValue": 25,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:str-melee-damage",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:melee-damage",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": 33,
+        "toScore": 18,
+        "toValue": 150,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:str-basic-slots",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:basic-slots",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 13,
+        "fromValue": 0,
+        "toScore": 18,
+        "toValue": 5,
+        "round": "ceil"
+      }
+    }
+  ]
+}

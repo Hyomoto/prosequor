@@ -1,0 +1,50 @@
+{
+  "id": "perception",
+  "rules": [
+    {
+      "id": "prosequor:per-cat-eyes-capacity",
+      "minScore": 14,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:cat-eyes",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 14,
+        "fromValue": 0.05555556,
+        "toScore": 18,
+        "toValue": 0.27777778
+      }
+    },
+    {
+      "id": "prosequor:per-ranged-speed",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:ranged-speed",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": 70,
+        "midScore": 10,
+        "midValue": 100,
+        "toScore": 18,
+        "toValue": 120,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:per-ranged-acc",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:ranged-acc",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": 30,
+        "midScore": 10,
+        "midValue": 100,
+        "toScore": 18,
+        "toValue": 140,
+        "round": "ceil"
+      }
+    }
+  ]
+}

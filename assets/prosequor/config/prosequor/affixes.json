@@ -1,0 +1,76 @@
+[
+  {
+    "id": "prosequor:quality",
+    "entries": [
+      { "code": "quality-1", "lang": "prosequor:affix-quality-1" },
+      { "code": "quality-2", "lang": "prosequor:affix-quality-2" },
+      { "code": "quality-3", "lang": "prosequor:affix-quality-3" },
+      { "code": "quality-4", "lang": "prosequor:affix-quality-4" },
+      { "code": "quality-5", "lang": "prosequor:affix-quality-5" }
+    ]
+  },
+  {
+    "id": "prosequor:cooling",
+    "entries": [
+      { "code": "cool", "lang": "prosequor:affix-cool", "color": "#99c9f9" }
+    ]
+  },
+  {
+    "id": "prosequor:warmth",
+    "entries": [
+      { "code": "warm", "lang": "prosequor:affix-warm", "color": "#ffb07c" }
+    ]
+  },
+  {
+    "id": "prosequor:durability",
+    "entries": [
+      { "code": "sturdy", "lang": "prosequor:affix-sturdy", "color": "#84ff84" },
+      { "code": "reinforced", "lang": "prosequor:affix-reinforced", "color": "#84ff84" },
+      { "code": "fortified", "lang": "prosequor:affix-fortified", "color": "#84ff84" }
+    ]
+  },
+  {
+    "id": "prosequor:reinforced",
+    "entries": [
+      { "code": "reinforced", "lang": "prosequor:affix-toughened", "color": "#84ff84" },
+      { "code": "reinforced", "lang": "prosequor:affix-hardened", "color": "#84ff84" },
+      { "code": "reinforced", "lang": "prosequor:affix-impenetrable", "color": "#84ff84" }
+    ]
+  },
+  {
+    "id": "prosequor:damage",
+    "entries": [
+      { "code": "keen", "lang": "prosequor:affix-keen", "color": "#ff8484" },
+      { "code": "sharp", "lang": "prosequor:affix-sharp", "color": "#ff8484" },
+      { "code": "deadly", "lang": "prosequor:affix-deadly", "color": "#ff8484" }
+    ]
+  },
+  {
+    "id": "prosequor:workspeed",
+    "entries": [
+      { "code": "nimble", "lang": "prosequor:affix-nimble", "color": "#84c7ff" },
+      { "code": "swift", "lang": "prosequor:affix-swift", "color": "#84c7ff" },
+      { "code": "efficient", "lang": "prosequor:affix-efficient", "color": "#84c7ff" }
+    ]
+  },
+  {
+    "id": "prosequor:intoxication",
+    "entries": [
+      { "code": "intoxication-1", "lang": "prosequor:affix-intoxication-1", "color": "#2A4849" },
+      { "code": "intoxication-2", "lang": "prosequor:affix-intoxication-2", "color": "#2A4849" },
+      { "code": "intoxication-3", "lang": "prosequor:affix-intoxication-3", "color": "#2A4849" },
+      { "code": "intoxication-4", "lang": "prosequor:affix-intoxication-4", "color": "#2A4849" },
+      { "code": "intoxication-5", "lang": "prosequor:affix-intoxication-5", "color": "#2A4849" }
+    ]
+  },
+  {
+    "id": "prosequor:liquor-stock",
+    "entries": [
+      { "code": "liquor-stock-1", "lang": "prosequor:affix-liquor-stock-1", "color": "#8A7C68" },
+      { "code": "liquor-stock-2", "lang": "prosequor:affix-liquor-stock-2", "color": "#718A63" },
+      { "code": "liquor-stock-3", "lang": "prosequor:affix-liquor-stock-3", "color": "#6D8098" },
+      { "code": "liquor-stock-4", "lang": "prosequor:affix-liquor-stock-4", "color": "#7F667E" },
+      { "code": "liquor-stock-5", "lang": "prosequor:affix-liquor-stock-5", "color": "#B08A4E" }
+    ]
+  }
+]

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/Prosequor.Pure.Tests/Prosequor.Pure.Tests.csproj" />
+    <Project Path="tests/Prosequor.Scenarios/Prosequor.Scenarios.csproj" />
+  </Folder>
+  <Project Path="prosequor.csproj" />
+</Solution>

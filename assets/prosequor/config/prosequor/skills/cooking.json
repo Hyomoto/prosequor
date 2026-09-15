@@ -1,0 +1,530 @@
+{
+  "id": "cooking",
+  "nameLang": "skill-cooking",
+  "descriptionLang": "skilldesc-cooking",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/cooking-skill.svg",
+  "attributeScores": [
+    { "id": "constitution", "value": 1.0 },
+    { "id": "perception", "value": 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-meal-cooking",
+      "amount": [0.1, 16],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<meal>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-cooking-pot-cooking",
+      "amount": [0.1, 16],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "cooking-pot" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-fermented-cooking",
+      "amount": 0.075,
+      "pay": "quantity",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<fermented>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-distilled-cooking",
+      "amount": 0.04,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<distilled>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-juice-cooking",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<juice>" ]
+      }
+    },
+    {
+      "id": "prosequor:butcher-cooking",
+      "amount": 0.03,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "butchered" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:mutate-drops",
+      "phase": "quantity",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "drop:<meat, fat>" ]
+      },
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.01 }
+    },
+    {
+      "hook": "prosequor:crafting-interaction",
+      "verb": "prosequor:apply-quality",
+      "phase": "quality-base",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<meal, claypot, cook, fermented, distilled>" ]
+      },
+      "params": { "op": "add", "base": 0, "perSkillLevel": 1 }
+    },
+    {
+      "hook": "prosequor:crafting-interaction",
+      "verb": "prosequor:apply-quality",
+      "phase": "quality-base",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<distilled>" ]
+      },
+      "params": { "op": "add", "value": -100 }
+    },
+    {
+      "hook": "prosequor:crafting-interaction",
+      "verb": "prosequor:apply-quality",
+      "phase": "attributes",
+      "action": "prosequor:quality-rank",
+      "when": {
+        "tags": [ "target:<fermented>" ]
+      },
+      "params": {
+        "key": "qualityRank",
+        "table": [0, 100]
+      }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "cooking-expertise",
+        "nameLang": "unlock-cooking-cooking-expertise",
+        "icon": "textures/icons/cooking/cooking-expertise.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-cooking-cooking-expertise",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-base",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<meal, claypot>" ]
+                },
+                "params": { "op": "add", "value": 50 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-window",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<meal, claypot>" ]
+                },
+                "params": { "op": "add", "value": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "descriptionLang": "unlockdesc-cooking-cooking-expertise-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 100 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "descriptionLang": "unlockdesc-cooking-cooking-expertise-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 150 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": -50 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "clean-cook",
+        "nameLang": "unlock-cooking-clean-cook",
+        "icon": "textures/icons/cooking/clean-cook.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-cooking-clean-cook",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<meal, claypot>" ]
+                },
+                "params": {
+                  "key": "freshness",
+                  "op": "scale",
+                  "table": [0, 0.25]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "descriptionLang": "unlockdesc-cooking-clean-cook-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "table": [0, 0.5]
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "cooking-expertise" ]
+      },
+      {
+        "id": "very-filling",
+        "nameLang": "unlock-cooking-very-filling",
+        "icon": "textures/icons/cooking/very-filling.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-cooking-very-filling",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<meal, claypot>" ]
+                },
+                "params": {
+                  "key": "satiety",
+                  "op": "scale",
+                  "table": [0, 0.25]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-cooking-very-filling-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "table": [0, 0.5]
+                }
+              }
+            ]
+          }
+        ],
+        "layout": { "columnBias": "left" },
+        "requires": [ "clean-cook" ]
+      },
+      {
+        "id": "nothing-wasted",
+        "nameLang": "unlock-cooking-nothing-wasted",
+        "icon": "textures/icons/cooking/nothing-wasted.svg",
+        "cost": 1,
+        "minSkillLevel": 25,
+        "descriptionLang": "unlockdesc-cooking-nothing-wasted",
+        "layout": { "layerOffset": 0 },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<meal, claypot>" ]
+                },
+                "params": {
+                  "key": "hungerDelay",
+                  "op": "scale",
+                  "table": [0, 0.25]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-cooking-nothing-wasted-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "table": [0, 0.5]
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "very-filling" ]
+      },
+      {
+        "id": "brewing-expertise",
+        "nameLang": "unlock-cooking-brewing-expertise",
+        "icon": "textures/icons/cooking/brewing-expertise.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-cooking-brewing-expertise",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-base",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<distilled>" ]
+                },
+                "params": { "op": "add", "value": 50 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-window",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<distilled>" ]
+                },
+                "params": { "op": "add", "value": 0 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-base",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<fermented>" ]
+                },
+                "params": { "op": "add", "value": 50 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "descriptionLang": "unlockdesc-cooking-brewing-expertise-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 100 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 0 }
+              },
+              {
+                "replicate": 2,
+                "params": { "value": 100 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "descriptionLang": "unlockdesc-cooking-brewing-expertise-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 150 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": -50 }
+              },
+              {
+                "replicate": 2,
+                "params": { "value": 150 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "perfect-presser",
+        "nameLang": "unlock-cooking-perfect-presser",
+        "icon": "textures/icons/cooking/perfect-presser.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-cooking-perfect-presser",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-process",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<juice>", "fruit-press" ]
+                },
+                "params": { "op": "scale", "base": 0, "perSkillLevel": 0.0025, "cap": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "descriptionLang": "unlockdesc-cooking-perfect-presser-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.005, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-cooking-perfect-presser-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.01, "cap": 0.4 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "brewing-expertise" ]
+      },
+      {
+        "id": "prized-liquors",
+        "nameLang": "unlock-cooking-prized-liquors",
+        "icon": "textures/icons/cooking/prized-liquors.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "layout": { "layerOffset": 0, "columnBias": "left" },
+        "descriptionLang": "unlockdesc-cooking-prized-liquors",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<distilled>" ]
+                },
+                "params": {
+                  "key": "price",
+                  "op": "scale",
+                  "table": [0.0, 0.2],
+                  "affixes": "prosequor:liquor-stock",
+                  "affixRange": [0, 3]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "descriptionLang": "unlockdesc-cooking-prized-liquors-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "table": [0.1, 0.33],
+                  "affixRange": [1, 4]
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "strong-spirits" ]
+      },
+      {
+        "id": "strong-spirits",
+        "nameLang": "unlock-cooking-strong-spirits",
+        "icon": "textures/icons/cooking/strong-spirits.svg",
+        "cost": 1,
+        "minSkillLevel": 25,
+        "layout": { "columnBias": "right" },
+        "descriptionLang": "unlockdesc-cooking-strong-spirits",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<distilled>" ]
+                },
+                "params": {
+                  "key": "intoxication",
+                  "op": "scale",
+                  "table": [0.0, 0.2],
+                  "affixes": "prosequor:intoxication",
+                  "affixRange": [0, 3]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-cooking-strong-spirits-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "table": [0.1, 0.33],
+                  "affixRange": [1, 4]
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "perfect-presser" ]
+      }
+    ]
+  }
+}

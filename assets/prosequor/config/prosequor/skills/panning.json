@@ -1,0 +1,215 @@
+{
+  "id": "panning",
+  "nameLang": "skill-panning",
+  "descriptionLang": "skilldesc-panning",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel", "panningexpert.0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/panning-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value" : 1.0},
+    { "id": "resilience", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:panning-effort",
+      "rate": 0.01,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "interacting", "caller:<pan>" ]
+      }
+    },
+    {
+      "id": "prosequor:panning-bony-soil",
+      "rate": 0.02,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "interacting", "caller:<pan>", "target:<bonysoil>" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:item-interaction",
+      "verb": "prosequor:interaction-speed",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "caller:<pan>" ]
+      },
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.0001 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "very-patient",
+        "nameLang": "unlock-panning-very-patient",
+        "icon": "textures/icons/panning/very-patient.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-panning-very-patient",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "caller:<pan>" ]
+                },
+                "params": { "op": "add", "base": 0.01, "perSkillLevel": 0.0025, "cap": 0.1 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.02, "perSkillLevel": 0.005, "cap": 0.25 },
+                "minSkillLevel": 20
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.5 },
+                "minSkillLevel": 40
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "panningexpert",
+        "nameLang": "unlock-panning-panningexpert",
+        "icon": "textures/icons/panning/panning-expert.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-panning-panningexpert",
+        "descriptionParams": [
+          { "sum": [ "root.0.perSkillLevel", "prev.0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "root.0.perSkillLevel", "0.perSkillLevel" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:interaction-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "caller:<pan>" ]
+                },
+                "params": { "op": "add", "ofBase": true, "base": 0, "perSkillLevel": 0.0001 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "base": 0, "perSkillLevel": 0.0001 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.00025 },
+                "minSkillLevel": 20
+              },
+              {
+                "replicate": 1,
+                "params": { "perSkillLevel": 0.00025 }
+              },
+              {
+                "replicate": 2,
+                "params": {}
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.0004 },
+                "minSkillLevel": 30
+              },
+              {
+                "replicate": 1,
+                "params": { "perSkillLevel": 0.0004 }
+              },
+              {
+                "replicate": 2,
+                "params": {}
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "doubledipper",
+        "nameLang": "unlock-panning-doubledipper",
+        "icon": "textures/icons/panning/double-dipper.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-panning-doubledipper",
+        "descriptionParams": [
+          { "sum": [ "0.chance.percent" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<pan>" ]
+                },
+                "params": {
+                  "chance": { "percent": 1 },
+                  "onSuccess": { "action": "prosequor:append-from-drop-table" }
+                }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "percent": 2 }
+                },
+                "minSkillLevel": 60
+              }
+            ]
+          }
+        ],
+        "requires": []
+      }
+    ]
+  }
+}

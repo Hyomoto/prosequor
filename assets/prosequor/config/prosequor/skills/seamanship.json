@@ -1,0 +1,342 @@
+{
+  "id": "seamanship",
+  "nameLang": "skill-seamanship",
+  "descriptionLang": "skilldesc-seamanship",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/seamanship-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value" : 1.0 },
+    { "id": "resilience", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:seamanship-idle",
+      "rate": 0.0025,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "boating" ]
+      }
+    },
+    {
+      "id": "prosequor:seamanship-moving",
+      "rate": 0.0025,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "boating", "moving" ]
+      }
+    },
+    {
+      "id": "prosequor:seamanship-helmsman",
+      "rate": 0.0075,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "boating", "moving", "helmsman" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:mounted",
+      "phase": "move-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.002, "cap": 0.1 }
+    },
+    {
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:mounted",
+      "phase": "turn-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.002, "cap": 0.1 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "oarsman",
+        "nameLang": "unlock-seamanship-oarsman",
+        "icon": "textures/icons/seamanship/oarsman.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-seamanship-oarsman",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "move-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<raft>" ]
+                },
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.0025, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.004, "cap": 1.4 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "rudderman",
+        "nameLang": "unlock-seamanship-rudderman",
+        "icon": "textures/icons/seamanship/rudderman.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-seamanship-rudderman",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "turn-speed",
+                "action": "prosequor:number",
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.0025, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.004, "cap": 1.4 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "boatswain",
+        "nameLang": "unlock-seamanship-boatswain",
+        "icon": "textures/icons/seamanship/boatswain.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-seamanship-boatswain",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "move-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<sailboat>" ]
+                },
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.0025, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.004, "cap": 1.4 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "riverraider",
+        "nameLang": "unlock-seamanship-riverraider",
+        "icon": "textures/icons/seamanship/river-raider.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-seamanship-riverraider",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "move-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<raft>", "ground:<freshwater>" ]
+                },
+                "params": { "op": "add", "value": 0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 45,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.3 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "oarsman" ]
+      },
+      {
+        "id": "rigger",
+        "nameLang": "unlock-seamanship-rigger",
+        "icon": "textures/icons/seamanship/rigger.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-seamanship-rigger",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "ratline-stamina",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 45,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.75 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "rudderman" ]
+      },
+      {
+        "id": "oceaneer",
+        "nameLang": "unlock-seamanship-oceaneer",
+        "icon": "textures/icons/seamanship/oceaneer.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-seamanship-oceaneer",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "move-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<sailboat>", "ground:<saltwater>" ]
+                },
+                "params": { "op": "add", "value": 0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 45,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.3 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "boatswain" ]
+      }
+    ]
+  }
+}

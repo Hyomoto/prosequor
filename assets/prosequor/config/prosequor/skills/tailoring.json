@@ -1,0 +1,643 @@
+{
+  "id": "tailoring",
+  "nameLang": "skill-tailoring",
+  "descriptionLang": "skilldesc-tailoring",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/tailoring-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value" : 1.0 },  
+    { "id": "inconspicuity", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-thread-tailoring",
+      "amount": 0.15,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<thread>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-cloth-tailoring",
+      "amount": 0.3,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<cloth>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-leather-tailoring",
+      "amount": 0.75,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<leather>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-hide-tailoring",
+      "amount": 0.25,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<hide>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-clothing-tailoring",
+      "amount": [2, 8, 15],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<clothing>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-armor-tailoring",
+      "amount": [10, 30],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<armor>" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:item-interaction",
+      "verb": "prosequor:repair",
+      "phase": "add-durability",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<clothing>" ]
+      },
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.001, "cap": 0.1 }
+    },
+    {
+      "hook": "prosequor:item-interaction",
+      "verb": "prosequor:repair",
+      "phase": "add-durability",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<armor>" ]
+      },
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.001, "cap": 0.1 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "threadmaker",
+        "nameLang": "unlock-tailoring-threadmaker",
+        "icon": "textures/icons/tailoring/threadmaker.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-tailoring-threadmaker",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<thread>" ]
+                },
+                "params": { "op": "scale", "base": 0.15, "perSkillLevel": 0, "cap": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "textile-laborer",
+        "nameLang": "unlock-tailoring-textile-laborer",
+        "icon": "textures/icons/tailoring/textile-laborer.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-tailoring-textile-laborer",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<cloth>" ]
+                },
+                "params": { "op": "scale", "base": 0.15, "perSkillLevel": 0, "cap": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "clothesmending",
+        "nameLang": "unlock-tailoring-clothesmending",
+        "icon": "textures/icons/tailoring/clothes-mending.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-tailoring-clothesmending",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:repair",
+                "phase": "add-durability",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<clothing>" ]
+                },
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.002, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.005, "cap": 1.5 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "tanning",
+        "nameLang": "unlock-tailoring-tanning",
+        "icon": "textures/icons/tailoring/tanning.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-tailoring-tanning",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-process",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<leather>", "barrel" ]
+                },
+                "params": { "op": "scale", "base": 0.15, "perSkillLevel": 0, "cap": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "cool-garments",
+        "nameLang": "unlock-tailoring-cool-garments",
+        "icon": "textures/icons/tailoring/cool-garments.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-tailoring-cool-garments",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<clothing>" ]
+                },
+                "params": {
+                  "key": "cooling",
+                  "op": "scale",
+                  "table": [0, 0.1],
+                  "affixes": "prosequor:cooling"
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.2], "bonus" : 50 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.3], "bonus" : 100 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "warm-garments",
+        "nameLang": "unlock-tailoring-warm-garments",
+        "icon": "textures/icons/tailoring/warm-garments.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-tailoring-warm-garments",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<clothing>" ]
+                },
+                "params": {
+                  "key": "warmth",
+                  "op": "scale",
+                  "table": [0, 0.1],
+                  "affixes": "prosequor:warmth"
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.2], "bonus" : 50 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.3], "bonus" : 100 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "tailor",
+        "nameLang": "unlock-tailoring-tailor",
+        "icon": "textures/icons/tailoring/tailor.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-tailoring-tailor",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-base",
+                "action": "prosequor:number",
+                "params": { "op": "add", "base": 0, "perSkillLevel": 1 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-window",
+                "action": "prosequor:number",
+                "params": { "op": "add", "base": 0, "perSkillLevel": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "threadmaker", "textile-laborer", "clothesmending" ]
+      },
+      {
+        "id": "spinthrifty",
+        "nameLang": "unlock-tailoring-spinthrifty",
+        "icon": "textures/icons/tailoring/spinthrifty.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "layout": { "layerOffset": 0 },
+        "descriptionLang": "unlockdesc-tailoring-spinthrifty",
+        "descriptionParams": [
+          { "sum": [ "0.amount" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "refund",
+                "action": "prosequor:refund-ingredients",
+                "when": {
+                  "tags": [ "input:<thread>" ]
+                },
+                "params": { "match": "<thread>", "amount": 1, "retain": 1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "amount": 2 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "tailor" ]
+      },
+      {
+        "id": "clothingproficiency",
+        "nameLang": "unlock-tailoring-clothingproficiency",
+        "icon": "textures/icons/tailoring/clothing-proficiency.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-tailoring-clothingproficiency",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<clothing, armor>" ]
+                },
+                "params": {
+                  "key": "durability",
+                  "op": "scale",
+                  "table": [0, 0.15],
+                  "affixes": "prosequor:durability",
+                  "affixRange": [0,1]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.3], "bonus" : 10, "affixRange": [0,2] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.5], "bonus" : 25, "affixRange": [1,2] }
+              }
+            ]
+          }
+        ],
+        "requires": [ "tailor" ],
+        "excludes": [ "armorproficiency" ]
+      },
+      {
+        "id": "armorrepair",
+        "nameLang": "unlock-tailoring-armorrepair",
+        "icon": "textures/icons/tailoring/armor-repair.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-tailoring-armorrepair",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:repair",
+                "phase": "add-durability",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<armor>" ]
+                },
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.002, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.005, "cap": 1.5 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "tailor" ]
+      },
+      {
+        "id": "armorproficiency",
+        "nameLang": "unlock-tailoring-armorproficiency",
+        "icon": "textures/icons/tailoring/armor-proficiency.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-tailoring-armorproficiency",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<armor>" ]
+                },
+                "params": {
+                  "key": "protection",
+                  "op": "scale",
+                  "table": [0, 0.1],
+                  "affixes": "prosequor:reinforced",
+                  "affixRange": [0,1]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.3], "bonus" : 10, "affixRange": [0,2] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.5], "bonus" : 25, "affixRange": [1,2] }
+              }
+            ]
+          }
+        ],
+        "requires": [ "tailor" ],
+        "excludes": [ "clothingproficiency" ]
+      },
+      {
+        "id": "careful-stitching",
+        "nameLang": "unlock-tailoring-careful-stitching",
+        "icon": "textures/icons/tailoring/careful-stitching.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-tailoring-careful-stitching",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:craft-damaged",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "last-craft:<wearable>" ]
+                },
+                "params": { "op": "scale", "value": -0.33 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      }
+    ]
+  }
+}

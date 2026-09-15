@@ -1,0 +1,47 @@
+{
+  "id": "constitution",
+  "rules": [
+    {
+      "id": "prosequor:con-health",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:health",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": -5,
+        "toScore": 18,
+        "toValue": 5,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:con-satiety",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:satiety",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": -200,
+        "toScore": 18,
+        "toValue": 800,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:con-hunger-delay",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:hunger-delay",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 13,
+        "fromValue": 0,
+        "toScore": 18,
+        "toValue": 50,
+        "round": "ceil"
+      }
+    }
+  ]
+}

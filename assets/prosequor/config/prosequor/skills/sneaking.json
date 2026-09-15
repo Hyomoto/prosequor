@@ -1,0 +1,31 @@
+{
+  "id": "sneaking",
+  "nameLang": "skill-sneaking",
+  "descriptionLang": "skilldesc-sneaking",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/sneaking-skill.svg",
+  "attributeScores": [
+    { "id": "inconspicuity", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:sneaking-effort",
+      "rate": 0.001,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "sneaking" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:sneak-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.004, "cap": 0.2 }
+    }
+  ]
+}

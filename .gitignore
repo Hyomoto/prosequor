@@ -1,0 +1,64 @@
+# Build / pack
+bin/
+obj/
+dist/
+build.log
+tests.log
+*.binlog
+artifacts/
+
+
+# Local game overrides (not tests)
+local-mod-overrides/
+
+# Local scratch at repo root only. Committed Atlas world saves belong under tests/.
+/fixtures/
+/tools/
+
+# Local decompile / inspect dumps. Keep on disk; never commit.
+.tmp/
+.tmp-*
+.vscode/
+.cursor/
+
+# Test runners (dotnet test, VSTest, IDE explorers)
+TestResults/
+TestStore/
+*.trx
+*.coverage
+*.coveragexml
+coverage.xml
+coverage.json
+*.dmp
+
+# Atlas / xUnit local noise. Scratch servers live in %TEMP% by default;
+# keep these in case someone dumps a keep-scratch dir or generated manifest into the tree.
+atlas-scratch/
+.atlas/
+atlas-mods.generated.txt
+**/staged-mod/
+**/staged-hor/
+tests/Prosequor.Scenarios/third-party/**/*.dll
+
+
+# IDE / user
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+# Local icon-attribution scratch
+/icons/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store

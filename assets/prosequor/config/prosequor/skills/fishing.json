@@ -1,0 +1,399 @@
+{
+  "id": "fishing",
+  "nameLang": "skill-fishing",
+  "descriptionLang": "skilldesc-fishing",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/fishing-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value" : 1.0 },
+    { "id": "constitution", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:fishing-effort",
+      "rate": 0.005,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "fishing", "caller:<fishingpole>" ]
+      }
+    },
+    {
+      "id": "prosequor:fish-small",
+      "amount": 5,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<small-fish>" ]
+      }
+    },
+    {
+      "id": "prosequor:fish-medium",
+      "amount": 10,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<medium-fish>" ]
+      }
+    },
+    {
+      "id": "prosequor:fish-large",
+      "amount": 20,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<large-fish>" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:seek-bobber",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.001, "cap": 0.1 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "line-care",
+        "nameLang": "unlock-fishing-line-care",
+        "icon": "textures/icons/fishing/line-care.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-fishing-line-care",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:item-damage",
+                "phase": "amount",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<fishingpole>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 },
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "set", "value": 0 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 10,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.45 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "superior-bait",
+        "nameLang": "unlock-fishing-superior-bait",
+        "icon": "textures/icons/fishing/superior-bait.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-fishing-superior-bait",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:consume-bait",
+                "phase": "restock",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<fishingpole>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.06, "perSkillLevel": 0.01, "cap": 0.3 },
+                  "onSuccess": { "action": "prosequor:restore-consumed-bait" }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 10,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.12, "perSkillLevel": 0.01, "cap": 0.4 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.18, "perSkillLevel": 0.01, "cap": 0.45 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "master-baiter",
+        "nameLang": "unlock-fishing-master-baiter",
+        "icon": "textures/icons/fishing/master-baiter.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-fishing-master-baiter",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:seek-bobber",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "used-bait" ]
+                },
+                "params": { "op": "add", "base": 0.06, "perSkillLevel": 0.01, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.12, "perSkillLevel": 0.01, "cap": 0.4 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.18, "perSkillLevel": 0.01, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "superior-bait" ]
+      },
+      {
+        "id": "freshwater-fishing",
+        "nameLang": "unlock-fishing-freshwater-fishing",
+        "icon": "textures/icons/fishing/freshwater-fishing.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-fishing-freshwater-fishing",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "excludes": [ "saltwater-fishing" ],
+        "layout": { "columnBias": "left" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:seek-bobber",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<freshwater>" ]
+                },
+                "params": { "op": "scale", "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 35,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.55 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "line-care" ]
+      },
+      {
+        "id": "saltwater-fishing",
+        "nameLang": "unlock-fishing-saltwater-fishing",
+        "icon": "textures/icons/fishing/saltwater-fishing.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-fishing-saltwater-fishing",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "excludes": [ "freshwater-fishing" ],
+        "layout": { "columnBias": "right" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:seek-bobber",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<saltwater>" ]
+                },
+                "params": { "op": "scale", "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 35,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.35 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "line-care" ]
+      },
+      {
+        "id": "baiting",
+        "nameLang": "unlock-fishing-baiting",
+        "icon": "textures/icons/fishing/baiting.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-fishing-baiting",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "priority": 10,
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:consume-bait",
+                "phase": "restock",
+                "action": "prosequor:restock-last-bait",
+                "params": {}
+              }
+            ]
+          }
+        ],
+        "requires": [ "master-baiter" ]
+      },
+      {
+        "id": "junk-attractor",
+        "nameLang": "unlock-fishing-junk-attractor",
+        "icon": "textures/icons/fishing/junk-attractor.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-fishing-junk-attractor",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<fishingpole>", "target:<fish>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.25 },
+                  "onSuccess": {
+                    "action": "prosequor:replace-from-drop-table",
+                    "params": { "table": "prosequor:magnetic-treasure" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.08, "perSkillLevel": 0.01, "cap": 0.3 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.12, "perSkillLevel": 0.01, "cap": 0.35 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [
+          [ "saltwater-fishing", "freshwater-fishing" ]
+        ]
+      }
+    ]
+  }
+}

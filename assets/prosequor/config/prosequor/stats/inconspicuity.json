@@ -1,0 +1,81 @@
+{
+  "id": "inconspicuity",
+  "rules": [
+    {
+      "id": "prosequor:inc-animal-seeking-range",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:animal-seeking-range",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 0,
+        "fromValue": 250,
+        "toScore": 18,
+        "toValue": 80,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:inc-animal-response-rate-flee",
+      "minScore": 0,
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:animal-flee",
+      "phase": "response",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "op": "scale",
+        "fromScore": 0,
+        "fromValue": 1.1,
+        "midScore": 10,
+        "midValue": 1.0,
+        "toScore": 18,
+        "toValue": 0.92
+      }
+    },
+    {
+      "id": "prosequor:inc-animal-response-rate-seek",
+      "minScore": 0,
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:animal-seek",
+      "phase": "response",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "op": "scale",
+        "fromScore": 0,
+        "fromValue": 1.1,
+        "midScore": 10,
+        "midValue": 1.0,
+        "toScore": 18,
+        "toValue": 0.92
+      }
+    },
+    {
+      "id": "prosequor:inc-whole-vessel-loot",
+      "minScore": 11,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:whole-vessel-loot-chance",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 11,
+        "fromValue": 3,
+        "toScore": 18,
+        "toValue": 24,
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:inc-crit-chance",
+      "minScore": 14,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:crit-chance",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "fromScore": 14,
+        "fromValue": 3,
+        "toScore": 18,
+        "toValue": 15,
+        "round": "ceil"
+      }
+    }
+  ]
+}

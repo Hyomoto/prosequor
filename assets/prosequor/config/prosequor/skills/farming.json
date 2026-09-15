@@ -1,0 +1,526 @@
+{
+  "id": "farming",
+  "nameLang": "skill-farming",
+  "descriptionLang": "skilldesc-farming",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/farming-skill.svg",
+  "attributeScores": [
+    { "id": "resilience", "value" : 1.0 },
+    { "id": "constitution", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:harvest-domesticated-farming",
+      "amount": 0.025,
+      "pay": "quantity",
+      "exclude": ["<seed>"],
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["harvested", "domesticated", "target:<crop, berry-bush, fruit-tree>"]
+      }
+    },
+    {
+      "id": "prosequor:till-soil",
+      "amount": 0.5,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["till-soil"]
+      }
+    },
+    {
+      "id": "prosequor:crop-grown-farming",
+      "amount": 0.01,
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["grown", "domesticated", "target:<crop>"]
+      }
+    },
+    {
+      "id": "prosequor:fruit-tree-grown-farming",
+      "amount": 2,
+      "pay": "quantity",
+      "payee": "maker",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["grown", "domesticated", "target:<fruit-tree>"]
+      }
+    },
+    {
+      "id": "prosequor:fertilizer-absorbed",
+      "amount": 0.01,
+      "pay": "quantity",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["fertilizer-absorbed", "target:<farmland, berry-bush>"]
+      }
+    },
+    {
+      "id": "prosequor:water-farmland",
+      "rate": 0.01,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": ["interacting", "caller:<watering-can>", "target:<farmland>"]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:plant-crop",
+      "action": "prosequor:adjust-plant-climate-value",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.001, "cap": 0.1 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "repotting",
+        "nameLang": "unlock-farming-repotting",
+        "icon": "textures/icons/farming/repotting.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-farming-repotting",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:add-crop-seed",
+                "when": {
+                  "tags": [ "target:<immature-crop>" ]
+                },
+                "params": {}
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "seed-bank",
+        "nameLang": "unlock-farming-seed-bank",
+        "icon": "textures/icons/farming/seed-bank.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-farming-seed-bank",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<crop>", "drop:<seed>" ]
+                },
+                "params": { "op": "add", "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.1, "perSkillLevel": 0.02, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "greenthumb",
+        "nameLang": "unlock-farming-greenthumb",
+        "icon": "textures/icons/farming/greenthumb.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-farming-greenthumb",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<crop>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 1.0 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "soil-enrichment",
+        "nameLang": "unlock-farming-soil-enrichment",
+        "icon": "textures/icons/farming/soil-enrichment.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-farming-soil-enrichment",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:fertilize",
+                "action": "prosequor:number",
+                "params": { "op": "add", "base": 0.15, "perSkillLevel": 0, "cap": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.25, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.33, "perSkillLevel": 0, "cap": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "fruit-picker",
+        "nameLang": "unlock-farming-fruit-picker",
+        "icon": "textures/icons/farming/fruit-picker.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-farming-fruit-picker",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "layout": { "columnBias": "left" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<fruit-tree>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "seed-bank" ]
+      },
+      {
+        "id": "berrygrower",
+        "nameLang": "unlock-farming-berrygrower",
+        "icon": "textures/icons/farming/berrygrower.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-farming-berrygrower",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<berry-bush>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "seed-bank" ]
+      },
+      {
+        "id": "farmhand",
+        "nameLang": "unlock-farming-farmhand",
+        "icon": "textures/icons/farming/farmhand.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-farming-farmhand",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "soil-enrichment", "greenthumb" ]
+      },
+      {
+        "id": "edaphologist",
+        "nameLang": "unlock-farming-edaphologist",
+        "icon": "textures/icons/farming/edaphologist.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-farming-edaphologist",
+        "descriptionParams": [
+          { "sum": [ "0.maxFertility" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:enrich-soil",
+                "when": {
+                  "tags": [ "target:<farmland>" ]
+                },
+                "params": { "maxFertility": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "maxFertility": 65 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "soil-enrichment" ]
+      },
+      {
+        "id": "pomologist",
+        "nameLang": "unlock-farming-pomologist",
+        "icon": "textures/icons/farming/pomologist.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-farming-pomologist",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:plant-bush-cutting",
+                "phase": "growth",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": -0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.7 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 70,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.6 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "berrygrower" ]
+      },
+      {
+        "id": "orchidist",
+        "nameLang": "unlock-farming-orchidist",
+        "icon": "textures/icons/farming/orchidist.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-farming-orchidist",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:establish-cutting",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 70,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "fruit-picker" ]
+      },
+      {
+        "id": "fieldexpertise",
+        "nameLang": "unlock-farming-fieldexpertise",
+        "icon": "textures/icons/farming/fieldexpertise.svg",
+        "cost": 1,
+        "minSkillLevel": 50,
+        "descriptionLang": "unlockdesc-farming-fieldexpertise",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:field-work",
+                "phase": "size",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 2 }
+              },
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:scythe-multibreak",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "base": 0.4, "perSkillLevel": 0, "cap": 0 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "descriptionLang": "unlockdesc-farming-fieldexpertise-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 3 }
+              },
+              {
+                "replicate": 1,
+                "params": { "base": 0.8 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "farmhand" ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "swimming",
+  "nameLang": "skill-swimming",
+  "descriptionLang": "skilldesc-swimming",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/swimming-skill.svg",
+  "attributeScores": [
+    { "id": "strength", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:swimming-effort",
+      "rate": 0.001,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "swimming" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:swim-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.004, "cap": 0.2 }
+    }
+  ]
+}

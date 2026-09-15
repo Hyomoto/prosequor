@@ -1,0 +1,11 @@
+[
+  {
+    "op": "replace",
+    "path": "/entityClassByType",
+    "value": {
+      "*-populated-*": "Beehive",
+      "*-empty-*": "ProsequorPedigree"
+    },
+    "file": "game:blocktypes/reed/skep"
+  }
+]

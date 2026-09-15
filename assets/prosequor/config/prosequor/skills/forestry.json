@@ -1,0 +1,491 @@
+{
+  "id": "forestry",
+  "nameLang": "skill-forestry",
+  "descriptionLang": "skilldesc-forestry",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel", "tree-felling.0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/forestry-skill.svg",
+  "attributeScores": [
+    { "id": "strength", "value" : 1.0 },
+    { "id": "constitution", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:chop-forestry",
+      "amount": 0.1,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["block-broken", "target:<wood>", "caller:<axe>"]
+      }
+    },
+    {
+      "id": "prosequor:craft-firewood-forestry",
+      "amount": 0.025,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<firewood>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-planks-forestry",
+      "amount": 0.075,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<planks>" ]
+      }
+    },
+    {
+      "id": "prosequor:sapling-grown-forestry",
+      "amount": 3.0,
+      "payee": "maker",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["grown", "domesticated", "target:<sapling>"]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:interaction-speed",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<wood>", "caller:<axe>" ]
+      },
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.001 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "seasoned-logger",
+        "nameLang": "unlock-forestry-seasoned-logger",
+        "icon": "textures/icons/forestry/seasoned-logger.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-forestry-seasoned-logger",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<wood>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.01, "cap": 0.2 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.02, "cap": 0.4 },
+                "minSkillLevel": 10
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.02, "cap": 0.6 },
+                "minSkillLevel": 20
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "cleansplitter",
+        "nameLang": "unlock-forestry-cleansplitter",
+        "icon": "textures/icons/forestry/clean-splitter.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-forestry-cleansplitter",
+        "descriptionParams": [
+          { "sum": [ "0.base" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<firewood>" ]
+                },
+                "params": { "op": "add", "base": 2, "perSkillLevel": 0, "cap": 2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 4, "perSkillLevel": 0, "cap": 4 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 8, "perSkillLevel": 0, "cap": 8 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "seasoned-logger" ]
+      },
+      {
+        "id": "carpentry",
+        "nameLang": "unlock-forestry-carpentry",
+        "icon": "textures/icons/forestry/carpentry.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-forestry-carpentry",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<planks>" ]
+                },
+                "params": { "op": "scale", "base": 0.02, "perSkillLevel": 0, "cap": 0.02 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.04, "perSkillLevel": 0, "cap": 0.04 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.08, "perSkillLevel": 0, "cap": 0.08 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "cleansplitter" ]
+      },
+      {
+        "id": "tree-felling",
+        "nameLang": "unlock-forestry-tree-felling",
+        "icon": "textures/icons/forestry/tree-felling.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-forestry-tree-felling",
+        "descriptionParams": [
+          { "sum": [ "root.0.perSkillLevel", "prev.0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "root.0.perSkillLevel", "0.perSkillLevel" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:interaction-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<wood>", "caller:<axe>" ]
+                },
+                "params": { "op": "add", "ofBase": true, "base": 0, "perSkillLevel": 0.001 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.002 },
+                "minSkillLevel": 1
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.002 },
+                "minSkillLevel": 1
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "axe-care",
+        "nameLang": "unlock-forestry-axe-care",
+        "icon": "textures/icons/forestry/axe-care.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-forestry-axe-care",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:block-damaged",
+                "phase": "amount",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<axe>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 },
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "set", "value": 0 }
+                  }
+                }
+              },
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:craft-damaged",
+                "phase": "amount",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<axe>", "last-craft:<firewood>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 },
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "set", "value": 0 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
+                },
+                "minSkillLevel": 10
+              },
+              {
+                "replicate": 1,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
+                },
+                "minSkillLevel": 10
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.45 }
+                },
+                "minSkillLevel": 20
+              },
+              {
+                "replicate": 1,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.45 }
+                },
+                "minSkillLevel": 20
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "sapling-saver",
+        "nameLang": "unlock-forestry-sapling-saver",
+        "icon": "textures/icons/forestry/sapling-saver.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-forestry-sapling-saver",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<leaves>", "drop:<sapling>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "cap": 0 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2 },
+                "minSkillLevel": 20
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "lumberjack",
+        "nameLang": "unlock-forestry-lumberjack",
+        "icon": "textures/icons/forestry/lumberjack.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-forestry-lumberjack",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "layout": { "columnBias": "right" },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "seasoned-logger", "axe-care" ]
+      },
+      {
+        "id": "sapjack",
+        "nameLang": "unlock-forestry-sapjack",
+        "icon": "textures/icons/forestry/sapjack.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-forestry-sapjack",
+        "descriptionParams": [
+          { "sum": [ "0.chance.percent" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "target:<pine>" ]
+                },
+                "params": {
+                  "chance": { "percent": 2 },
+                  "onSuccess": {
+                    "action": "prosequor:append-from-drop-table",
+                    "params": { "table": "prosequor:resin" }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "axe-care" ]
+      },
+      {
+        "id": "woodland-spirit",
+        "nameLang": "unlock-forestry-woodland-spirit",
+        "icon": "textures/icons/forestry/woodland-spirit.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-forestry-woodland-spirit",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:plant-sapling",
+                "phase": "growth",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": -0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.7 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.6 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "sapling-saver" ]
+      }
+    ]
+  }
+}

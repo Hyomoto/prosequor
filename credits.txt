@@ -1,0 +1,354 @@
+Prosequor third-party icon credits
+==================================
+
+Many icons were sourced from https://game-icons.net/ and are used under Creative Commons Attribution 3.0 Unported (CC BY 3.0):
+
+  https://creativecommons.org/licenses/by/3.0/
+
+Authors
+-------
+  Lorc              https://lorcblog.blogspot.com
+  Delapouite        https://delapouite.com
+  Skoll
+  Cathelineau
+  Caro Asercion
+  Faithtoken        http://www.faithtoken.com
+  DarkZaitzev       http://darkzaitzev.deviantart.com
+  Lucas
+  SeregaCthtuf
+
+
+Game-icons.net (CC BY 3.0)
+----------------------------------------------------------
+  textures/icons/forager.svg                         Grab — Lorc
+    https://game-icons.net/1x1/lorc/grab.html
+  textures/icons/adaptation.svg                      Gears — Lorc
+    https://game-icons.net/1x1/lorc/gears.html
+  textures/icons/athletics.svg                       Athletics — Lorc
+    https://game-icons.net/1x1/lorc/run.html
+  textures/icons/swimming.svg                        Pool Dive — Delapouite
+    https://game-icons.net/1x1/delapouite/pool-dive.html
+  textures/icons/sneaking.svg                        Robber — Delapouite
+    https://game-icons.net/1x1/delapouite/robber.html
+  textures/icons/metalworking/hammer-care.svg        Hammer Drop — Lorc
+    https://game-icons.net/1x1/lorc/hammer-drop.html
+  textures/icons/metalworking/weaponsmith.svg        Sword Smithing — Lorc
+    https://game-icons.net/1x1/lorc/sword-smithing.html
+  textures/icons/metalworking/heated-hits.svg        Anvil Impact — Lorc
+    https://game-icons.net/1x1/lorc/anvil-impact.html
+  textures/icons/metalworking/gavel.svg              Gavel — Lorc
+    https://game-icons.net/1x1/lorc/gavel.html
+  textures/icons/metalworking/hammer-care.svg        Flat Hammer — Lorc
+    https://game-icons.net/1x1/lorc/flat-hammer.html
+  textures/icons/metalworking/toolsmith.svg          Dig Dug — Lorc
+    https://game-icons.net/1x1/delapouite/dig-dug.html
+  textures/icons/metalworking/blacksmith.svg         Blacksmith — Delapouite
+    https://game-icons.net/1x1/delapouite/blacksmith.html
+  textures/icons/metalworking/thrifty-smithing.svg   Gold Stack — Delapouite
+    https://game-icons.net/1x1/delapouite/gold-stack.html
+  textures/icons/metalworking/craftsmanship.svg      Mona List — Delapouite
+    https://game-icons.net/1x1/delapouite/mona-lisa.html
+  textures/icons/animal-husbandry-skill.svg          Sheep — Delapouite
+    https://game-icons.net/1x1/delapouite/sheep.html
+  textures/icons/archery-skill.svg                   Archer — Delapouite
+    https://game-icons.net/1x1/delapouite/archer.html
+  textures/icons/brewing-skill.svg                   Brandy bottle — Lorc
+    https://game-icons.net/1x1/lorc/brandy-bottle.html
+  textures/icons/clayforming-skill.svg               Painted pottery — Delapouite
+    https://game-icons.net/1x1/delapouite/painted-pottery.html
+  textures/icons/clayforming/claywright.svg          Pointing — Lorc
+    https://game-icons.net/1x1/lorc/pointing.html
+  textures/icons/clayforming/claysaver.svg           Brick pile — Delapouite
+    https://game-icons.net/1x1/delapouite/brick-pile.html
+  textures/icons/clayforming/flowstate.svg           Tired eye — Delapouite
+    https://game-icons.net/1x1/delapouite/tired-eye.html
+  textures/icons/clayforming/makersmark.svg          Ubisoft sun — Lorc
+    https://game-icons.net/1x1/lorc/ubisoft-sun.html
+  textures/icons/clayforming/quicklayer.svg          Slap — Lorc
+    https://game-icons.net/1x1/lorc/slap.html
+  textures/icons/clayforming/claymation.svg          Card discard — Faithtoken
+    https://game-icons.net/1x1/faithtoken/card-discard.html
+  textures/icons/combat-skill.svg                    Sword brandish — Delapouite
+    https://game-icons.net/1x1/delapouite/sword-brandish.html
+  textures/icons/constitution-attribute.svg          Heart organ — Lorc
+    https://game-icons.net/1x1/lorc/heart-organ.html
+  textures/icons/cooking-skill.svg                   Cooking pot — Delapouite
+    https://game-icons.net/1x1/delapouite/cooking-pot.html
+  textures/icons/dairy-nutrition.svg                 Jug — Delapouite
+    https://game-icons.net/1x1/delapouite/jug.html
+  textures/icons/digging-skill.svg                   Coal pile — Delapouite
+    https://game-icons.net/1x1/delapouite/coal-pile.html
+  textures/icons/digging/shovel-care.svg             Trench spade — Skoll
+    https://game-icons.net/1x1/skoll/trench-spade.html
+  textures/icons/digging/clay-digging.svg            Silex — Delapouite
+    https://game-icons.net/1x1/delapouite/silex.html
+  textures/icons/digging/clay-spotter.svg            Flint spark — Delapouite
+    https://game-icons.net/1x1/delapouite/flint-spark.html
+  textures/icons/digging/peat-digging.svg            Stone tablet — Lorc
+    https://game-icons.net/1x1/lorc/stone-tablet.html
+  textures/icons/digging/saltpeter-digging.svg       Stone pile — Delapouite
+    https://game-icons.net/1x1/delapouite/stone-pile.html
+  textures/icons/digging/shovel-expert.svg           Dig hole — Delapouite
+    https://game-icons.net/1x1/delapouite/dig-hole.html
+  textures/icons/farming/berrygrower.svg             Berry bush — Delapouite
+    https://game-icons.net/1x1/delapouite/berry-bush.html
+  textures/icons/farming/pomologist.svg              New shoot — Lorc
+    https://game-icons.net/1x1/lorc/new-shoot.html
+  textures/icons/farming/soil-enrichment.svg         Powder — Lorc
+    https://game-icons.net/1x1/lorc/powder.html
+  textures/icons/farming/crossbreeding.svg           Sprout — Lorc
+    https://game-icons.net/1x1/lorc/sprout.html
+  textures/icons/farming/seed-bank.svg               Sesame — Delapouite
+    https://game-icons.net/1x1/delapouite/sesame.html
+  textures/icons/farming/farmhand.svg                Farmer — Delapouite
+    https://game-icons.net/1x1/delapouite/farmer.html
+  textures/icons/farming/fieldexpertise.svg          Plow — Delapouite
+    https://game-icons.net/1x1/delapouite/plow.html
+  textures/icons/farming/orchidist.svg               Fruiting — Lorc
+    https://game-icons.net/1x1/lorc/fruiting.html
+  textures/icons/farming/greenthumb.svg              Wheat — Lorc
+    https://game-icons.net/1x1/lorc/wheat.html
+  textures/icons/farming/fruit-picker.svg            Fruit tree — Delapouite
+    https://game-icons.net/1x1/delapouite/fruit-tree.html
+  textures/icons/farming/edaphologist.svg            Fertilizer bag — Delapouite
+    https://game-icons.net/1x1/delapouite/fertilizer-bag.html
+  textures/icons/farming/repotting.svg               Plant seed — Lorc
+    https://game-icons.net/1x1/lorc/plant-seed.html
+  textures/icons/fishing-skill.svg                   Fishing pole — Delapouite
+    https://game-icons.net/1x1/delapouite/fishing-pole.html
+  textures/icons/fishing/ancient-mariner.svg         Stomach — Delapouite
+    https://game-icons.net/1x1/delapouite/stomach.html
+  textures/icons/fishing/superior-bait.svg           Fishing lure — Delapouite
+    https://game-icons.net/1x1/delapouite/fishing-lure.html
+  textures/icons/fishing/saltwater-fishing.svg       At sea — Lorc
+    https://game-icons.net/1x1/lorc/at-sea.html
+  textures/icons/fishing/master-baiter.svg           Fishing — Delapouite
+    https://game-icons.net/1x1/delapouite/fishing.html
+  textures/icons/fishing/ice-fisher.svg              Thermometer cold — Delapouite
+    https://game-icons.net/1x1/delapouite/thermometer-cold.html
+  textures/icons/fishing/junk-attractor.svg          Oyster pearl — Delapouite
+    https://game-icons.net/1x1/delapouite/oyster-pearl.html
+  textures/icons/fishing/moonlit-waters.svg          Star swirl — Lorc
+    https://game-icons.net/1x1/lorc/star-swirl.html
+  textures/icons/fishing/baiting.svg                 Fishing hook — Lorc
+    https://game-icons.net/1x1/lorc/fishing-hook.html
+  textures/icons/fishing/freshwater-fishing.svg      River — Delapouite
+    https://game-icons.net/1x1/delapouite/river.html
+  textures/icons/forestry-skill.svg                  Axe in stump — Lorc
+    https://game-icons.net/1x1/lorc/axe-in-stump.html
+  textures/icons/forestry/sapling-saver.svg          Ground sprout — Lorc
+    https://game-icons.net/1x1/lorc/ground-sprout.html
+  textures/icons/forestry/tree-felling.svg           Axe swing — Lorc
+    https://game-icons.net/1x1/lorc/axe-swing.html
+  textures/icons/forestry/axe-care.svg               Broken axe — Delapouite
+    https://game-icons.net/1x1/delapouite/broken-axe.html
+  textures/icons/forestry/carpentry.svg              Wood beam — Delapouite
+    https://game-icons.net/1x1/delapouite/wood-beam.html
+  textures/icons/forestry/clean-splitter.svg         Axe in log — Delapouite
+    https://game-icons.net/1x1/delapouite/axe-in-log.html
+  textures/icons/forestry/sapjack.svg                Goo spurt — Lorc
+    https://game-icons.net/1x1/lorc/goo-spurt.html
+  textures/icons/forestry/woodland-spirit.svg        Tree growth — Delapouite
+    https://game-icons.net/1x1/delapouite/tree-growth.html
+  textures/icons/fruit-nutrition.svg                 Grapes — Lorc
+    https://game-icons.net/1x1/lorc/grapes.html
+  textures/icons/generic.svg                         Check mark — Delapouite
+    https://game-icons.net/1x1/delapouite/check-mark.html
+  textures/icons/grain-nutrition.svg                 Wheat — Lorc
+    https://game-icons.net/1x1/lorc/wheat.html
+  textures/icons/husbandry/animal-whisperer.svg      Rabbit — Delapouite
+    https://game-icons.net/1x1/delapouite/rabbit.html
+  textures/icons/husbandry/apiary-master.svg         Beehive — Delapouite
+    https://game-icons.net/1x1/delapouite/beehive.html
+  textures/icons/husbandry/calm-hives.svg            Tree beehive — Delapouite
+    https://game-icons.net/1x1/delapouite/tree-beehive.html
+  textures/icons/husbandry/calming-presence.svg      Goat — Skoll
+    https://game-icons.net/1x1/skoll/goat.html
+  textures/icons/husbandry/feedhand.svg              Grain bundle — Delapouite
+    https://game-icons.net/1x1/delapouite/grain-bundle.html
+  textures/icons/husbandry/gentle-spirit.svg         Dread — Cathelineau
+    https://game-icons.net/1x1/cathelineau/dread.html
+  textures/icons/husbandry/hen-friend.svg            New born — Delapouite
+    https://game-icons.net/1x1/delapouite/new-born.html
+  textures/icons/husbandry/rancher.svg               Barn — Delapouite
+    https://game-icons.net/1x1/delapouite/barn.html
+  textures/icons/husbandry/sticky-fingers.svg        Dripping honey — Lorc
+    https://game-icons.net/1x1/lorc/dripping-honey.html
+  textures/icons/husbandry/warm-hands.svg            Udder — Delapouite
+    https://game-icons.net/1x1/delapouite/udder.html
+  textures/icons/inconspicuity-attribute.svg         Cowled — Lorc
+    https://game-icons.net/1x1/lorc/cowled.html
+  textures/icons/metalworking-skill.svg              Anvil impact — Lorc
+    https://game-icons.net/1x1/lorc/anvil-impact.html
+  textures/icons/mining-skill.svg                    Mining — Lorc
+    https://game-icons.net/1x1/lorc/mining.html
+  textures/icons/mining/shiny-hunter.svg             Minerals — Faithtoken
+    https://game-icons.net/1x1/faithtoken/minerals.html
+  textures/icons/mining/glittering-swings.svg        Diamond hard — Lorc
+    https://game-icons.net/1x1/lorc/diamond-hard.html
+  textures/icons/mining/geologist.svg                Crystal eye — Lorc
+    https://game-icons.net/1x1/lorc/crystal-eye.html
+  textures/icons/mining/lucky-ore.svg                Shamrock — Delapouite
+    https://game-icons.net/1x1/delapouite/shamrock.html
+  textures/icons/mining/miner.svg                    Stone crafting — Lorc
+    https://game-icons.net/1x1/lorc/stone-crafting.html
+  textures/icons/mining/abundant-ores.svg            Ore — Faithtoken
+    https://game-icons.net/1x1/faithtoken/ore.html
+  textures/icons/mining/pickaxe-expert.svg           Miner — Delapouite
+    https://game-icons.net/1x1/delapouite/miner.html
+  textures/icons/mining/rock-hoarder.svg             Stone pile — Delapouite
+    https://game-icons.net/1x1/delapouite/stone-pile.html
+  textures/icons/mining/quarrying-strikes.svg        Stone block — Lorc
+    https://game-icons.net/1x1/lorc/stone-block.html
+  textures/icons/panning/double-dipper.svg           Clover — Lorc
+    https://game-icons.net/1x1/lorc/clover.html
+  textures/icons/panning/very-patient.svg            Gold nuggets — Delapouite
+  textures/icons/metalworking/bit-parts.svg
+    https://game-icons.net/1x1/delapouite/gold-nuggets.html
+  textures/icons/perception-attribute.svg            Bullseye — Skoll
+    https://game-icons.net/1x1/skoll/bullseye.html
+  textures/icons/protein-nutrition.svg               Meat — Lorc
+    https://game-icons.net/1x1/lorc/meat.html
+  textures/icons/resiliance-attribute.svg            Knockout — Skoll
+    https://game-icons.net/1x1/skoll/knockout.html
+  textures/icons/riding-skill.svg                    Horseshoe — Delapouite
+    https://game-icons.net/1x1/delapouite/horseshoe.html
+  textures/icons/riding/jousting.svg                 Mounted knight — Skoll
+    https://game-icons.net/1x1/skoll/mounted-knight.html
+  textures/icons/riding/restful-rider.svg            Cavalry — Delapouite
+    https://game-icons.net/1x1/delapouite/cavalry.html
+  textures/icons/seamanship-skill.svg                At sea — Lorc
+    https://game-icons.net/1x1/lorc/at-sea.html
+  textures/icons/seamanship/boatswain.svg            Sailboat — Delapouite
+    https://game-icons.net/1x1/delapouite/sailboat.html
+  textures/icons/seamanship/oarsman.svg              Canoe — Delapouite
+    https://game-icons.net/1x1/delapouite/canoe.html
+  textures/icons/seamanship/oceaneer.svg             Big wave — Lorc
+    https://game-icons.net/1x1/lorc/big-wave.html
+  textures/icons/seamanship/rigger.svg               Sail — Delapouite
+    https://game-icons.net/1x1/delapouite/sail.html
+  textures/icons/seamanship/river-raider.svg         River — Delapouite
+    https://game-icons.net/1x1/delapouite/river.html
+  textures/icons/seamanship/rudderman.svg            Ship wheel — Delapouite
+    https://game-icons.net/1x1/delapouite/ship-wheel.html
+  textures/icons/sliced-bread.svg                    Sliced bread — Lorc
+    https://game-icons.net/1x1/lorc/sliced-bread.html
+  textures/icons/strength-attribute.svg              Strong — Lorc
+    https://game-icons.net/1x1/lorc/strong.html
+  textures/icons/survival-skill.svg                  Campfire — Lorc
+    https://game-icons.net/1x1/lorc/campfire.html
+  textures/icons/tailoring-skill.svg                 Sewing needle — Lorc
+    https://game-icons.net/1x1/lorc/sewing-needle.html
+  textures/icons/tailoring/armor-proficiency.svg     Mail shirt — Lorc
+    https://game-icons.net/1x1/lorc/mail-shirt.html
+  textures/icons/tailoring/armor-repair.svg          Armor blueprint — SeregaCthtuf
+    https://game-icons.net/1x1/seregacthtuf/armor-blueprint.html
+  textures/icons/tailoring/careful-stitching.svg     Measure tape — Delapouite
+    https://game-icons.net/1x1/delapouite/measure-tape.html
+  textures/icons/tailoring/clothes-mending.svg       Safety pin — Delapouite
+    https://game-icons.net/1x1/delapouite/safety-pin.html
+  textures/icons/tailoring/clothing-proficiency.svg  Shirt — Lucas
+    https://game-icons.net/1x1/lucasms/shirt.html
+  textures/icons/tailoring/textile-laborer.svg       Rolled cloth — Delapouite
+    https://game-icons.net/1x1/delapouite/rolled-cloth.html
+  textures/icons/tailoring/spinthrifty.svg           Spinning wheel — Caro Asercion
+    https://game-icons.net/1x1/caro-asercion/spinning-wheel.html
+  textures/icons/tailoring/cool-garments.svg         Sun — Lorc
+    https://game-icons.net/1x1/lorc/sun.html
+  textures/icons/tailoring/tailor.svg                Sewing needle — Lorc
+    https://game-icons.net/1x1/lorc/sewing-needle.html
+  textures/icons/tailoring/tanning.svg               Animal hide — Delapouite
+    https://game-icons.net/1x1/delapouite/animal-hide.html
+  textures/icons/tailoring/threadmaker.svg           Sewing string — Delapouite
+    https://game-icons.net/1x1/delapouite/sewing-string.html
+  textures/icons/tailoring/warm-garments.svg         Snowflake 2 — Lorc
+    https://game-icons.net/1x1/lorc/snowflake-2.html
+  textures/icons/forager-skill.svg                   Mushrooms — Delapouite
+    https://game-icons.net/1x1/delapouite/mushrooms.html
+  textures/icons/athletics-skill.svg                 Running shoe — Lorc
+    https://game-icons.net/1x1/lorc/running-shoe.html
+  textures/icons/swimming-skill.svg                  Swimfins — Delapouite
+    https://game-icons.net/1x1/delapouite/swimfins.html
+  textures/icons/sneaking-skill.svg                  Footsteps — Lorc
+    https://game-icons.net/1x1/lorc/footsteps.html
+  textures/icons/temporal-adaptation-skill.svg       Gears — Lorc
+    https://game-icons.net/1x1/lorc/gears.html
+  textures/icons/vegetable-nutrition.svg             Carrot — Delapouite
+    https://game-icons.net/1x1/delapouite/carrot.html
+
+
+LibreICONS / Diemen Design (MIT)
+--------------------------------
+  Farm — Diemen Design, Libre Variety Filled Icons
+  via SVG Repo. Recolored / renamed for the farming skill icon.
+
+  textures/icons/farming-skill.svg
+
+  Source: https://github.com/DiemenDesign/LibreICONS
+
+  MIT License
+
+  Copyright (c) 2018 Diemen Design
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+
+SVG Repo / Outdoors 8 (CC0)
+---------------------------
+  Log wood — CC0, collection Outdoors 8, uploaded via SVG Repo.
+  Attribution is not required; recorded here for bookkeeping.
+  Recolored / renamed for the seasoned logger node (formerly lumberjack).
+
+  textures/icons/forestry/seasoned-logger.svg
+
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+
+Flaticon (free license with attribution)
+----------------------------------------
+  Gold rush icons created by Smashicons - Flaticon
+  https://www.flaticon.com/free-icons/gold-rush
+
+  textures/icons/panning-skill.svg
+
+
+Original (Hyomoto)
+------------------
+  textures/icons/digging/shovelman.svg
+  textures/icons/fishing/line-care.svg
+  textures/icons/forestry/lumberjack.svg
+  textures/icons/mining/pickaxe-care.svg
+  textures/icons/panning/panning-expert.svg
+  textures/icons/riding/break-fall.svg
+  textures/icons/riding/steppe-rider.svg
+  textures/icons/riding/mount-breaking.svg
+  textures/icons/riding/jockey.svg
+  textures/icons/metalworking/bloom-brigand.svg
+
+
+Adding a new icon
+-----------------
+  1. Download from the icon's page, not a random mirror.
+  2. Keep the original slug in icons/{slug}.svg (scratch folder).
+  3. Copy/rename into assets/prosequor/textures/icons/ as needed.
+  4. Add a row in the matching section: shipped path, original title,
+     author, page URL (or "original" if you drew it).
+  5. Note extras (recolor, crop, composite). Do not mix sources
+     across sections.
+

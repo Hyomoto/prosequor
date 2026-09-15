@@ -1,0 +1,14 @@
+{
+  "type": "code",
+  "modid": "horperformanceoptimizer",
+  "name": "HoR Performance Optimizer",
+  "version": "1.2.0",
+  "description": "Third-party craft/handbook optimizer staged only for Atlas A/B profile runs.",
+  "authors": ["HoR"],
+  "side": "Universal",
+  "requiredOnClient": false,
+  "requiredOnServer": false,
+  "dependencies": {
+    "game": "1.22.0"
+  }
+}

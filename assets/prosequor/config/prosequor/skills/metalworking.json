@@ -1,0 +1,533 @@
+{
+  "id": "metalworking",
+  "nameLang": "skill-metalworking",
+  "descriptionLang": "skilldesc-metalworking",
+  "icon": "textures/icons/metalworking-skill.svg",
+  "attributeScores": [
+    { "id": "strength", "value": 1.0 },
+    { "id": "perception", "value": 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-metal-tool",
+      "amount": 2,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<metal-crafts>" ]
+      }
+    },
+    {
+      "id": "prosequor:smith-work",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafting", "caller:@hand", "target:<smithing-formed>" ]
+      }
+    },
+    {
+      "id": "prosequor:mold-cast",
+      "amount": [1, 5, 15],
+      "pay": "ingredients",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "mold-cast" ]
+      }
+    },
+    {
+      "id": "prosequor:bloomery-harvest",
+      "amount": 3,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "bloomery-harvest" ]
+      }
+    }
+  ],
+  "effects": [],
+  "tree": {
+    "nodes": [
+      {
+        "id": "hammer-care",
+        "nameLang": "unlock-metalworking-hammer-care",
+        "icon": "textures/icons/metalworking/hammer-care.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-metalworking-hammer-care",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:item-damage",
+                "phase": "amount",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<hammer>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15, "skill": "mining" },
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "set", "value": 0 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.45 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "bloom-brigand",
+        "nameLang": "unlock-metalworking-bloom-brigand",
+        "icon": "textures/icons/metalworking/bloom-brigand.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-metalworking-bloom-brigand",
+        "descriptionParams": [
+          { "sum": [ "1.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:harvest-bloomery",
+                "phase": "allow-right-click-harvest",
+                "action": "prosequor:set-true"
+              },
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:harvest-bloomery",
+                "phase": "right-click-harvest-break-chance",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              { "replicate": 0 },
+              { "replicate": 1, "params": { "value": 0.10 } }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              { "replicate": 0 },
+              { "replicate": 1, "params": { "value": 0.05 } }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "hammer-cadence",
+        "nameLang": "unlock-metalworking-hammer-cadence",
+        "icon": "textures/icons/metalworking/hammer-cadence.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-metalworking-hammer-cadence",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:anvil-strike",
+                "phase": "decay-shrink",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 0.02 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 15,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.05 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "thrifty-smithing",
+        "nameLang": "unlock-metalworking-thrifty-smithing",
+        "icon": "textures/icons/metalworking/thrifty-smithing.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "layout": { "layerOffset": 0 },
+        "descriptionLang": "unlockdesc-metalworking-thrifty-smithing",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:anvil-split",
+                "phase": "bits-refund",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 6 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 70,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 4 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "blacksmith"]
+      },
+      {
+        "id": "blacksmith",
+        "nameLang": "unlock-metalworking-blacksmith",
+        "icon": "textures/icons/metalworking/blacksmith.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-metalworking-blacksmith",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-base",
+                "action": "prosequor:number",
+                "params": { "op": "add", "base": 0, "perSkillLevel": 1 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "quality-window",
+                "action": "prosequor:number",
+                "params": { "op": "add", "base": 0, "perSkillLevel": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "hammer-care", "hammer-cadence" ]
+      },
+      {
+        "id": "slag-smasher",
+        "nameLang": "unlock-metalworking-slag-smasher",
+        "icon": "textures/icons/metalworking/slag-smasher.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "layout": { "layerOffset": 0 },
+        "descriptionLang": "unlockdesc-metalworking-slag-smasher",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:anvil-heavy-hit",
+                "phase": "slag-radius",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 3 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "blacksmith" ]
+      },
+      {
+        "id": "bit-parts",
+        "nameLang": "unlock-metalworking-bit-parts",
+        "icon": "textures/icons/metalworking/bit-parts.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-metalworking-bit-parts",
+        "tiers": [
+          {
+            "effects": []
+          }
+        ],
+        "requires": [ "thrifty-smithing" ]
+      },
+      {
+        "id": "weaponsmith",
+        "nameLang": "unlock-metalworking-weaponsmith",
+        "icon": "textures/icons/metalworking/weaponsmith.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-metalworking-weaponsmith",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<weapon>" ]
+                },
+                "params": {
+                  "key": "damage",
+                  "op": "scale",
+                  "table": [0.1, 0.2],
+                  "affixes": "prosequor:damage"
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.3], "bonus": 10 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.5], "bonus": 25 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "blacksmith" ]
+      },
+      {
+        "id": "craftsmanship",
+        "nameLang": "unlock-metalworking-craftsmanship",
+        "icon": "textures/icons/metalworking/craftsmanship.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-metalworking-craftsmanship",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<weapon, tool>" ]
+                },
+                "params": {
+                  "key": "durability",
+                  "op": "scale",
+                  "table": [0, 0.15],
+                  "affixes": "prosequor:durability"
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.3], "bonus": 15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.5], "bonus": 33 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "blacksmith" ]
+      },
+      {
+        "id": "toolsmith",
+        "nameLang": "unlock-metalworking-toolsmith",
+        "icon": "textures/icons/metalworking/toolsmith.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-metalworking-toolsmith",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<tool>" ]
+                },
+                "params": {
+                  "key": "miningSpeed",
+                  "op": "scale",
+                  "table": [0.02, 0.02],
+                  "affixes": "prosequor:workspeed"
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.03, 0.03], "bonus": 10 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.04, 0.03], "bonus": 25 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "blacksmith" ]
+      },
+      {
+        "id": "hammer-mastery",
+        "nameLang": "unlock-metalworking-hammer-mastery",
+        "icon": "textures/icons/metalworking/hammer-mastery.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-metalworking-hammer-mastery",
+        "descriptionParams": [
+          { "sum": [ "1.value" ] },
+          { "sum": [ "0.value" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:anvil-heavy-hit",
+                "phase": "assist-radius",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 2 }
+              },
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:anvil-heavy-hit",
+                "phase": "move-count",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 3 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 70,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 3 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 4 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "slag-smasher" ]
+      }
+    ]
+  }
+}

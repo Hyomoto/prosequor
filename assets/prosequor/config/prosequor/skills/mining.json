@@ -1,0 +1,499 @@
+{
+  "id": "mining",
+  "nameLang": "skill-mining",
+  "descriptionLang": "skilldesc-mining",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel", "pickaxeexpert.0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/mining-skill.svg",
+  "attributeScores": [
+    { "id": "strength", "value" : 1.0 },
+    { "id": "resilience", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:mine-mining",
+      "amount": [1, 3, 5],
+      "pay": "resistance",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["block-broken", "target:<stone,ore,gemstone>", "caller:<pickaxe,bombs>"]
+      }
+    },
+    {
+      "id": "prosequor:craft-nugget-grid-mining",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["crafted", "caller:@grid", "target:<nugget>"]
+      }
+    },
+    {
+      "id": "prosequor:craft-nugget-hammer-mining",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["crafted", "caller:<hammer>", "target:<nugget>"]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:interaction-speed",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<stone>", "caller:<pickaxe>" ]
+      },
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.001 }
+    },
+    {
+      "hook": "prosequor:block-interaction",
+      "verb": "prosequor:interaction-speed",
+      "action": "prosequor:number",
+      "when": {
+        "tags": [ "target:<ore>", "caller:<pickaxe>" ]
+      },
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.001 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "pickaxe-care",
+        "nameLang": "unlock-mining-pickaxe-care",
+        "icon": "textures/icons/mining/pickaxe-care.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-mining-pickaxe-care",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:block-damaged",
+                "phase": "amount",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "caller:<pickaxe>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 },
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "set", "value": 0 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 10,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "perSkillLevel": 0.02, "cap": 0.45 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "abundant-ores",
+        "nameLang": "unlock-mining-abundant-ores",
+        "icon": "textures/icons/mining/abundant-ores.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-mining-abundant-ores",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<ore>", "caller:<pickaxe>" ]
+                },
+                "params": { "op": "add", "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 }
+              },
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:has-unlock",
+                "when": {
+                  "tags": [ "target:<ore>", "caller:<pickaxe>", "drop:<crystalizedore>" ]
+                },
+                "params": {
+                  "unlock": "shiny-hunter",
+                  "onSuccess": {
+                    "action": "prosequor:number",
+                    "params": { "op": "add", "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              },
+              {
+                "replicate": 1,
+                "params": {
+                  "onSuccess": {
+                    "params": { "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.13, "perSkillLevel": 0.02, "cap": 0.5 }
+              },
+              {
+                "replicate": 1,
+                "params": {
+                  "onSuccess": {
+                    "params": { "base": 0.13, "perSkillLevel": 0.02, "cap": 0.5 }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "pickaxeexpert",
+        "nameLang": "unlock-mining-pickaxeexpert",
+        "icon": "textures/icons/mining/pickaxe-expert.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-mining-pickaxeexpert",
+        "descriptionParams": [
+          { "sum": [ "root.0.perSkillLevel", "prev.0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "root.0.perSkillLevel", "0.perSkillLevel" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:interaction-speed",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<stone, ore>", "caller:<pickaxe>" ]
+                },
+                "params": { "op": "add", "ofBase": true, "base": 0, "perSkillLevel": 0.001 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.0025 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "perSkillLevel": 0.004 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "rock-hoarder",
+        "nameLang": "unlock-mining-rock-hoarder",
+        "icon": "textures/icons/mining/rock-hoarder.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-mining-rock-hoarder",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<stone>", "caller:<pickaxe>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 1.0 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "glittering-swings",
+        "nameLang": "unlock-mining-glittering-swings",
+        "icon": "textures/icons/mining/glittering-swings.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-mining-glittering-swings",
+        "layout": { "columnBias": "left" },
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<gemstone>", "caller:<pickaxe>" ]
+                },
+                "params": { "op": "add", "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.13, "perSkillLevel": 0.02, "cap": 0.5 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "abundant-ores" ]
+      },
+      {
+        "id": "lucky-ore",
+        "nameLang": "unlock-mining-lucky-ore",
+        "icon": "textures/icons/mining/lucky-ore.svg",
+        "cost": 1,
+        "minSkillLevel": 50,
+        "descriptionLang": "unlockdesc-mining-lucky-ore",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" }
+        ],
+        "layout": { "layerOffset": 0 },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stack",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "target:<ore>", "caller:<pickaxe>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0, "cap": 0.05 },
+                  "onSuccess": { "action": "prosequor:upgrade-ore-grade" }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 80,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.1, "perSkillLevel": 0, "cap": 0.1 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "miner", "glittering-swings", "abundant-ores" ]
+      },
+      {
+        "id": "miner",
+        "nameLang": "unlock-mining-miner",
+        "icon": "textures/icons/mining/miner.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-mining-miner",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "pickaxeexpert", "abundant-ores", "rock-hoarder" ]
+      },
+      {
+        "id": "quarrying-strikes",
+        "nameLang": "unlock-mining-quarrying-strikes",
+        "icon": "textures/icons/mining/quarrying-strikes.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-mining-quarrying-strikes",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.chance.cap" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stack",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "target:<stone>", "caller:<pickaxe>", "drop:<stone>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.02, "perSkillLevel": 0.01, "cap": 0.12 },
+                  "onSuccess": { "action": "prosequor:replace-matching-stack-with-block" }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.04, "perSkillLevel": 0.02, "cap": 0.24 }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.04, "perSkillLevel": 0.02, "cap": 0.44 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "rock-hoarder" ]
+      },
+      {
+        "id": "shiny-hunter",
+        "nameLang": "unlock-mining-shiny-hunter",
+        "icon": "textures/icons/mining/shiny-hunter.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-mining-shiny-hunter",
+        "tiers": [
+          { "effects": [] }
+        ],
+        "requires": [ "glittering-swings", "miner" ]
+      }
+    ]
+  }
+}

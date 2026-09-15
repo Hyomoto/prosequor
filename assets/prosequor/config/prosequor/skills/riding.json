@@ -1,0 +1,305 @@
+{
+  "id": "riding",
+  "nameLang": "skill-riding",
+  "descriptionLang": "skilldesc-riding",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/riding-skill.svg",
+  "attributeScores": [
+    { "id": "inconspicuity", "value" : 1.0 },
+    { "id": "resilience", "value" : 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:riding-idle",
+      "rate": 0.0025,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "riding" ]
+      }
+    },
+    {
+      "id": "prosequor:riding-moving",
+      "rate": 0.005,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "riding", "moving" ]
+      }
+    },
+    {
+      "id": "prosequor:saddle-break",
+      "amount": 10,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "saddle-break" ]
+      }
+    },
+    {
+      "id": "prosequor:saddle-tame",
+      "amount": 50,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "saddle-tame" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:entity-interaction",
+      "verb": "prosequor:mounted",
+      "phase": "move-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.002, "cap": 0.1 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "steppe-rider",
+        "nameLang": "unlock-riding-steppe-rider",
+        "icon": "textures/icons/riding/steppe-rider.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-riding-steppe-rider",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "can-ride",
+                "action": "prosequor:allow-mounted-ride-without-saddle",
+                "params": {}
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "mountbreaking",
+        "nameLang": "unlock-riding-mountbreaking",
+        "icon": "textures/icons/riding/mount-breaking.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-riding-mountbreaking",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "saddle-break",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.45 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "breakfall",
+        "nameLang": "unlock-riding-breakfall",
+        "icon": "textures/icons/riding/break-fall.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-riding-breakfall",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "fall-damage",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 15,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.75 }
+              }
+            ]
+          }
+        ],
+        "requires": []
+      },
+      {
+        "id": "jockey",
+        "nameLang": "unlock-riding-jockey",
+        "icon": "textures/icons/riding/jockey.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-riding-jockey",
+        "descriptionParams": [
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "move-speed",
+                "action": "prosequor:number",
+                "params": { "op": "set", "base": 1, "perSkillLevel": 0.0025, "cap": 1.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.003, "cap": 1.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1, "perSkillLevel": 0.004, "cap": 1.4 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "steppe-rider" ]
+      },
+      {
+        "id": "restfulrider",
+        "nameLang": "unlock-riding-restfulrider",
+        "icon": "textures/icons/riding/restful-rider.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-riding-restfulrider",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "hunger-rate",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "moving" ]
+                },
+                "params": { "op": "add", "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.4 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 45,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.6 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "mountbreaking" ]
+      },
+      {
+        "id": "jousting",
+        "nameLang": "unlock-riding-jousting",
+        "icon": "textures/icons/riding/jousting.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-riding-jousting",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mounted",
+                "phase": "melee-damage",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 0.15 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.45 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "breakfall" ]
+      }
+    ]
+  }
+}

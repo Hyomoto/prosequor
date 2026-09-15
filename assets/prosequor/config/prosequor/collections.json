@@ -1,0 +1,230 @@
+[
+  {
+    "id": "clothing",
+    "includes": [
+      "game:clothes-*"
+    ]
+  },
+  {
+    "id": "armor",
+    "includes": [
+      "game:armor-*"
+    ]
+  },
+  {
+    "id": "wearable",
+    "unions": [
+      "clothing",
+      "armor"
+    ]
+  },
+  {
+    "id": "thread",
+    "includes": [
+      "game:flaxtwine",
+      "game:*-twine",
+      "game:*-thread"
+    ]
+  },
+  {
+    "id": "cloth",
+    "includes": [
+      "game:cloth-*",
+      "game:linen-*"
+    ]
+  },
+  {
+    "id": "leather",
+    "includes": [
+      "game:leather*"
+    ]
+  },
+  {
+    "id": "hide",
+    "includes": [
+      "game:hide-*"
+    ]
+  },
+  {
+    "id": "firewood",
+    "includes": [
+      "game:firewood"
+    ]
+  },
+  {
+    "id": "planks",
+    "includes": [
+      "game:plank-*"
+    ]
+  },
+  {
+    "id": "freshwater",
+    "includes": [
+      "game:water-*",
+      "game:lakeice-*"
+    ]
+  },
+  {
+    "id": "saltwater",
+    "includes": [
+      "game:saltwater-*"
+    ]
+  },
+  {
+    "id": "dirt",
+    "includes": [
+      "game:soil-*",
+      "game:dirt-*"
+    ]
+  },
+  {
+    "id": "raft",
+    "includes": [
+      "game:raft-*",
+      "game:boat-raft*"
+    ]
+  },
+  {
+    "id": "sailboat",
+    "includes": [
+      "game:sailboat-*",
+      "game:boat-sail*"
+    ]
+  },
+  {
+    "id": "watercraft",
+    "unions": [
+      "raft",
+      "sailboat"
+    ]
+  },
+  {
+    "id": "egg",
+    "includes": [
+      "game:egg-*-raw",
+      "game:egg-chicken-raw"
+    ]
+  },
+  {
+    "id": "honeycomb",
+    "includes": [
+      "game:honeycomb"
+    ]
+  },
+  {
+    "id": "skep",
+    "includes": [
+      "game:skep-*"
+    ]
+  },
+  {
+    "id": "wildbeehive",
+    "includes": [
+      "game:wildbeehive-*",
+      "game:wildbeehive-inlog-*"
+    ]
+  },
+  {
+    "id": "beehive",
+    "unions": [
+      "skep",
+      "wildbeehive"
+    ]
+  },
+  {
+    "id": "bloomery",
+    "includes": [
+      "game:bloomery-*"
+    ]
+  },
+  {
+    "id": "meat",
+    "includes": [
+      "game:redmeat-*",
+      "game:poultry-*",
+      "game:bushmeat-*"
+    ]
+  },
+  {
+    "id": "fat",
+    "includes": [
+      "game:fat"
+    ]
+  },
+  {
+    "id": "claypot",
+    "includes": [
+      "game:claypot-*-cooked"
+    ]
+  },
+  {
+    "id": "meal",
+    "includes": [
+      "game:bowl-*-meal",
+      "game:pie-perfect",
+      "game:pie-partbaked",
+      "game:*-cooked",
+      "game:vegetable-cookedcattailroot",
+      "game:bread-*"
+    ],
+    "excludes": [
+      "claypot"
+    ]
+  },
+  {
+    "id": "cook",
+    "includes": [
+      "game:fat-rendered",
+      "game:oilportion-*"
+    ]
+  },
+  {
+    "id": "juice",
+    "includes": [
+      "game:juiceportion-*"
+    ]
+  },
+  {
+    "id": "fermented",
+    "includes": [
+      "game:ciderportion-*",
+      "game:vinegarportion"
+    ]
+  },
+  {
+    "id": "mushroom",
+    "includes": [
+      "game:mushroom-*"
+    ]
+  },
+  {
+    "id": "reed",
+    "includes": [
+      "game:tallplant-tule-*",
+      "game:tallplant-coopersreed-*",
+      "game:tallplant-papyrus-*",
+      "game:flower-horsetail-*"
+    ]
+  },
+  {
+    "id": "sap",
+    "includes": [
+      "game:log-resin-pine-*",
+      "game:log-resin-acacia-*"
+    ]
+  },
+  {
+    "id": "stick",
+    "includes": [
+      "game:stick",
+      "game:loosestick-*"
+    ]
+  },
+  {
+    "id": "distilled",
+    "includes": [
+      "game:spiritportion-*",
+      "game:alcoholportion"
+    ]
+  }
+]

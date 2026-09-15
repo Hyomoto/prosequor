@@ -1,0 +1,31 @@
+{
+  "id": "athletics",
+  "nameLang": "skill-athletics",
+  "descriptionLang": "skilldesc-athletics",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+    { "sum": [ "0.cap" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/athletics-skill.svg",
+  "attributeScores": [
+    { "id": "constitution", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:athletics-sprint",
+      "rate": 0.001,
+      "when": {
+        "activity": "prosequor:effort",
+        "tags": [ "sprinting" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:sprint-speed",
+      "action": "prosequor:number",
+      "params": { "op": "add", "base": 0, "perSkillLevel": 0.005, "cap": 0.25 }
+    }
+  ]
+}

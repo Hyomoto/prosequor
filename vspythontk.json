@@ -1,0 +1,43 @@
+{
+  "name": "prosequor",
+  "modinfo": "modinfo.json",
+  "content": {
+    "input": "assets",
+    "output": "dist/stage/assets"
+  },
+  "stage": "dist/stage",
+  "package": {
+    "dir": "dist",
+    "zipName": "{name}-v{version}.zip"
+  },
+  "compile": {
+    "enabled": true,
+    "csproj": "prosequor.csproj",
+    "configuration": "Release",
+    "targetFramework": "Mods/mod",
+    "dllName": "prosequor.dll",
+    "dllOut": "dist/stage",
+    "sourceGlobs": ["**/*.cs", "**/*.csproj", "**/*.props", "**/*.targets"]
+  },
+  "hash": {
+    "cache": "dist/.vspythontk-cache.json"
+  },
+  "generators": [],
+  "stageExtra": [
+    {
+      "from": "assets",
+      "to": "dist/stage/assets",
+      "exclude": ["**/grammar*"]
+    },
+    {
+      "from": "credits.txt",
+      "to": "dist/stage/credits.txt"
+    },
+    {
+      "from": "LICENSE",
+      "to": "dist/stage/LICENSE"
+    }
+  ],
+  "absolute": true,
+  "strict": true
+}
