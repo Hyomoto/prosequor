@@ -243,8 +243,12 @@ public static class BarrelMutateProcessPatches
     }
 
     /// <summary>
-    /// In-flight seals from older builds stored the closer as a sole contributor or
-    /// a flat maker. Adopt that uid without replacing a bag that already has shares.
+    /// Restore the closer after chunk unpack. <c>ServerChunk.AfterDeserialization</c>
+    /// calls this before <c>Initialize</c>, so do not dirty inventory slots — vanilla
+    /// <c>FindMatchingRecipe</c> uses <c>Api</c> and the chunk discards the BE on NRE.
+    /// The liquid maker stamp already rides on the serialized stack. Older in-flight
+    /// seals stored the closer as a sole contributor or a flat maker; adopt that uid
+    /// without replacing a bag that already has shares.
     /// </summary>
     [HarmonyPatch(typeof(BlockEntityBarrel), nameof(BlockEntityBarrel.FromTreeAttributes))]
     public static class BarrelLegacySealerMigratePatch
@@ -273,18 +277,23 @@ public static class BarrelMutateProcessPatches
                 return;
             }
 
-            LockSealer(__instance, sealer);
+            AdoptSealer(__instance, sealer);
         }
     }
 
     static void LockSealer(BlockEntityBarrel barrel, string uid)
     {
+        AdoptSealer(barrel, uid);
+        StampLiquidMaker(barrel, uid.Trim());
+        barrel.MarkDirty(true);
+    }
+
+    static void AdoptSealer(BlockEntityBarrel barrel, string uid)
+    {
         string trimmed = uid.Trim();
         SessionOf(barrel).SealerUid = trimmed;
         SessionOf(barrel).LastActorUid = null;
         AddOnce(barrel, trimmed);
-        StampLiquidMaker(barrel, trimmed);
-        barrel.MarkDirty(true);
     }
 
     static void RememberActor(BlockEntityBarrel barrel, string uid) =>
@@ -325,7 +334,8 @@ public static class BarrelMutateProcessPatches
         }
 
         CraftAttribution.StampMakerUid(liquid, uid);
-        if (barrel.Inventory != null && barrel.Inventory.Count > LiquidSlot)
+        // SlotModified → FindMatchingRecipe needs Api. Skip during chunk unpack.
+        if (barrel.Api != null && barrel.Inventory != null && barrel.Inventory.Count > LiquidSlot)
         {
             barrel.Inventory[LiquidSlot].MarkDirty();
         }
