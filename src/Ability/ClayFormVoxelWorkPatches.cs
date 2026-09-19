@@ -17,6 +17,7 @@ namespace Prosequor.Ability;
 public static class ClayFormOnUseOverScopePatch
 {
     [HarmonyPrefix]
+    [HarmonyPriority(Priority.First)]
     public static void Prefix(IPlayer byPlayer) => ClayFormScope.Begin(byPlayer);
 
     [HarmonyFinalizer]
@@ -108,6 +109,7 @@ public static class ClayFormCheckIfFinishedPatch
     [HarmonyPostfix]
     public static void Postfix(BlockEntityClayForm __instance, IPlayer byPlayer)
     {
+        ClayFormVoxelOps.TryAwardProgress(__instance, byPlayer);
         ClayFormCraftAttribution.StampGroundStorageOutputs(__instance, byPlayer);
     }
 }

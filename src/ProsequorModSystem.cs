@@ -130,6 +130,7 @@ public class ProsequorModSystem : ModSystem
                 CraftMutateOutputAttributePatches.TryPatchOptionalReaders(sharedHarmony);
                 KilnFireXpPatches.TryPatchOptionalIgniters(sharedHarmony);
                 PlayerModelLibCompat.TryPatch(sharedHarmony);
+                KnapsterCompat.TryPatch(sharedHarmony);
                 ProsequorStackPedigree.EnsurePedigreeIgnoredForMerge();
             }
 

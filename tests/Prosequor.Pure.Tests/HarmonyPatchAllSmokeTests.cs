@@ -36,6 +36,7 @@ public class HarmonyPatchAllSmokeTests
                 CraftMutateOutputAttributePatches.TryPatchOptionalReaders(harmony);
                 KilnFireXpPatches.TryPatchOptionalIgniters(harmony);
                 PlayerModelLibCompat.TryPatch(harmony);
+                KnapsterCompat.TryPatch(harmony);
             }
             catch (Exception ex)
             {
@@ -831,6 +832,77 @@ public class HarmonyPatchAllSmokeTests
             Assert.NotNull(barrelTickInfo);
             Assert.True(barrelTickInfo!.Prefixes.Count > 0, "Expected OnEvery3Second prefix.");
             Assert.True(barrelTickInfo.Postfixes.Count > 0, "Expected OnEvery3Second postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_ScopeClayAndAnvilUseOverFirst()
+    {
+        MethodInfo? clayUseOver = AccessTools.Method(
+            typeof(BlockEntityClayForm),
+            nameof(BlockEntityClayForm.OnUseOver),
+            [typeof(IPlayer), typeof(Vec3i), typeof(BlockFacing), typeof(bool)]);
+        MethodInfo? anvilUseOver = AccessTools.Method(
+            typeof(BlockEntityAnvil),
+            "OnUseOver",
+            [typeof(IPlayer), typeof(Vec3i), typeof(BlockSelection)]);
+        MethodInfo? anvilFinished = AccessTools.Method(
+            typeof(BlockEntityAnvil),
+            nameof(BlockEntityAnvil.CheckIfFinished));
+        Assert.NotNull(clayUseOver);
+        Assert.NotNull(anvilUseOver);
+        Assert.NotNull(anvilFinished);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.knapsterscope.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+
+            Patch? clayPrefix = Harmony.GetPatchInfo(clayUseOver)
+                ?.Prefixes
+                .FirstOrDefault(p => p.PatchMethod.DeclaringType == typeof(ClayFormOnUseOverScopePatch));
+            Assert.NotNull(clayPrefix);
+            Assert.Equal(Priority.First, clayPrefix!.priority);
+
+            Patch? anvilPrefix = Harmony.GetPatchInfo(anvilUseOver)
+                ?.Prefixes
+                .FirstOrDefault(p => p.PatchMethod.DeclaringType == typeof(AnvilOnUseOverScopePatch));
+            Assert.NotNull(anvilPrefix);
+            Assert.Equal(Priority.First, anvilPrefix!.priority);
+
+            Assert.Contains(anvilFinished, harmony.GetPatchedMethods());
+            Patches? finishedInfo = Harmony.GetPatchInfo(anvilFinished);
+            Assert.NotNull(finishedInfo);
+            Assert.True(finishedInfo!.Postfixes.Count > 0, "Expected anvil CheckIfFinished postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
+    public void TryPatch_WhenKnapsterMissing_ShouldNotThrow()
+    {
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.knapsteroptional.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            KnapsterCompat.TryPatch(harmony);
+            Assert.Null(AccessTools.TypeByName(KnapsterCompat.ClayExtensionsTypeName));
+            Assert.Null(AccessTools.TypeByName(KnapsterCompat.SmithingPatchesTypeName));
         }
         finally
         {

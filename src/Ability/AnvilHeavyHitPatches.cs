@@ -16,6 +16,7 @@ namespace Prosequor.Ability;
 public static class AnvilOnUseOverScopePatch
 {
     [HarmonyPrefix]
+    [HarmonyPriority(Priority.First)]
     public static void Prefix(IPlayer byPlayer) => AnvilHitScope.Begin(byPlayer);
 
     [HarmonyFinalizer]
@@ -197,6 +198,18 @@ public static class AnvilInteractBitsForgingPatch
         __result = invoked is true;
         return false;
     }
+}
+
+/// <summary>
+/// High-water XP backstop when a complete-path (Knapster easy smithing) mutates
+/// voxels without vanilla <c>OnHit</c>/<c>OnSplit</c>. Duplicate calls pay 0.
+/// </summary>
+[HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.CheckIfFinished))]
+public static class AnvilCheckIfFinishedXpPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix(BlockEntityAnvil __instance, IPlayer byPlayer) =>
+        AnvilXpStation.TryAwardProgress(__instance, byPlayer);
 }
 
 [HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.ToTreeAttributes))]

@@ -344,7 +344,7 @@ public static class ClayFormVoxelOps
         return true;
     }
 
-    static void TryAwardProgress(BlockEntityClayForm form, IPlayer player)
+    public static void TryAwardProgress(BlockEntityClayForm form, IPlayer player)
     {
         if (form?.Api?.Side != EnumAppSide.Server || player == null)
         {
