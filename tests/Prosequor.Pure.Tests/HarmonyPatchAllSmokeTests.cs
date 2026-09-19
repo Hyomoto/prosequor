@@ -35,6 +35,7 @@ public class HarmonyPatchAllSmokeTests
                 harmony.PatchAll(mod);
                 CraftMutateOutputAttributePatches.TryPatchOptionalReaders(harmony);
                 KilnFireXpPatches.TryPatchOptionalIgniters(harmony);
+                PlayerModelLibCompat.TryPatch(harmony);
             }
             catch (Exception ex)
             {

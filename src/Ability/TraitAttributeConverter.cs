@@ -14,6 +14,8 @@ namespace Prosequor.Ability;
 public static class TraitAttributeConverter
 {
     public const string AppliedModDataKey = "prosequorTraitAttributesApplied";
+    public const string CreateCharacterModDataKey = "createCharacter";
+    public const string FoldedExtrasModDataKey = "prosequorTraitExtrasFolded";
 
     /// <summary>
     /// Base 10 + summed deltas for known mappings; clamp 0..18. Unknown trait codes contribute nothing.
@@ -24,6 +26,26 @@ public static class TraitAttributeConverter
     {
         Dictionary<string, int> scores = NewBaseScores();
         ApplyDeltas(scores, registry, traitCodes);
+        ClampScores(scores);
+        return scores;
+    }
+
+    /// <summary>Copy class scores and fold extra-trait deltas (Player Model Lib extras, extraTraits).</summary>
+    public static Dictionary<string, int> WithExtraTraits(
+        IReadOnlyDictionary<string, int> classScores,
+        ITraitAttributeRegistry registry,
+        IEnumerable<string>? extraTraits)
+    {
+        Dictionary<string, int> scores = NewBaseScores();
+        if (classScores != null)
+        {
+            foreach (KeyValuePair<string, int> pair in classScores)
+            {
+                scores[pair.Key] = pair.Value;
+            }
+        }
+
+        ApplyDeltas(scores, registry, extraTraits);
         ClampScores(scores);
         return scores;
     }
@@ -116,8 +138,10 @@ public static class TraitAttributeConverter
 
     /// <summary>
     /// Once per character: set attributes from cached class scores, then fold extraTraits deltas.
-    /// Used on first selection and again for mid-save joins that already have a class
+    /// Used on first confirmed selection and again for mid-save joins that already have a class
     /// (those players never send <c>DidSelect</c>).
+    /// Vanilla and Player Model Lib both assign a default class before the dialog confirms, so
+    /// skip until <c>createCharacter</c> is true.
     /// </summary>
     public static void TryApplyOnSelection(
         IServerPlayer player,
@@ -131,6 +155,11 @@ public static class TraitAttributeConverter
         }
 
         if (player.GetModData(AppliedModDataKey, false))
+        {
+            return;
+        }
+
+        if (!player.GetModData(CreateCharacterModDataKey, false))
         {
             return;
         }
@@ -184,6 +213,59 @@ public static class TraitAttributeConverter
         }
 
         player.SetModData(AppliedModDataKey, true);
+        RememberFoldedExtras(player, extra);
+    }
+
+    /// <summary>
+    /// Player Model Lib writes model <c>ExtraTraits</c> onto <c>extraTraits</c> after the
+    /// class-selection packet. Fold any codes that were not part of the first apply.
+    /// Does not reset grown scores.
+    /// </summary>
+    public static void FoldNewExtraTraits(
+        IServerPlayer player,
+        ITraitAttributeRegistry registry,
+        ISkillRegistry skills)
+    {
+        if (player?.Entity == null || registry == null || !player.GetModData(AppliedModDataKey, false))
+        {
+            return;
+        }
+
+        EntityPlayer entityPlayer = player.Entity;
+        if (entityPlayer.SidedProperties?.Behaviors == null)
+        {
+            return;
+        }
+
+        string[] extra = entityPlayer.WatchedAttributes.GetStringArray("extraTraits") ?? [];
+        HashSet<string> folded = ReadFoldedExtras(player);
+        HashSet<string> fresh = NewExtraTraitCodes(extra, folded);
+        if (fresh.Count == 0)
+        {
+            return;
+        }
+
+        EntityBehaviorProgress? progress = entityPlayer.GetBehavior<EntityBehaviorProgress>();
+        if (progress == null)
+        {
+            return;
+        }
+
+        progress.EnsureLoaded(player, skills);
+        Dictionary<string, int> scores = NewBaseScores();
+        foreach (string id in AttributeIds.All)
+        {
+            scores[id] = progress.GetAttribute(id);
+        }
+
+        ApplyDeltas(scores, registry, fresh);
+        ClampScores(scores);
+        foreach (string id in AttributeIds.All)
+        {
+            progress.SetAttribute(id, scores[id]);
+        }
+
+        RememberFoldedExtras(player, folded.Concat(fresh));
     }
 
     /// <summary>Whether a trait code should remain on a class after mutation.</summary>
@@ -200,6 +282,82 @@ public static class TraitAttributeConverter
         }
 
         return !mapping.ShouldStripFromClass;
+    }
+
+    public static HashSet<string> NewExtraTraitCodes(
+        IEnumerable<string>? extraTraits,
+        IEnumerable<string>? alreadyFolded)
+    {
+        HashSet<string> folded = new(StringComparer.OrdinalIgnoreCase);
+        if (alreadyFolded != null)
+        {
+            foreach (string raw in alreadyFolded)
+            {
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    folded.Add(raw.Trim());
+                }
+            }
+        }
+
+        HashSet<string> fresh = new(StringComparer.OrdinalIgnoreCase);
+        if (extraTraits == null)
+        {
+            return fresh;
+        }
+
+        foreach (string raw in extraTraits)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                continue;
+            }
+
+            string code = raw.Trim();
+            if (folded.Add(code))
+            {
+                fresh.Add(code);
+            }
+        }
+
+        return fresh;
+    }
+
+    static void RememberFoldedExtras(IServerPlayer player, IEnumerable<string>? extras)
+    {
+        HashSet<string> codes = new(StringComparer.OrdinalIgnoreCase);
+        if (extras != null)
+        {
+            foreach (string raw in extras)
+            {
+                if (!string.IsNullOrWhiteSpace(raw))
+                {
+                    codes.Add(raw.Trim());
+                }
+            }
+        }
+
+        player.SetModData(FoldedExtrasModDataKey, string.Join(",", codes));
+    }
+
+    static HashSet<string> ReadFoldedExtras(IServerPlayer player)
+    {
+        HashSet<string> folded = new(StringComparer.OrdinalIgnoreCase);
+        string stored = player.GetModData(FoldedExtrasModDataKey, "");
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return folded;
+        }
+
+        foreach (string raw in stored.Split(','))
+        {
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                folded.Add(raw.Trim());
+            }
+        }
+
+        return folded;
     }
 
     static Dictionary<string, int> NewBaseScores()

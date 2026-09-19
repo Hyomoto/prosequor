@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using HarmonyLib;
+using Prosequor.Ability;
 using Prosequor.Data;
 using Prosequor.Player;
 using Vintagestory.API.Client;
@@ -56,6 +57,11 @@ public static class CharacterTraitsTabPatches
     {
         ICoreClientAPI? capi = Traverse.Create(__instance).Field<ICoreClientAPI>("capi").Value;
         if (capi == null)
+        {
+            return true;
+        }
+
+        if (PlayerModelLibCompat.IsLoaded(capi))
         {
             return true;
         }
@@ -117,6 +123,43 @@ public static class CharacterTraitsTabPatches
         Refresh();
         capi.Event.EnqueueMainThreadTask(ApplyScrollbar, "prosequor-traits-scroll");
         return false;
+    }
+
+    [HarmonyPostfix]
+    public static void Postfix(CharacterSystem __instance, GuiComposer compo)
+    {
+        ICoreClientAPI? capi = Traverse.Create(__instance).Field<ICoreClientAPI>("capi").Value;
+        if (capi == null || !PlayerModelLibCompat.IsLoaded(capi))
+        {
+            return;
+        }
+
+        if (compo.GetRichtext(BodyKey) != null)
+        {
+            return;
+        }
+
+        GuiElementRichtext? body = compo.GetRichtext("traitsDesc");
+        if (body == null)
+        {
+            return;
+        }
+
+        DetachProgress();
+        DetachStats();
+        lastHtml = null;
+        activeComposer = compo;
+        activeModSys = __instance;
+        activeCapi = capi;
+        scrollY = 0f;
+        contentHeight = 0;
+        clipBounds = null;
+        contentBounds = null;
+
+        EntityPlayer entity = capi.World.Player.Entity;
+        AttachProgress(entity.GetBehavior<EntityBehaviorProgress>());
+        AttachStats(entity);
+        Refresh();
     }
 
     static void OnScroll(float value)
@@ -193,7 +236,7 @@ public static class CharacterTraitsTabPatches
         }
 
         string html = BuildHtml(modSys, capi);
-        GuiElementRichtext? body = compo.GetRichtext(BodyKey);
+        GuiElementRichtext? body = compo.GetRichtext(BodyKey) ?? compo.GetRichtext("traitsDesc");
         if (body == null)
         {
             // Traits tab composer was torn down (switched tabs / closed dialog).
@@ -227,22 +270,34 @@ public static class CharacterTraitsTabPatches
     static void ApplyScrollbar()
     {
         GuiComposer? compo = activeComposer;
-        if (compo == null || clipBounds == null)
+        if (compo == null)
         {
             return;
         }
 
-        GuiElementScrollbar? scrollbar = compo.GetScrollbar(ScrollKey);
+        GuiElementScrollbar? scrollbar = compo.GetScrollbar(ScrollKey) ?? compo.GetScrollbar("scrollbar");
         if (scrollbar == null)
         {
             return;
         }
 
         scrollbar.Bounds.CalcWorldBounds();
-        double clipH = clipBounds.fixedHeight;
+        double clipH = clipBounds?.fixedHeight ?? scrollbar.Bounds.fixedHeight;
+        if (clipH < 1)
+        {
+            clipH = scrollbar.Bounds.InnerHeight / RuntimeEnv.GUIScale;
+        }
+
         double totalH = contentHeight > clipH + 1 ? contentHeight : clipH;
         scrollbar.SetHeights((float)clipH, (float)totalH);
-        OnScroll(GameMath.Clamp(scrollY, 0f, MaxScrollOffset()));
+        if (contentBounds != null)
+        {
+            OnScroll(GameMath.Clamp(scrollY, 0f, MaxScrollOffset()));
+        }
+        else
+        {
+            scrollbar.CurrentYPosition = 0;
+        }
     }
 
     public static string BuildHtml(CharacterSystem modSys, ICoreClientAPI capi)

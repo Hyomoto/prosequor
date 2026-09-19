@@ -14,6 +14,7 @@ public static class TraitAttributeFixtures
         VerifyResolveScoresMath();
         VerifyVanillaClassTotals();
         VerifyClassTraitStrip();
+        VerifyExtraTraitFoldMath();
     }
 
     static void VerifyResolveScoresMath()
@@ -145,6 +146,35 @@ public static class TraitAttributeFixtures
         if (hunterScores[AttributeIds.Perception] != 13)
         {
             Assert.Fail("[prosequor] Mid-save class profile must read hunter perception 13 from cache, not leftover traits.");
+        }
+    }
+
+    static void VerifyExtraTraitFoldMath()
+    {
+        TraitAttributeRegistry registry = BuildShippedRegistry();
+        HashSet<string> fresh = TraitAttributeConverter.NewExtraTraitCodes(
+            ["soldier", "focused"],
+            ["focused"]);
+        if (fresh.Count != 1 || !fresh.Contains("soldier"))
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] New extra-trait codes expected [soldier], got [{0}].",
+                string.Join(", ", fresh)));
+        }
+
+        Dictionary<string, int> hunter = TraitAttributeConverter.ResolveScores(
+            registry,
+            ["focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"]);
+        Dictionary<string, int> withSoldier = TraitAttributeConverter.WithExtraTraits(
+            hunter,
+            registry,
+            ["soldier"]);
+        if (withSoldier[AttributeIds.Strength] != 11 || withSoldier[AttributeIds.Perception] != 13)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Hunter + soldier extras expected STR/PER 11/13, got {0}/{1}.",
+                withSoldier[AttributeIds.Strength],
+                withSoldier[AttributeIds.Perception]));
         }
     }
 

@@ -26,6 +26,7 @@ public class TraitAttributeScenarios : AtlasScenarioBase
         IPlayerProgress progress = RequireProgress(player);
 
         player.Entity.WatchedAttributes.SetString("characterClass", "hunter");
+        player.SetModData(TraitAttributeConverter.CreateCharacterModDataKey, true);
         player.SetModData(TraitAttributeConverter.AppliedModDataKey, false);
 
         ProsequorModSystem mod = ProsequorModSystem.For(World.Api)
@@ -41,6 +42,59 @@ public class TraitAttributeScenarios : AtlasScenarioBase
         Assert.Equal(11, progress.GetAttribute(AttributeIds.Constitution));
         Assert.Equal(10, progress.GetAttribute(AttributeIds.Inconspicuity));
         Assert.Equal(9, progress.GetAttribute(AttributeIds.Resilience));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Server")]
+    [Trait("Kind", "Traits")]
+    public async Task ClassProfile_Should_Wait_Until_CharacterCreationConfirmed()
+    {
+        ITestPlayer joined = await World.JoinPlayer("UnconfirmedCommoner");
+        IServerPlayer player = RequireServerPlayer(joined.Player);
+        IPlayerProgress progress = RequireProgress(player);
+
+        player.Entity.WatchedAttributes.SetString("characterClass", "hunter");
+        player.SetModData(TraitAttributeConverter.CreateCharacterModDataKey, false);
+        player.SetModData(TraitAttributeConverter.AppliedModDataKey, false);
+
+        ProsequorModSystem mod = ProsequorModSystem.For(World.Api)
+            ?? throw new InvalidOperationException("Expected a live Prosequor mod system.");
+        CharacterSystem characters = World.Api.ModLoader.GetModSystem<CharacterSystem>()
+            ?? throw new InvalidOperationException("Expected CharacterSystem.");
+
+        TraitAttributeConverter.TryApplyOnSelection(player, characters, mod.TraitAttributes, mod.Registry);
+
+        Assert.False(player.GetModData(TraitAttributeConverter.AppliedModDataKey, false));
+        Assert.Equal(AttributeGrowth.DefaultScore, progress.GetAttribute(AttributeIds.Perception));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Server")]
+    [Trait("Kind", "Traits")]
+    public async Task ExtraTraits_Should_Fold_After_FirstApply()
+    {
+        ITestPlayer joined = await World.JoinPlayer("ModelExtraHunter");
+        IServerPlayer player = RequireServerPlayer(joined.Player);
+        IPlayerProgress progress = RequireProgress(player);
+
+        player.Entity.WatchedAttributes.SetString("characterClass", "hunter");
+        player.SetModData(TraitAttributeConverter.CreateCharacterModDataKey, true);
+        player.SetModData(TraitAttributeConverter.AppliedModDataKey, false);
+
+        ProsequorModSystem mod = ProsequorModSystem.For(World.Api)
+            ?? throw new InvalidOperationException("Expected a live Prosequor mod system.");
+        CharacterSystem characters = World.Api.ModLoader.GetModSystem<CharacterSystem>()
+            ?? throw new InvalidOperationException("Expected CharacterSystem.");
+
+        TraitAttributeConverter.TryApplyOnSelection(player, characters, mod.TraitAttributes, mod.Registry);
+        Assert.Equal(9, progress.GetAttribute(AttributeIds.Strength));
+        Assert.Equal(13, progress.GetAttribute(AttributeIds.Perception));
+
+        player.Entity.WatchedAttributes.SetStringArray("extraTraits", ["soldier"]);
+        TraitAttributeConverter.FoldNewExtraTraits(player, mod.TraitAttributes, mod.Registry);
+
+        Assert.Equal(13, progress.GetAttribute(AttributeIds.Perception));
+        Assert.Equal(11, progress.GetAttribute(AttributeIds.Strength));
     }
 
     [AtlasScenario]
