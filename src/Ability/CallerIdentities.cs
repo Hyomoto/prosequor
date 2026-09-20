@@ -20,6 +20,9 @@ public static class CallerIdentities
     /// <summary>Liquid metal mold (tool / ingot) casting settle.</summary>
     public const string Mold = "@mold";
 
+    /// <summary>Cementation furnace (stone coffin) carburization settle.</summary>
+    public const string Cementation = "@cementation";
+
     public static bool IsReserved(string? identity)
     {
         if (string.IsNullOrWhiteSpace(identity))
@@ -33,7 +36,8 @@ public static class CallerIdentities
             || t.Equals(Trough, StringComparison.OrdinalIgnoreCase)
             || t.Equals(Crop, StringComparison.OrdinalIgnoreCase)
             || t.Equals(Loose, StringComparison.OrdinalIgnoreCase)
-            || t.Equals(Mold, StringComparison.OrdinalIgnoreCase);
+            || t.Equals(Mold, StringComparison.OrdinalIgnoreCase)
+            || t.Equals(Cementation, StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool TryNormalizeReserved(string? raw, out string identity)
@@ -78,6 +82,12 @@ public static class CallerIdentities
         if (t.Equals(Mold, StringComparison.OrdinalIgnoreCase))
         {
             identity = Mold;
+            return true;
+        }
+
+        if (t.Equals(Cementation, StringComparison.OrdinalIgnoreCase))
+        {
+            identity = Cementation;
             return true;
         }
 

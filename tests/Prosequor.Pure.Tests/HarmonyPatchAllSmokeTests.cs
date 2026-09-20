@@ -35,6 +35,7 @@ public class HarmonyPatchAllSmokeTests
                 harmony.PatchAll(mod);
                 CraftMutateOutputAttributePatches.TryPatchOptionalReaders(harmony);
                 KilnFireXpPatches.TryPatchOptionalIgniters(harmony);
+                CementationAbilityPatches.TryPatchOptionalIgniters(harmony);
                 PlayerModelLibCompat.TryPatch(harmony);
                 KnapsterCompat.TryPatch(harmony);
             }
@@ -832,6 +833,51 @@ public class HarmonyPatchAllSmokeTests
             Assert.NotNull(barrelTickInfo);
             Assert.True(barrelTickInfo!.Prefixes.Count > 0, "Expected OnEvery3Second prefix.");
             Assert.True(barrelTickInfo.Postfixes.Count > 0, "Expected OnEvery3Second postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeCementationFurnaceXpHooks()
+    {
+        MethodInfo? interact = AccessTools.Method(
+            typeof(BlockEntityStoneCoffin),
+            nameof(BlockEntityStoneCoffin.Interact));
+        MethodInfo? addIngot = AccessTools.Method(typeof(BlockEntityStoneCoffin), "AddIngot");
+        MethodInfo? addCoal = AccessTools.Method(typeof(BlockEntityStoneCoffin), "AddCoal");
+        MethodInfo? tick3s = AccessTools.Method(typeof(BlockEntityStoneCoffin), "onServerTick3s");
+        MethodInfo? toTree = AccessTools.Method(
+            typeof(BlockEntityStoneCoffin),
+            nameof(BlockEntityStoneCoffin.ToTreeAttributes));
+        MethodInfo? fromTree = AccessTools.Method(
+            typeof(BlockEntityStoneCoffin),
+            nameof(BlockEntityStoneCoffin.FromTreeAttributes));
+        Assert.NotNull(interact);
+        Assert.NotNull(addIngot);
+        Assert.NotNull(addCoal);
+        Assert.NotNull(tick3s);
+        Assert.NotNull(toTree);
+        Assert.NotNull(fromTree);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.cementation.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+
+            Assert.Contains(interact, harmony.GetPatchedMethods());
+            Assert.Contains(addIngot, harmony.GetPatchedMethods());
+            Assert.Contains(addCoal, harmony.GetPatchedMethods());
+            Assert.Contains(tick3s, harmony.GetPatchedMethods());
+            Assert.Contains(toTree, harmony.GetPatchedMethods());
+            Assert.Contains(fromTree, harmony.GetPatchedMethods());
         }
         finally
         {

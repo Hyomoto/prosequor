@@ -2,7 +2,7 @@ using Prosequor.Data;
 
 namespace Prosequor.Xp;
 
-/// <summary>Pure dual-bucket capacity / saturation / drain formulas.</summary>
+/// <summary>Pure skill-bucket capacity / saturation / drain formulas.</summary>
 public static class XpBucketFormulas
 {
     public const float MinAward = 0.1f;
@@ -18,13 +18,6 @@ public static class XpBucketFormulas
         return Math.Max(1f, baseCap * Math.Max(0f, multiplier));
     }
 
-    /// <summary>Base player bucket capacity. Optional multiplier reserved for future buffs.</summary>
-    public static float PlayerCap(int playerLevel, float multiplier = 1f)
-    {
-        float baseCap = 50f * Math.Max(XpCurves.PlayerMinLevel, playerLevel);
-        return Math.Max(1f, baseCap * Math.Max(0f, multiplier));
-    }
-
     public static int SatLevel(float fill, float cachedCap)
     {
         if (cachedCap <= 0f || fill <= 0f)
@@ -36,31 +29,20 @@ public static class XpBucketFormulas
         return Math.Clamp(level, 0, MaxSatExponent);
     }
 
-    public static float Multiplier(int skillSat, int playerSat)
+    public static float Multiplier(int sat)
     {
-        int exp = Math.Clamp(skillSat + playerSat, 0, MaxSatExponent);
+        int exp = Math.Clamp(sat, 0, MaxSatExponent);
         return exp == 0 ? 1f : MathF.Pow(2f, -exp);
     }
 
-    public static float Multiplier(float skillFill, float skillCap, float playerFill, float playerCap) =>
-        Multiplier(SatLevel(skillFill, skillCap), SatLevel(playerFill, playerCap));
-
-    /// <summary>
-    /// Player grace refreshes only when this award actually earns, or when both meters are
-    /// still unsaturated (MinAward holds on a fresh meter). Compressed dust ticks do not.
-    /// </summary>
-    public static bool RefreshesPlayerGrace(float granted, int skillSat, int playerSat) =>
-        granted > 0f || (skillSat <= 0 && playerSat <= 0);
+    public static float Multiplier(float fill, float cachedCap) =>
+        Multiplier(SatLevel(fill, cachedCap));
 
     public static void RefreshSkillCap(SkillProgressState skill, float multiplier = 1f) =>
         skill.CachedCap = SkillCap(skill.Level, multiplier);
 
-    public static void RefreshPlayerCap(PlayerProgressState state, float multiplier = 1f) =>
-        state.PlayerCachedCap = PlayerCap(state.PlayerLevel, multiplier);
-
     public static void RefreshAllCaps(PlayerProgressState state)
     {
-        RefreshPlayerCap(state);
         foreach (SkillProgressState skill in state.Skills.Values)
         {
             RefreshSkillCap(skill);
@@ -163,8 +145,7 @@ public static class XpBucketFormulas
         ref double lastAccrualTotalHours,
         float cachedCap,
         float raw,
-        double nowHours,
-        bool playerSatOnly)
+        double nowHours)
     {
         if (raw <= 0f)
         {
@@ -176,7 +157,7 @@ public static class XpBucketFormulas
         while (remaining > 0f)
         {
             int sat = SatLevel(fill, cachedCap);
-            float mult = playerSatOnly ? Multiplier(0, sat) : Multiplier(sat, 0);
+            float mult = Multiplier(sat);
             float room = RoomToNextSatLevel(fill, cachedCap);
             float chunk = Math.Min(remaining, room);
             if (chunk <= 0f)
@@ -191,55 +172,6 @@ public static class XpBucketFormulas
                 chunk,
                 mult,
                 nowHours);
-            remaining -= chunk;
-        }
-
-        return totalGranted;
-    }
-
-    /// <summary>
-    /// Skill accrual with dual-bucket saturation: both meters advance by the same raw chunk per tier.
-    /// Player fill is updated here; caller should set player last-accrual only when
-    /// <see cref="RefreshesPlayerGrace"/> is true.
-    /// </summary>
-    public static float AccrueSkillAcrossSatTiers(
-        ref float skillAccrued,
-        ref float skillFill,
-        ref double skillLastAccrualTotalHours,
-        ref float playerFill,
-        float skillCap,
-        float playerCap,
-        float raw,
-        double nowHours)
-    {
-        if (raw <= 0f)
-        {
-            return 0f;
-        }
-
-        float totalGranted = 0f;
-        float remaining = raw;
-        while (remaining > 0f)
-        {
-            int skillSat = SatLevel(skillFill, skillCap);
-            int playerSat = SatLevel(playerFill, playerCap);
-            float mult = Multiplier(skillSat, playerSat);
-            float skillRoom = RoomToNextSatLevel(skillFill, skillCap);
-            float playerRoom = RoomToNextSatLevel(playerFill, playerCap);
-            float chunk = Math.Min(remaining, Math.Min(skillRoom, playerRoom));
-            if (chunk <= 0f)
-            {
-                chunk = remaining;
-            }
-
-            totalGranted += AccrueAndMaybeFlush(
-                ref skillAccrued,
-                ref skillFill,
-                ref skillLastAccrualTotalHours,
-                chunk,
-                mult,
-                nowHours);
-            playerFill += chunk;
             remaining -= chunk;
         }
 

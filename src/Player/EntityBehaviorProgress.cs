@@ -264,7 +264,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             return;
         }
 
-        float fillBefore = state.PlayerFill;
+        float fillBefore = 0f;
         foreach (SkillProgressState skill in state.Skills.Values)
         {
             fillBefore += skill.Fill;
@@ -272,7 +272,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
         XpAwardService.ApplyDrain(state, nowTotalHours);
 
-        float fillAfter = state.PlayerFill;
+        float fillAfter = 0f;
         foreach (SkillProgressState skill in state.Skills.Values)
         {
             fillAfter += skill.Fill;
@@ -419,23 +419,9 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             return;
         }
 
-        double nowHours = NowTotalHours();
-        float toCommit = amount;
-        if (mode == XpAwardMode.Earn)
-        {
-            toCommit = XpAwardService.AwardPlayer(state, amount, nowHours);
-            if (toCommit <= 0f)
-            {
-                MarkPersistDirty();
-                return;
-            }
-        }
-        else if (mode == XpAwardMode.GrantAndFill)
-        {
-            XpAwardService.FillPlayerMeter(state, amount, nowHours);
-        }
-
-        CommitPlayerXp(toCommit);
+        // Player XP is unmetered; nb/fb are no-ops on this track.
+        _ = mode;
+        CommitPlayerXp(amount);
     }
 
     public void AddSkillXp(
@@ -501,11 +487,6 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         {
             MarkPersistDirty();
             return;
-        }
-
-        if (state.PlayerLevel != beforeLevel)
-        {
-            XpBucketFormulas.RefreshPlayerCap(state);
         }
 
         NotifyVisibleProgress(VisibleProgressChange.PlayerTrack());
@@ -579,7 +560,6 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
     void RefreshAllSkillCaps()
     {
-        XpBucketFormulas.RefreshPlayerCap(state);
         foreach (KeyValuePair<string, SkillProgressState> kv in state.Skills)
         {
             XpBucketFormulas.RefreshSkillCap(kv.Value, ResolveSkillCapMultiplier(kv.Key));
@@ -645,11 +625,6 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             {
                 TryApplyPlayerXp(playerXpAward, out _, out playerApplied, out attributeGains);
             }
-        }
-
-        if (state.PlayerLevel != playerBeforeLevel)
-        {
-            XpBucketFormulas.RefreshPlayerCap(state);
         }
 
         NotifyVisibleProgress(
@@ -786,7 +761,6 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             playerBarFillBefore: barFillBefore,
             playerBarFillAfter: LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
             attributeGains: attributeGains);
-        XpBucketFormulas.RefreshPlayerCap(state);
     }
 
     public void AddAttributeBucket(string id, float amount)
@@ -829,10 +803,6 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     {
         EnsureServer();
         double now = NowTotalHours();
-        state.PlayerFill = 0f;
-        state.PlayerAccrued = 0f;
-        state.PlayerLastAccrualTotalHours = now;
-        state.PlayerLastDrainTotalHours = now;
         foreach (SkillProgressState skill in state.Skills.Values)
         {
             skill.Fill = 0f;

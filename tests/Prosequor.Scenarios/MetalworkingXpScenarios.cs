@@ -303,6 +303,53 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         ScenarioXp.AssertPaid(gained, expected, "bloomery harvest");
     }
 
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "Metalworking")]
+    public async Task CementationFired_Should_PayQuantityPerBlister()
+    {
+        ITestPlayer joined = await World.JoinPlayer("MwCementation");
+        IPlayer player = joined.Player;
+        IPlayerProgress progress = RequireProgress(player);
+
+        Item? blister = World.Api.World.GetItem(new AssetLocation("game:ingot-blistersteel"));
+        Assert.NotNull(blister);
+        ItemStack targetStack = new(blister, 16);
+        const int quantity = 16;
+
+        float expected = ScenarioXp.PlannedCementationFired(
+            World.Api.World,
+            Skill,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(targetStack),
+            quantity);
+        Assert.True(expected > 0f, "Expected cementation-fired rule to plan a positive grant.");
+        Assert.Equal(16f, expected);
+
+        float xpBefore = ScenarioXp.TotalSkill(progress, Skill);
+        Deed.Emit(
+            World.Api,
+            playerUid: "",
+            DeedToken.CementationFired,
+            caller: CallerIdentities.Cementation,
+            target: EventFactBuilder.CodeOf(targetStack),
+            craftCount: quantity,
+            contributors: [new Deed.ContributorShare(player.PlayerUID, 1f)]);
+
+        float gained = ScenarioXp.TotalSkill(progress, Skill) - xpBefore;
+        ScenarioXp.AssertPaid(gained, expected, "cementation fired");
+
+        bool was = true;
+        bool paid = true;
+        Assert.False(
+            CementationXpStation.TrySettleRisingEdge(
+                processComplete: true,
+                hasContributors: true,
+                ref was,
+                ref paid),
+            "Second complete tick must not repay.");
+    }
+
     BlockEntityAnvil PrepareAnvil(IPlayer player, out SmithingRecipe recipe, out List<Vec3i> goods)
     {
         ICoreAPI api = World.Api;

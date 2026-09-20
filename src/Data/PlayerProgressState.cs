@@ -129,21 +129,6 @@ public class PlayerProgressState
     /// </summary>
     public Dictionary<string, float> AttributeBuckets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Player-track accrued XP pending MinAward flush.</summary>
-    public float PlayerAccrued { get; set; }
-
-    /// <summary>Player saturation fill meter.</summary>
-    public float PlayerFill { get; set; }
-
-    /// <summary>Cached player bucket capacity for current player level.</summary>
-    public float PlayerCachedCap { get; set; }
-
-    /// <summary>World calendar TotalHours of last XP accrual that filled the player bucket.</summary>
-    public double PlayerLastAccrualTotalHours { get; set; }
-
-    /// <summary>World calendar TotalHours through which player-bucket drain has been applied.</summary>
-    public double PlayerLastDrainTotalHours { get; set; }
-
     public static PlayerProgressState CreateNew(ISkillRegistry registry)
     {
         PlayerProgressState state = new()

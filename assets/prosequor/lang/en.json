@@ -204,7 +204,7 @@
   "skill-tailoring": "Tailoring",
   "skilldesc-tailoring": "Craft and repair clothing, cloth, leather, and armor. Repairing recovers +{0} durability per Tailoring level, up to {1}.",
   "skill-metalworking": "Metalworking",
-  "skilldesc-metalworking": "Craft metal tools and weapons, smith on the anvil, and cast from molds. Quench shatter chance is reduced by 0.1% per Metalworking level.",
+  "skilldesc-metalworking": "Craft metal tools and weapons, smith on the anvil, cast from molds, harvest bloomeries, and carburize steel in a cementation furnace. Quench shatter chance is reduced by 0.1% per Metalworking level.",
   "skill-forager": "Forager",
   "skilldesc-forager": "Gather wild berries, vegetables, mushrooms, tule, cattails, papyrus, horsetail, tree sap, and spawned sticks. Those drops are +{0} per Forager level, up to +{1}. Player-placed piles do not count.",
   "skill-athletics": "Athletics",

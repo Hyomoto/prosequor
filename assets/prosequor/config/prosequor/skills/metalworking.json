@@ -43,6 +43,16 @@
         "activity": "prosequor:deed",
         "tags": [ "bloomery-harvest" ]
       }
+    },
+    {
+      "id": "prosequor:cementation-fired",
+      "amount": 1,
+      "pay": "quantity",
+      "payee": "contributors",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "cementation-fired" ]
+      }
     }
   ],
   "effects": [],

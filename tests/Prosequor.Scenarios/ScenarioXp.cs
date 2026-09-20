@@ -181,6 +181,29 @@ static class ScenarioXp
             playerUid);
     }
 
+    /// <summary>Same fact <see cref="CementationXp.Settle"/> publishes (<c>payee: contributors</c>).</summary>
+    public static float PlannedCementationFired(
+        IWorldAccessor world,
+        string skillId,
+        string contributorUid,
+        string? target,
+        int blisterQuantity)
+    {
+        return Sum(
+            Plan(
+                world,
+                playerUid: "",
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.CementationFired },
+                CallerIdentities.Cementation,
+                target,
+                totalUnits: 0,
+                craftCount: blisterQuantity,
+                quantityUnits: null,
+                contributors: [new Deed.ContributorShare(contributorUid, 1f)]),
+            skillId,
+            contributorUid);
+    }
+
     public static void AssertPaid(float gained, float expected, string detail)
     {
         Assert.True(

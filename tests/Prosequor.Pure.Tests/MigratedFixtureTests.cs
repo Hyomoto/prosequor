@@ -26,6 +26,9 @@ public class MigratedFixtureTests
     public void MoldCastXpFixtures_Should_Pass() => MoldCastXpFixtures.VerifyAll();
 
     [Fact]
+    public void CementationXpFixtures_Should_Pass() => CementationXpFixtures.VerifyAll();
+
+    [Fact]
     public void AnvilVoxelGridFixtures_Should_Pass() => AnvilVoxelGridFixtures.VerifyAll();
 
     [Fact]

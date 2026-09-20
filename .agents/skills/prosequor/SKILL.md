@@ -12,7 +12,11 @@ description: >-
 
 Vintage Story progression mod (`modid`: `prosequor`). JSON **declares** matches and effects; C# **emits** facts and runs stations. Do not scrape authored JSON at runtime, and do not invent a parallel XP or unlock path.
 
-This skill is the **layout and injection map**. Field grammar (effects, tags, hooks, actions, XP rule fields, contributions) lives in [reference.md](../../../reference.md). Admin commands: [commands.md](../../../commands.md). Design targets and historical remaps are not runtime truth — [attrref.md](../../../attrref.md), [docs/surface-verb-phase-remap.md](../../../docs/surface-verb-phase-remap.md).
+This skill is the **layout and injection map**. Field grammar lives in [docs/reference.md](../../../docs/reference.md). Admin commands: [docs/commands.md](../../../docs/commands.md). Design targets and historical remaps are not runtime truth — [attrref.md](../../../attrref.md), [docs/surface-verb-phase-remap.md](../../../docs/surface-verb-phase-remap.md).
+
+### `docs/reference.md`
+
+Keep [docs/reference.md](../../../docs/reference.md) up-to-date with JSON features and changes. It is a user-facing JSON-reference document. It does not delve into engine technical specifics, and definitely doesn't contain notes about why something works the way it does. The document is unopinionated and raw: it explains each item in sufficient detail and moves on. Sufficient detail means it can answer "what this key does," and in relevant cases, "what effects its accepted values have." Keep a Contents TOC at the top linking to each section.
 
 Paths below are relative to the **prosequor mod root**.
 
@@ -101,7 +105,7 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 
 ## Schema shape (not values)
 
-Full fields: [reference.md](../../../reference.md). Shapes only:
+Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
 **Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`.
 
@@ -109,7 +113,7 @@ Full fields: [reference.md](../../../reference.md). Shapes only:
 
 **Tier effects** are active only while **that** tier is owned. Lower tiers do not stack. Multi-tier nodes must `replicate` prior effects (tier 2+ only; never on root `effects` or tier 1).
 
-**Effect row** — `hook` / `verb` / `phase` (omit phase → `default`) / `action` / `params` / `when` / `priority`. `contract` is **not** a JSON field; the action must fulfill the phase contract. Bare ids normalize to `prosequor:`. Catalog of hooks, phases, and actions: [reference.md](../../../reference.md) (Hooks, Contracts, Actions). Do not invent a hook that `AbilityBootstrap` did not register.
+**Effect row** — `hook` / `verb` / `phase` (omit phase → `default`) / `action` / `params` / `when` / `priority`. `contract` is **not** a JSON field; the action must fulfill the phase contract. Bare ids normalize to `prosequor:`. Catalog of hooks, phases, and actions: [docs/reference.md](../../../docs/reference.md) (Hooks, Contracts, Actions). Do not invent a hook that `AbilityBootstrap` did not register.
 
 **XP rule** — `id`, exactly one of `amount` or `rate`, `when.activity` + `when.tags`. Amount rules may set `pay` and `payee`. Skill is implied. Activities without `:` get a `game:` prefix (`XpRuleRegistry.NormalizeActivity`). Prefer `prosequor:deed` and `prosequor:effort` plus tokens; a custom activity only pays if some rule's `when.activity` matches it.
 
@@ -121,7 +125,7 @@ Full fields: [reference.md](../../../reference.md). Shapes only:
 
 **Stat file** — `id` must be a known attribute (`src/Data/AttributeIds.cs`). `rules[]` use the effect envelope plus score gates (`minScore` / `maxScore`). Unknown id → skipped.
 
-**Level of caps and curves** — authored `maxLevel` is **ignored**. Kind and cap come from `src/Data/SkillKind.cs` (`SkillKindPolicy`) and `src/Data/XpCurves.cs`. Classification: `hobby: true` wins; else a tree with any `specialization` node; else a non-empty tree; else no/empty tree. Read those types; do not hardcode caps. Hobby specialization flags are stripped at compile. Hobbies spend **local** unlock points derived from skill level vs tree cost, not global points — formula in [reference.md](../../../reference.md).
+**Level of caps and curves** — authored `maxLevel` is **ignored**. Kind and cap come from `src/Data/SkillKind.cs` (`SkillKindPolicy`) and `src/Data/XpCurves.cs`. Classification: `hobby: true` wins; else a tree with any `specialization` node; else a non-empty tree; else no/empty tree. Read those types; do not hardcode caps. Hobby specialization flags are stripped at compile. Hobbies spend **local** unlock points derived from skill level vs tree cost, not global points — formula in [docs/reference.md](../../../docs/reference.md).
 
 ## Ability address
 
@@ -135,7 +139,7 @@ Stations build a typed context (with `IPlayerProgress` and a fact) and call `Abi
 | Tree tier | `GetUnlockTier(skillId, nodeId) == rule.Source.Tier` (and > 0) |
 | Attribute stat | `GetAttribute(id)` within min/max score |
 
-New hook or action: register both in `src/Ability/AbilityBootstrap.cs`, implement `IAbilityActionHandler`, and document the contract in `reference.md`. A hook without a matching action (or the reverse) will not fold.
+New hook or action: register both in `src/Ability/AbilityBootstrap.cs`, implement `IAbilityActionHandler`, and document it in `docs/reference.md`. A hook without a matching action (or the reverse) will not fold.
 
 Prefer JSON `effects` plus an existing station. Direct `HasUnlock` in C# is for hard gates the fold cannot express — copy `src/Ability/AnvilBitsForgingOps.cs`.
 
@@ -151,7 +155,7 @@ Gameplay must not call `IPlayerProgress.AddSkillXp`. That method is the pay sink
 
 `RegisterActivityWrapper` is deprecated for rate XP.
 
-Publish roles the rule will read (`caller`, `target`, tokens, metric, quantity). Payees (`user`, `maker`, `contributor`, `contributors`) are chosen by the **rule**, not by merging maker into contributors. Emit `makerUid` and `contributors` separately. Channel and token catalogs: [reference.md](../../../reference.md) (XP rules). Prefer `DeedToken` / `EffortToken` for standard tags. A new token needs the enum, an emitter, and a doc line in that file — data-only rules can only match tokens something already emits.
+Publish roles the rule will read (`caller`, `target`, tokens, metric, quantity). Payees (`user`, `maker`, `contributor`, `contributors`) are chosen by the **rule**, not by merging maker into contributors. Emit `makerUid` and `contributors` separately. Channel and token catalogs: [docs/reference.md](../../../docs/reference.md) (XP rules). Prefer `DeedToken` / `EffortToken` for standard tags. A new token needs the enum, an emitter, and a doc line in that file — data-only rules can only match tokens something already emits.
 
 Offline XP is held on the world save and flushed on join. Test plans without a world: `Deed.PlanPays`.
 
@@ -196,7 +200,7 @@ Attribute ids and score clamps: `src/Data/AttributeIds.cs` and `src/Data/Attribu
 2. `assets/<yourDomain>/config/prosequor/contributions/<name>.json` — JSON **array**. Optional engine-style `dependsOn` skips the entry unless those mods are loaded.
 3. Order per entry: `dependsOn` → `disable` → `xpRules` → `nodes` (`replaces` then append). `"disable": "all"` stops that entry.
 4. Contributed node ids must be `<yourDomain>:localId`. Prereqs may use plain ids of nodes already on that skill.
-5. Ship lang and icons. Grammar and examples: [reference.md](../../../reference.md) (Contributions).
+5. Ship lang and icons. Grammar and examples: [docs/reference.md](../../../docs/reference.md) (Contributions).
 
 ### New XP source
 
@@ -211,7 +215,7 @@ Attribute ids and score clamps: `src/Data/AttributeIds.cs` and `src/Data/Attribu
 1. If an existing hook/verb/phase can fold the number, add JSON only.
 2. Else: Harmony patch delegates to a Station; Station calls `pipeline.Run`. Copy `src/Ability/DropsStation.cs` or `src/Ability/CraftMutateOutputStation.cs`.
 3. Register hook and action together in `AbilityBootstrap`.
-4. Update the contract section of `reference.md`.
+4. Update [docs/reference.md](../../../docs/reference.md) for any new or changed JSON-facing hook, verb, phase, contract, action, tag, or XP field (same change).
 
 ### Collection, pool, or affix
 
@@ -281,7 +285,8 @@ New Harmony: smoke/transpile tests next to existing `HarmonyPatchAllSmokeTests` 
 | Assume collection membership at `AssetsFinalize` | Keys then; codes at `GameReady` |
 | `RegisterActivityWrapper` for new rate XP | `EmitEffort` or `RegisterEffortPoll` |
 | Chain unlock renames in `UnlockIdRemap` | Single hop; bump schema |
-| Treat `reference.md` as optional when adding a hook/action/token | Update that catalog in the same change |
+| Treat `docs/reference.md` as optional when adding a JSON feature | Update it in the same change (user-facing keys/values only; no engine/"why" notes; keep the Contents TOC) |
+| Dump implementation, shipped curves, or design rationale into `docs/reference.md` | Keep it unopinionated and raw — what the key does, what accepted values do |
 
 ## Packaging
 

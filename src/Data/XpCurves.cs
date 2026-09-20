@@ -22,7 +22,7 @@ public static class XpCurves
             return 0;
         }
 
-        int L = Math.Min(level, 17);
+        int L = Math.Min(level, 29);
         int B = (L == 1 || L == 17 || (L > 22 && L % 2 == 1)) ? 1 : 0;
         return 39 * (L * L) + B;
     }
@@ -43,8 +43,9 @@ public static class XpCurves
             return 0;
         }
 
-        int L = Math.Min(level, 40);
-        return 15 + (L * L) / 3;
+        int L = Math.Min(level + 1, 49);
+        int B = (L == 1 || L == 17 || (L > 22 && L % 2 == 1)) ? 1 : 0;
+        return 19 + (L * L) + B;
     }
 
     /// <summary>

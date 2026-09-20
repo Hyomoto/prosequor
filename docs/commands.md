@@ -6,7 +6,7 @@ Server console / in-game chat. Requires `controlserver`. Online players only (na
 |---|---|---|
 | `/prosequor show [player]` | optional player | Dump player level/XP/points, attribute scores + buckets, and per-skill level/unlocks |
 | `/prosequor setlevel <player> <skill\|player\|self> <level>` | player + target + int | Set overall player level (`player` / `self`) or a skill level (skill id or localized display name) |
-| `/prosequor addxp <player> <skill\|player\|self> <amount> [nb\|fb]` | player + target + float + optional flag | Add player XP or skill XP. Default Earn (bucketed). `nb` = Grant (full commit, no meters). `fb` = GrantAndFill (full commit + fill meters) |
+| `/prosequor addxp <player> <skill\|player\|self> <amount> [nb\|fb]` | player + target + float + optional flag | Add player XP or skill XP. Skill default Earn is skill-bucketed; player-track awards are unmetered (`nb`/`fb` no-ops there). Skill `nb` = Grant (full commit, no meters). Skill `fb` = GrantAndFill (full commit + fill skill meter) |
 | `/prosequor points <player> <amount>` | player + int | Add or subtract unspent unlock points (negative allowed) |
 | `/prosequor addbucket <player> <attribute> <amount>` | player + attribute + float | Add growth credit to an attribute bucket (`strength`, `perception`, `constitution`, `inconspicuity`, `resilience`) |
 | `/prosequor setattr <player> <attribute> <value>` | player + attribute + int | Set attribute score (clamped 0–18); refreshes that attribute’s player-interaction effects |

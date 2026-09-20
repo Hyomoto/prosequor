@@ -14,11 +14,10 @@ public static class XpBucketFixtures
     public static void VerifyAll()
     {
         VerifyCapFormulas();
-        VerifyMultiplierStacking();
+        VerifyMultiplier();
         VerifyAccruedFlush();
         VerifySatTierAccrual();
         VerifyGraceAndDrain();
-        VerifyPlayerGraceSkipsCompressedHold();
         VerifyAwardSkillPipeline();
         VerifyGrantAndFillMeters();
         VerifyCraftGrantMath();
@@ -144,9 +143,7 @@ public static class XpBucketFixtures
     {
         if (!Near(XpBucketFormulas.SkillCap(0), 25f)
             || !Near(XpBucketFormulas.SkillCap(10), 45f)
-            || !Near(XpBucketFormulas.SkillCap(99), 223f)
-            || !Near(XpBucketFormulas.PlayerCap(1), 50f)
-            || !Near(XpBucketFormulas.PlayerCap(50), 2500f))
+            || !Near(XpBucketFormulas.SkillCap(99), 223f))
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (cap formulas).");
             return;
@@ -155,27 +152,26 @@ public static class XpBucketFixtures
         PlayerProgressState state = new() { PlayerLevel = 10 };
         state.Skills["digging"] = new SkillProgressState { Level = 20 };
         XpBucketFormulas.RefreshAllCaps(state);
-        if (!Near(state.PlayerCachedCap, 500f) || !Near(state.Skills["digging"].CachedCap, 65f))
+        if (!Near(state.Skills["digging"].CachedCap, 65f))
         {
-            Assert.Fail("[prosequor] XP bucket fixture failed (cached caps).");
+            Assert.Fail("[prosequor] XP bucket fixture failed (cached skill cap).");
         }
     }
 
-    static void VerifyMultiplierStacking()
+    static void VerifyMultiplier()
     {
-        // fill in [cap, 2cap) => sat 1; both meters sat 1 => /4
+        // fill in [cap, 2cap) => sat 1 => /2
         float skillCap = 25f;
-        float playerCap = 20f;
-        float mult = XpBucketFormulas.Multiplier(30f, skillCap, 25f, playerCap);
-        if (!Near(mult, 0.25f))
+        float mult = XpBucketFormulas.Multiplier(30f, skillCap);
+        if (!Near(mult, 0.5f))
         {
-            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (mult stacking /4), got {0}.", mult));
+            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (sat 1 mult), got {0}.", mult));
             return;
         }
 
-        if (!Near(XpBucketFormulas.Multiplier(0, 0), 1f)
-            || !Near(XpBucketFormulas.Multiplier(1, 0), 0.5f)
-            || !Near(XpBucketFormulas.Multiplier(0, 1), 0.5f))
+        if (!Near(XpBucketFormulas.Multiplier(0), 1f)
+            || !Near(XpBucketFormulas.Multiplier(1), 0.5f)
+            || !Near(XpBucketFormulas.Multiplier(2), 0.25f))
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (sat exponents).");
         }
@@ -217,27 +213,23 @@ public static class XpBucketFixtures
 
     static void VerifySatTierAccrual()
     {
-        // fill 24/25 on both meters: first 1 raw at ×1, next 4 at ×0.25 (both sat 1) = 2.0 effective.
+        // fill 24/25: first 1 raw at ×1, next 4 at ×0.5 (sat 1) = 3.0 effective.
         float accrued = 0f;
         float skillFill = 24f;
-        float playerFill = 24f;
         double lastAccrual = 10.0;
         float cap = 25f;
-        float granted = XpBucketFormulas.AccrueSkillAcrossSatTiers(
+        float granted = XpBucketFormulas.AccrueAcrossSatTiers(
             ref accrued,
             ref skillFill,
             ref lastAccrual,
-            ref playerFill,
-            cap,
             cap,
             5f,
             nowHours: 11.0);
-        if (!Near(granted, 2f) || !Near(skillFill, 29f) || !Near(playerFill, 29f) || accrued != 0f)
+        if (!Near(granted, 3f) || !Near(skillFill, 29f) || accrued != 0f)
         {
-            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (sat tier split), granted={0} fill={1}/{2}.",
+            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (sat tier split), granted={0} fill={1}.",
                 granted,
-                skillFill,
-                playerFill));
+                skillFill));
             return;
         }
 
@@ -293,91 +285,6 @@ public static class XpBucketFixtures
         }
     }
 
-    static void VerifyPlayerGraceSkipsCompressedHold()
-    {
-        if (!XpBucketFormulas.RefreshesPlayerGrace(0f, 0, 0)
-            || !XpBucketFormulas.RefreshesPlayerGrace(0.1f, 5, 5)
-            || XpBucketFormulas.RefreshesPlayerGrace(0f, 1, 0)
-            || XpBucketFormulas.RefreshesPlayerGrace(0f, 0, 1))
-        {
-            Assert.Fail("[prosequor] XP bucket fixture failed (player grace predicate).");
-            return;
-        }
-
-        PlayerProgressState hold = new() { PlayerLevel = 1 };
-        hold.Skills["digging"] = new SkillProgressState { Level = 0 };
-        XpBucketFormulas.RefreshAllCaps(hold);
-        const double holdT = 50.0;
-        float held = XpAwardService.AwardSkill(hold, "digging", 0.05f, holdT);
-        if (held != 0f || hold.PlayerLastAccrualTotalHours != holdT)
-        {
-            Assert.Fail("[prosequor] XP bucket fixture failed (unsaturated hold still refreshes player grace).");
-            return;
-        }
-
-        PlayerProgressState state = new() { PlayerLevel = 1 };
-        state.Skills["digging"] = new SkillProgressState { Level = 0 };
-        XpBucketFormulas.RefreshAllCaps(state);
-        float playerCap = state.PlayerCachedCap;
-        float skillCap = state.Skills["digging"].CachedCap;
-        const double lastEarn = 100.0;
-        const double tick = 100.5;
-        state.PlayerFill = playerCap * XpBucketFormulas.MaxSatExponent;
-        state.Skills["digging"].Fill = skillCap * XpBucketFormulas.MaxSatExponent;
-        state.PlayerLastAccrualTotalHours = lastEarn;
-        state.PlayerLastDrainTotalHours = lastEarn;
-        state.Skills["digging"].LastAccrualTotalHours = lastEarn;
-        state.Skills["digging"].LastDrainTotalHours = lastEarn;
-        float playerFillBefore = state.PlayerFill;
-
-        float granted = XpAwardService.AwardSkill(state, "digging", 5f, tick);
-        if (granted != 0f
-            || state.PlayerLastAccrualTotalHours != lastEarn
-            || state.Skills["digging"].LastAccrualTotalHours != tick)
-        {
-            Assert.Fail(string.Format(
-                "[prosequor] XP bucket fixture failed (compressed tick skips player grace). granted={0} playerAccrual={1} skillAccrual={2}.",
-                granted,
-                state.PlayerLastAccrualTotalHours,
-                state.Skills["digging"].LastAccrualTotalHours));
-            return;
-        }
-
-        if (!Near(state.PlayerFill, playerFillBefore + 5f))
-        {
-            Assert.Fail("[prosequor] XP bucket fixture failed (compressed tick still fills player meter).");
-            return;
-        }
-
-        const double afterGrace = 101.0 + (10.0 / 3600.0);
-        XpAwardService.ApplyDrain(state, afterGrace);
-        if (!Near(state.PlayerFill, playerFillBefore + 5f - 0.1f))
-        {
-            Assert.Fail(string.Format(
-                "[prosequor] XP bucket fixture failed (player drain after compressed tick), fill={0}.",
-                state.PlayerFill));
-            return;
-        }
-
-        PlayerProgressState flush = new() { PlayerLevel = 1 };
-        flush.Skills["digging"] = new SkillProgressState { Level = 0 };
-        XpBucketFormulas.RefreshAllCaps(flush);
-        flush.PlayerFill = flush.PlayerCachedCap;
-        flush.Skills["digging"].Fill = 0f;
-        flush.PlayerLastAccrualTotalHours = lastEarn;
-        flush.PlayerLastDrainTotalHours = lastEarn;
-        flush.Skills["digging"].LastAccrualTotalHours = lastEarn;
-        flush.Skills["digging"].LastDrainTotalHours = lastEarn;
-        float flushed = XpAwardService.AwardSkill(flush, "digging", 5f, tick);
-        if (flushed <= 0f || flush.PlayerLastAccrualTotalHours != tick)
-        {
-            Assert.Fail(string.Format(
-                "[prosequor] XP bucket fixture failed (compressed flush still refreshes player grace). granted={0} accrual={1}.",
-                flushed,
-                flush.PlayerLastAccrualTotalHours));
-        }
-    }
-
     static void VerifyAwardSkillPipeline()
     {
         PlayerProgressState state = new() { PlayerLevel = 1 };
@@ -386,7 +293,9 @@ public static class XpBucketFixtures
 
         double t = 50.0;
         float g1 = XpAwardService.AwardSkill(state, "digging", 0.05f, t);
-        if (g1 != 0f || !Near(state.Skills["digging"].Accrued, 0.05f))
+        if (g1 != 0f
+            || !Near(state.Skills["digging"].Accrued, 0.05f)
+            || state.Skills["digging"].LastAccrualTotalHours != t)
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (AwardSkill hold).");
             return;
@@ -399,14 +308,14 @@ public static class XpBucketFixtures
             return;
         }
 
-        if (!Near(state.Skills["digging"].Fill, 0.1f) || !Near(state.PlayerFill, 0.1f))
+        if (!Near(state.Skills["digging"].Fill, 0.1f))
         {
-            Assert.Fail("[prosequor] XP bucket fixture failed (AwardSkill dual fill).");
+            Assert.Fail("[prosequor] XP bucket fixture failed (AwardSkill skill fill).");
         }
     }
 
     /// <summary>
-    /// GrantAndFill fill-only: full raw onto meters even when saturated; accrued untouched.
+    /// GrantAndFill fill-only: full raw onto the skill meter even when saturated; accrued untouched.
     /// Contrasts with Earn, which sat-scales the flush amount.
     /// </summary>
     static void VerifyGrantAndFillMeters()
@@ -416,30 +325,25 @@ public static class XpBucketFixtures
         XpBucketFormulas.RefreshAllCaps(fillState);
 
         float skillCap = fillState.Skills["digging"].CachedCap;
-        float playerCap = fillState.PlayerCachedCap;
         const float raw = 100f;
         const double t = 100.0;
         fillState.Skills["digging"].Fill = skillCap * 5f;
-        fillState.PlayerFill = playerCap * 5f;
         fillState.Skills["digging"].Accrued = 0.04f;
-        // Keep meters inside drain grace so ApplyDrain is a no-op for this call.
+        // Keep meter inside drain grace so ApplyDrain is a no-op for this call.
         fillState.Skills["digging"].LastAccrualTotalHours = t;
         fillState.Skills["digging"].LastDrainTotalHours = t;
-        fillState.PlayerLastAccrualTotalHours = t;
-        fillState.PlayerLastDrainTotalHours = t;
         float accruedBefore = fillState.Skills["digging"].Accrued;
         float skillFillBefore = fillState.Skills["digging"].Fill;
-        float playerFillBefore = fillState.PlayerFill;
 
         XpAwardService.FillSkillMeters(fillState, "digging", raw, t);
 
         if (!Near(fillState.Skills["digging"].Fill, skillFillBefore + raw)
-            || !Near(fillState.PlayerFill, playerFillBefore + raw)
-            || !Near(fillState.Skills["digging"].Accrued, accruedBefore))
+            || !Near(fillState.Skills["digging"].Accrued, accruedBefore)
+            || fillState.Skills["digging"].LastAccrualTotalHours != t)
         {
-            Assert.Fail(string.Format("[prosequor] XP GrantAndFill fixture failed (fill-only). skillFill={0} playerFill={1} accrued={2}.",
+            Assert.Fail(string.Format(
+                "[prosequor] XP GrantAndFill fixture failed (fill-only). skillFill={0} accrued={1}.",
                 fillState.Skills["digging"].Fill,
-                fillState.PlayerFill,
                 fillState.Skills["digging"].Accrued));
             return;
         }
@@ -449,11 +353,8 @@ public static class XpBucketFixtures
         earnState.Skills["digging"] = new SkillProgressState { Level = 0 };
         XpBucketFormulas.RefreshAllCaps(earnState);
         earnState.Skills["digging"].Fill = skillCap * 5f;
-        earnState.PlayerFill = playerCap * 5f;
         earnState.Skills["digging"].LastAccrualTotalHours = t;
         earnState.Skills["digging"].LastDrainTotalHours = t;
-        earnState.PlayerLastAccrualTotalHours = t;
-        earnState.PlayerLastDrainTotalHours = t;
         float granted = XpAwardService.AwardSkill(earnState, "digging", raw, t);
         if (granted >= raw - 0.001f)
         {
