@@ -8,11 +8,22 @@ using Vintagestory.API.Server;
 
 namespace Prosequor.Data;
 
-/// <summary>ModData persistence and WatchedAttributes mirror.</summary>
+/// <summary>
+/// ModData persistence and sparse public WatchedAttributes mirror.
+/// Private numbers (XP, points, attribute buckets) ride the owner channel.
+/// </summary>
 public static class ProgressStore
 {
     public const string ModDataKey = "prosequor-progress";
+
+    /// <summary>Legacy full-blob root. Removed on write so join does not keep sending it.</summary>
     public const string AttrTree = "prosequor";
+
+    /// <summary>Public unlock tiers (omit empty skills).</summary>
+    public const string AttrUnlocks = "prosequorU";
+
+    /// <summary>Public attribute scores only.</summary>
+    public const string AttrScores = "prosequorA";
 
     public static PlayerProgressState Load(IServerPlayer player, ISkillRegistry registry)
     {
@@ -92,6 +103,9 @@ public static class ProgressStore
         MirrorToEntity(player.Entity, state);
     }
 
+    /// <summary>
+    /// Full public mirror: unlock tiers + attribute scores. Removes the legacy blob root.
+    /// </summary>
     public static void MirrorToEntity(Entity? entity, PlayerProgressState state)
     {
         if (entity == null)
@@ -99,66 +113,56 @@ public static class ProgressStore
             return;
         }
 
-        ITreeAttribute tree = EnsureRootTree(entity);
-        tree.SetInt("schema", state.Schema);
-        MirrorPlayerTrack(entity, state.PlayerLevel, state.PlayerXp, state.UnlockPoints);
-        MirrorAttributes(entity, state);
-
-        ITreeAttribute skillsTree = tree.GetTreeAttribute("skills") as TreeAttribute ?? new TreeAttribute();
-        foreach (KeyValuePair<string, SkillProgressState> kv in state.Skills)
-        {
-            MirrorSkillIntoTree(skillsTree, kv.Key, kv.Value);
-        }
-
-        tree["skills"] = skillsTree;
-        entity.WatchedAttributes.MarkPathDirty(AttrTree);
+        RemoveLegacyTree(entity);
+        MirrorUnlocks(entity, state);
+        MirrorAttributeScores(entity, state);
     }
 
-    public static void MirrorPlayerTrack(Entity entity, int playerLevel, float playerXp, int unlockPoints)
-    {
-        ITreeAttribute tree = EnsureRootTree(entity);
-        tree.SetInt("playerLevel", playerLevel);
-        tree.SetFloat("playerXp", playerXp);
-        tree.SetInt("unlockPoints", unlockPoints);
-        entity.WatchedAttributes.MarkPathDirty(AttrTree);
-    }
-
-    /// <summary>Mirror attribute scores and growth-bucket fills for the stats panel.</summary>
-    public static void MirrorAttributes(Entity entity, PlayerProgressState state)
+    public static void MirrorAttributeScores(Entity entity, PlayerProgressState state)
     {
         PlayerProgressState.EnsureAttributeEntries(state);
-        ITreeAttribute tree = EnsureRootTree(entity);
-        TreeAttribute attributesTree = new();
-        TreeAttribute bucketsTree = new();
+        TreeAttribute scores = new();
         foreach (string id in AttributeIds.All)
         {
-            attributesTree.SetInt(id, state.Attributes[id]);
-            bucketsTree.SetFloat(id, state.AttributeBuckets[id]);
+            scores.SetInt(id, state.Attributes[id]);
         }
 
-        tree["attributes"] = attributesTree;
-        tree["attributeBuckets"] = bucketsTree;
-        entity.WatchedAttributes.MarkPathDirty(AttrTree);
+        entity.WatchedAttributes.SetAttribute(AttrScores, scores);
+        entity.WatchedAttributes.MarkPathDirty(AttrScores);
     }
 
-    public static void MirrorSkillTrack(Entity entity, string skillId, int level, float xp)
+    /// <summary>Rewrite the full public unlock tree (omit skills with no owned tiers).</summary>
+    public static void MirrorUnlocks(Entity entity, PlayerProgressState state)
     {
-        if (string.IsNullOrWhiteSpace(skillId))
+        TreeAttribute root = new();
+        int skillCount = 0;
+        foreach (KeyValuePair<string, SkillProgressState> kv in state.Skills)
         {
+            TreeAttribute? tiers = BuildTiersTree(kv.Value);
+            if (tiers == null)
+            {
+                continue;
+            }
+
+            TreeAttribute skillTree = new();
+            skillTree["unlockTiers"] = tiers;
+            root[kv.Key] = skillTree;
+            skillCount++;
+        }
+
+        if (skillCount == 0)
+        {
+            if (entity.WatchedAttributes.HasAttribute(AttrUnlocks))
+            {
+                entity.WatchedAttributes.RemoveAttribute(AttrUnlocks);
+                entity.WatchedAttributes.MarkPathDirty(AttrUnlocks);
+            }
+
             return;
         }
 
-        ITreeAttribute skillsTree = EnsureSkillsTree(entity);
-        ITreeAttribute skillTree = skillsTree.GetTreeAttribute(skillId) as TreeAttribute ?? new TreeAttribute();
-        skillTree.SetInt("level", level);
-        skillTree.SetFloat("xp", xp);
-        if (skillTree.GetTreeAttribute("unlockTiers") == null)
-        {
-            skillTree["unlockTiers"] = new TreeAttribute();
-        }
-
-        skillsTree[skillId] = skillTree;
-        entity.WatchedAttributes.MarkPathDirty(AttrTree);
+        entity.WatchedAttributes.SetAttribute(AttrUnlocks, root);
+        entity.WatchedAttributes.MarkPathDirty(AttrUnlocks);
     }
 
     public static void MirrorUnlockTier(Entity entity, string skillId, string nodeId, int tier)
@@ -168,8 +172,8 @@ public static class ProgressStore
             return;
         }
 
-        ITreeAttribute skillsTree = EnsureSkillsTree(entity);
-        ITreeAttribute skillTree = skillsTree.GetTreeAttribute(skillId) as TreeAttribute ?? new TreeAttribute();
+        ITreeAttribute root = EnsureUnlocksRoot(entity);
+        ITreeAttribute skillTree = root.GetTreeAttribute(skillId) as TreeAttribute ?? new TreeAttribute();
         ITreeAttribute tiersTree = skillTree.GetTreeAttribute("unlockTiers") as TreeAttribute ?? new TreeAttribute();
         if (tier <= 0)
         {
@@ -180,60 +184,251 @@ public static class ProgressStore
             tiersTree.SetInt(nodeId, tier);
         }
 
-        skillTree["unlockTiers"] = tiersTree;
-        skillsTree[skillId] = skillTree;
-        entity.WatchedAttributes.MarkPathDirty(AttrTree);
+        if (CountEntries(tiersTree) == 0)
+        {
+            root.RemoveAttribute(skillId);
+        }
+        else
+        {
+            skillTree["unlockTiers"] = tiersTree;
+            root[skillId] = skillTree;
+        }
+
+        if (CountEntries(root) == 0)
+        {
+            entity.WatchedAttributes.RemoveAttribute(AttrUnlocks);
+        }
+        else
+        {
+            entity.WatchedAttributes.SetAttribute(AttrUnlocks, root);
+        }
+
+        entity.WatchedAttributes.MarkPathDirty(AttrUnlocks);
     }
 
     public static void ApplyVisibleMirror(Entity entity, PlayerProgressState state, VisibleProgressChange change)
     {
-        if (change.MirrorPlayerTrack)
+        RemoveLegacyTree(entity);
+
+        if (change.MirrorAttributeScores)
         {
-            MirrorPlayerTrack(entity, state.PlayerLevel, state.PlayerXp, state.UnlockPoints);
+            MirrorAttributeScores(entity, state);
         }
 
-        if (change.MirrorAttributes)
+        if (change.MirrorUnlockTiers)
         {
-            MirrorAttributes(entity, state);
-        }
-
-        if (change.MirrorSkillTrack
-            && !string.IsNullOrWhiteSpace(change.SkillId)
-            && state.Skills.TryGetValue(change.SkillId, out SkillProgressState? skill))
-        {
-            MirrorSkillTrack(entity, change.SkillId, skill.Level, skill.Xp);
-        }
-
-        if (change.MirrorUnlockTiers
-            && !string.IsNullOrWhiteSpace(change.SkillId)
-            && !string.IsNullOrWhiteSpace(change.UnlockNodeId)
-            && state.Skills.TryGetValue(change.SkillId, out SkillProgressState? unlockSkill))
-        {
-            MirrorUnlockTier(
-                entity,
-                change.SkillId,
-                change.UnlockNodeId,
-                unlockSkill.GetTier(change.UnlockNodeId));
+            if (!string.IsNullOrWhiteSpace(change.SkillId)
+                && !string.IsNullOrWhiteSpace(change.UnlockNodeId)
+                && state.Skills.TryGetValue(change.SkillId, out SkillProgressState? unlockSkill))
+            {
+                MirrorUnlockTier(
+                    entity,
+                    change.SkillId,
+                    change.UnlockNodeId,
+                    unlockSkill.GetTier(change.UnlockNodeId));
+            }
+            else
+            {
+                MirrorUnlocks(entity, state);
+            }
         }
     }
 
+    /// <summary>
+    /// Merge public unlock tiers and attribute scores into <paramref name="into"/>.
+    /// Does not touch XP, points, or attribute buckets.
+    /// </summary>
+    public static bool MergePublicFromEntity(Entity entity, PlayerProgressState into)
+    {
+        bool any = false;
+        ITreeAttribute? scores = entity.WatchedAttributes.GetTreeAttribute(AttrScores);
+        if (scores != null)
+        {
+            foreach (string id in AttributeIds.All)
+            {
+                if (scores.HasAttribute(id))
+                {
+                    into.Attributes[id] = scores.GetInt(id, AttributeGrowth.DefaultScore);
+                    any = true;
+                }
+            }
+        }
+
+        ITreeAttribute? unlocks = entity.WatchedAttributes.GetTreeAttribute(AttrUnlocks);
+        if (unlocks != null)
+        {
+            // Clear owned tiers then re-apply so revokes on the wire stick.
+            foreach (SkillProgressState skill in into.Skills.Values)
+            {
+                skill.UnlockTiers.Clear();
+            }
+
+            foreach (KeyValuePair<string, IAttribute> kv in unlocks)
+            {
+                if (kv.Value is not ITreeAttribute skillTree)
+                {
+                    continue;
+                }
+
+                SkillProgressState skill = into.GetOrCreateSkill(kv.Key);
+                skill.UnlockTiers.Clear();
+                ITreeAttribute? tiersTree = skillTree.GetTreeAttribute("unlockTiers");
+                if (tiersTree == null)
+                {
+                    continue;
+                }
+
+                foreach (KeyValuePair<string, IAttribute> tier in tiersTree)
+                {
+                    skill.SetTier(tier.Key, tiersTree.GetInt(tier.Key));
+                    any = true;
+                }
+            }
+        }
+        else if (entity.WatchedAttributes.HasAttribute(AttrUnlocks) == false
+                 && into.Skills.Values.Any(s => s.UnlockTiers.Count > 0))
+        {
+            // Explicit empty public tree: wipe mirrored unlocks.
+            foreach (SkillProgressState skill in into.Skills.Values)
+            {
+                if (skill.UnlockTiers.Count > 0)
+                {
+                    skill.UnlockTiers.Clear();
+                    any = true;
+                }
+            }
+        }
+
+        // Legacy full blob (pre-sparse): hydrate once for clients mid-upgrade.
+        if (!any && entity.WatchedAttributes.GetTreeAttribute(AttrTree) is ITreeAttribute legacy)
+        {
+            MergeLegacyTree(legacy, into);
+            any = true;
+        }
+
+        PlayerProgressState.EnsureAttributeEntries(into);
+        return any || scores != null || unlocks != null;
+    }
+
+    /// <summary>
+    /// Snapshot public fields only (unlocks + scores). Missing XP stays at defaults.
+    /// Prefer <see cref="MergePublicFromEntity"/> when an existing state must keep private fields.
+    /// </summary>
     public static PlayerProgressState? ReadFromEntity(Entity entity)
     {
-        ITreeAttribute? tree = entity.WatchedAttributes.GetTreeAttribute(AttrTree);
-        if (tree == null)
+        bool hasPublic =
+            entity.WatchedAttributes.HasAttribute(AttrScores)
+            || entity.WatchedAttributes.HasAttribute(AttrUnlocks)
+            || entity.WatchedAttributes.HasAttribute(AttrTree);
+        if (!hasPublic)
         {
             return null;
         }
 
-        int storedSchema = tree.HasAttribute("schema") ? tree.GetInt("schema") : 0;
-        PlayerProgressState state = new()
-        {
-            Schema = storedSchema > 0 ? storedSchema : PlayerProgressState.CurrentSchema,
-            PlayerLevel = tree.GetInt("playerLevel", XpCurves.PlayerMinLevel),
-            PlayerXp = tree.GetFloat("playerXp"),
-            UnlockPoints = tree.GetInt("unlockPoints")
-        };
+        PlayerProgressState state = new() { Schema = PlayerProgressState.CurrentSchema };
+        MergePublicFromEntity(entity, state);
+        return state;
+    }
 
+    public static bool HasLegacyTree(Entity entity) =>
+        entity.WatchedAttributes.HasAttribute(AttrTree);
+
+    public static int CountUnlockSkillKeys(Entity entity)
+    {
+        ITreeAttribute? unlocks = entity.WatchedAttributes.GetTreeAttribute(AttrUnlocks);
+        return unlocks == null ? 0 : CountEntries(unlocks);
+    }
+
+    public static int CountUnlockNodeKeys(Entity entity)
+    {
+        ITreeAttribute? unlocks = entity.WatchedAttributes.GetTreeAttribute(AttrUnlocks);
+        if (unlocks == null)
+        {
+            return 0;
+        }
+
+        int total = 0;
+        foreach (KeyValuePair<string, IAttribute> skill in unlocks)
+        {
+            if (skill.Value is not ITreeAttribute skillTree)
+            {
+                continue;
+            }
+
+            ITreeAttribute? tiers = skillTree.GetTreeAttribute("unlockTiers");
+            if (tiers != null)
+            {
+                total += CountEntries(tiers);
+            }
+        }
+
+        return total;
+    }
+
+    public static int PublicTreeBytes(Entity entity)
+    {
+        int total = 0;
+        if (entity.WatchedAttributes.GetTreeAttribute(AttrUnlocks) is ITreeAttribute unlocks)
+        {
+            total += TreeBytes(unlocks);
+        }
+
+        if (entity.WatchedAttributes.GetTreeAttribute(AttrScores) is ITreeAttribute scores)
+        {
+            total += TreeBytes(scores);
+        }
+
+        if (entity.WatchedAttributes.GetTreeAttribute(AttrTree) is ITreeAttribute legacy)
+        {
+            total += TreeBytes(legacy);
+        }
+
+        return total;
+    }
+
+    static void RemoveLegacyTree(Entity entity)
+    {
+        if (!entity.WatchedAttributes.HasAttribute(AttrTree))
+        {
+            return;
+        }
+
+        entity.WatchedAttributes.RemoveAttribute(AttrTree);
+        entity.WatchedAttributes.MarkPathDirty(AttrTree);
+    }
+
+    static ITreeAttribute EnsureUnlocksRoot(Entity entity)
+    {
+        if (entity.WatchedAttributes.GetTreeAttribute(AttrUnlocks) is TreeAttribute existing)
+        {
+            return existing;
+        }
+
+        TreeAttribute root = new();
+        entity.WatchedAttributes.SetAttribute(AttrUnlocks, root);
+        return root;
+    }
+
+    static TreeAttribute? BuildTiersTree(SkillProgressState skill)
+    {
+        TreeAttribute tiers = new();
+        int count = 0;
+        foreach (KeyValuePair<string, int> tier in skill.UnlockTiers)
+        {
+            if (tier.Value <= 0)
+            {
+                continue;
+            }
+
+            tiers.SetInt(tier.Key, tier.Value);
+            count++;
+        }
+
+        return count == 0 ? null : tiers;
+    }
+
+    static void MergeLegacyTree(ITreeAttribute tree, PlayerProgressState into)
+    {
         ITreeAttribute? attributesTree = tree.GetTreeAttribute("attributes");
         if (attributesTree != null)
         {
@@ -241,104 +436,55 @@ public static class ProgressStore
             {
                 if (attributesTree.HasAttribute(id))
                 {
-                    state.Attributes[id] = attributesTree.GetInt(id, AttributeGrowth.DefaultScore);
+                    into.Attributes[id] = attributesTree.GetInt(id, AttributeGrowth.DefaultScore);
                 }
             }
         }
-
-        ITreeAttribute? bucketsTree = tree.GetTreeAttribute("attributeBuckets");
-        if (bucketsTree != null)
-        {
-            foreach (string id in AttributeIds.All)
-            {
-                if (bucketsTree.HasAttribute(id))
-                {
-                    state.AttributeBuckets[id] = bucketsTree.GetFloat(id);
-                }
-            }
-        }
-
-        PlayerProgressState.EnsureAttributeEntries(state);
 
         ITreeAttribute? skillsTree = tree.GetTreeAttribute("skills");
-        if (skillsTree != null)
+        if (skillsTree == null)
         {
-            foreach (KeyValuePair<string, IAttribute> kv in skillsTree)
+            return;
+        }
+
+        foreach (KeyValuePair<string, IAttribute> kv in skillsTree)
+        {
+            if (kv.Value is not ITreeAttribute skillTree)
             {
-                if (kv.Value is not ITreeAttribute skillTree)
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                SkillProgressState skill = new()
-                {
-                    Level = skillTree.GetInt("level"),
-                    Xp = skillTree.GetFloat("xp")
-                };
+            SkillProgressState skill = into.GetOrCreateSkill(kv.Key);
+            ITreeAttribute? tiersTree = skillTree.GetTreeAttribute("unlockTiers");
+            if (tiersTree == null)
+            {
+                continue;
+            }
 
-                ITreeAttribute? tiersTree = skillTree.GetTreeAttribute("unlockTiers");
-                if (tiersTree != null)
-                {
-                    foreach (KeyValuePair<string, IAttribute> tier in tiersTree)
-                    {
-                        skill.SetTier(tier.Key, tiersTree.GetInt(tier.Key));
-                    }
-                }
-
-                if (storedSchema < UnlockIdRemap.Schema)
-                {
-                    skill.RemapUnlockIds(kv.Key);
-                }
-
-                state.Skills[kv.Key] = skill;
+            foreach (KeyValuePair<string, IAttribute> tier in tiersTree)
+            {
+                skill.SetTier(tier.Key, tiersTree.GetInt(tier.Key));
             }
         }
-
-        if (state.Schema < PlayerProgressState.CurrentSchema)
-        {
-            state.Schema = PlayerProgressState.CurrentSchema;
-        }
-
-        return state;
     }
 
-    static ITreeAttribute EnsureRootTree(Entity entity)
+    static int CountEntries(ITreeAttribute tree)
     {
-        ITreeAttribute? tree = entity.WatchedAttributes.GetTreeAttribute(AttrTree);
-        if (tree == null)
+        int count = 0;
+        foreach (KeyValuePair<string, IAttribute> _ in tree)
         {
-            tree = new TreeAttribute();
-            entity.WatchedAttributes.SetAttribute(AttrTree, tree);
+            count++;
         }
 
-        return tree;
+        return count;
     }
 
-    static ITreeAttribute EnsureSkillsTree(Entity entity)
+    static int TreeBytes(ITreeAttribute tree)
     {
-        ITreeAttribute tree = EnsureRootTree(entity);
-        if (tree.GetTreeAttribute("skills") is not TreeAttribute skillsTree)
-        {
-            skillsTree = new TreeAttribute();
-            tree["skills"] = skillsTree;
-        }
-
-        return skillsTree;
-    }
-
-    static void MirrorSkillIntoTree(ITreeAttribute skillsTree, string skillId, SkillProgressState skill)
-    {
-        TreeAttribute skillTree = new();
-        skillTree.SetInt("level", skill.Level);
-        skillTree.SetFloat("xp", skill.Xp);
-
-        TreeAttribute tiersTree = new();
-        foreach (KeyValuePair<string, int> tier in skill.UnlockTiers)
-        {
-            tiersTree.SetInt(tier.Key, tier.Value);
-        }
-
-        skillTree["unlockTiers"] = tiersTree;
-        skillsTree[skillId] = skillTree;
+        using MemoryStream stream = new();
+        using BinaryWriter writer = new(stream);
+        tree.ToBytes(writer);
+        writer.Flush();
+        return (int)stream.Length;
     }
 }

@@ -187,7 +187,14 @@ public class CharacterStatsPanel
         entity.WatchedAttributes.RegisterModifiedListener("health", UpdateAll);
         entity.WatchedAttributes.RegisterModifiedListener("stats", UpdateAll);
         entity.WatchedAttributes.RegisterModifiedListener("bodyTemp", UpdateAll);
-        entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrTree, UpdateAll);
+        entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrUnlocks, UpdateAll);
+        entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrScores, UpdateAll);
+        EntityBehaviorProgress? progress = entity.GetBehavior<EntityBehaviorProgress>();
+        if (progress != null)
+        {
+            progress.Changed += UpdateAll;
+        }
+
         listenersRegistered = true;
     }
 
@@ -200,6 +207,12 @@ public class CharacterStatsPanel
 
         EntityPlayer entity = capi.World.Player.Entity;
         entity.WatchedAttributes.UnregisterListener(UpdateAll);
+        EntityBehaviorProgress? progress = entity.GetBehavior<EntityBehaviorProgress>();
+        if (progress != null)
+        {
+            progress.Changed -= UpdateAll;
+        }
+
         listenersRegistered = false;
     }
 

@@ -68,7 +68,7 @@ public class BlockBreakXpAdapter
             return;
         }
 
-        // Reed override and Block.OnBlockBroken can both fire for one break.
+        // Reed / ore overrides and Block.OnBlockBroken can both fire for one break.
         if (!TryClaimBreak(playerUid, broken, pos, sapi.World))
         {
             return;

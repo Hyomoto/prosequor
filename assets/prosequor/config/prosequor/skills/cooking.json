@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:craft-meal-cooking",
-      "amount": [0.1, 16],
+      "amount": [0.1, 12],
       "pay": "ingredients",
       "when": {
         "activity": "prosequor:deed",
@@ -22,7 +22,7 @@
     },
     {
       "id": "prosequor:craft-cooking-pot-cooking",
-      "amount": [0.1, 16],
+      "amount": [0.1, 12],
       "pay": "ingredients",
       "when": {
         "activity": "prosequor:deed",
@@ -31,7 +31,7 @@
     },
     {
       "id": "prosequor:craft-fermented-cooking",
-      "amount": 0.075,
+      "amount": 0.04,
       "pay": "quantity",
       "payee": "contributors",
       "when": {
@@ -41,7 +41,7 @@
     },
     {
       "id": "prosequor:craft-distilled-cooking",
-      "amount": 0.04,
+      "amount": 0.05,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
@@ -50,7 +50,7 @@
     },
     {
       "id": "prosequor:craft-juice-cooking",
-      "amount": 0.01,
+      "amount": 0.025,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
@@ -59,7 +59,7 @@
     },
     {
       "id": "prosequor:butcher-cooking",
-      "amount": 0.03,
+      "amount": 0.082,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",

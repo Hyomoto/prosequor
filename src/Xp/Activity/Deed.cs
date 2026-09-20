@@ -16,6 +16,9 @@ public static class Deed
     /// <summary>Metric domain for clay fire amount tables (voxels per unit).</summary>
     public const string MetricDomainClayVoxels = "clay-voxels";
 
+    /// <summary>Metric domain for crop growth lifetime amount tables (growth days).</summary>
+    public const string MetricDomainCropLifetime = "crop-lifetime";
+
     public readonly record struct PlannedPay(string SkillId, float Amount, AbilityAction Fact);
 
     /// <summary>One countable quantity unit (code + stack size) for <c>exclude</c> filtering.</summary>
@@ -40,7 +43,12 @@ public static class Deed
         IReadOnlyList<QuantityUnit>? QuantityUnits = null,
         IReadOnlyList<ContributorShare>? Contributors = null,
         string? MakerUid = null,
-        string? SelectedContributorUid = null);
+        string? SelectedContributorUid = null,
+        float Lifetime = 0f,
+        float LifetimeMin = 0f,
+        float LifetimeMax = 0f,
+        bool HasLifetime = false,
+        int GrowthStages = 0);
 
     /// <summary>Role bag for <c>payee</c> resolution (separate from pay channels).</summary>
     public readonly record struct PayeeRoles(
@@ -68,7 +76,8 @@ public static class Deed
         IReadOnlyList<QuantityUnit>? quantityUnits = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
-        string? selectedContributorUid = null) =>
+        string? selectedContributorUid = null,
+        int growthStages = 0) =>
         Emit(
             api,
             playerUid,
@@ -89,7 +98,8 @@ public static class Deed
             quantityUnits,
             contributors,
             makerUid,
-            selectedContributorUid);
+            selectedContributorUid,
+            growthStages);
 
     public static void Emit(
         ICoreAPI api,
@@ -111,7 +121,8 @@ public static class Deed
         IReadOnlyList<QuantityUnit>? quantityUnits = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
-        string? selectedContributorUid = null)
+        string? selectedContributorUid = null,
+        int growthStages = 0)
     {
         if (tokens == null || tokens.Count == 0)
         {
@@ -144,7 +155,8 @@ public static class Deed
             quantityUnits,
             contributors,
             makerUid,
-            selectedContributorUid);
+            selectedContributorUid,
+            growthStages: growthStages);
     }
 
     public static void Emit(
@@ -167,7 +179,8 @@ public static class Deed
         IReadOnlyList<QuantityUnit>? quantityUnits = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
-        string? selectedContributorUid = null)
+        string? selectedContributorUid = null,
+        int growthStages = 0)
     {
         if (player?.PlayerUID == null)
         {
@@ -200,7 +213,8 @@ public static class Deed
             quantityUnits,
             contributors,
             makerUid,
-            selectedContributorUid);
+            selectedContributorUid,
+            growthStages: growthStages);
     }
 
     public static void Emit(
@@ -224,6 +238,7 @@ public static class Deed
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
+        int growthStages = 0,
         string? activity = null,
         IReadOnlyList<string>? inputs = null)
     {
@@ -266,7 +281,8 @@ public static class Deed
             quantityUnits,
             shares,
             maker,
-            selected);
+            selected,
+            growthStages);
 
         IReadOnlyList<PlannedPay> pays = PlanPays(
             rules,
@@ -336,7 +352,8 @@ public static class Deed
         int totalUnits,
         int craftCount,
         BlockPos? position = null,
-        string? metricDomain = null) =>
+        string? metricDomain = null,
+        int growthStages = 0) =>
         PlanPays(
             rules,
             collections,
@@ -347,7 +364,7 @@ public static class Deed
             mount,
             ground,
             lastCraft,
-            BuildChannels(metric, metricMin, metricMax, metricDomain, totalUnits, craftCount),
+            BuildChannels(metric, metricMin, metricMax, metricDomain, totalUnits, craftCount, growthStages: growthStages),
             position);
 
     /// <summary>Pure match/pay planning against an explicit channel bag.</summary>
@@ -558,8 +575,9 @@ public static class Deed
 
     /// <summary>
     /// Map legacy Emit metric args into named channels.
-    /// dig/mine/chop → resistance; clay-voxels → voxels; totalUnits → ingredients measure;
-    /// craftCount → quantity fallback; quantityUnits (when present) override quantity as summed stack counts.
+    /// dig/mine/chop → resistance; clay-voxels → voxels; crop-lifetime → lifetime;
+    /// totalUnits → ingredients measure; craftCount → quantity fallback;
+    /// quantityUnits (when present) override quantity as summed stack counts.
     /// When domain is blank but a metric range is present (tests), publish as resistance.
     /// </summary>
     public static Channels BuildChannels(
@@ -572,18 +590,23 @@ public static class Deed
         IReadOnlyList<QuantityUnit>? quantityUnits = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
-        string? selectedContributorUid = null)
+        string? selectedContributorUid = null,
+        int growthStages = 0)
     {
         int quantity = craftCount > 0 ? craftCount : 1;
         int ingredients = Math.Max(0, totalUnits);
         bool hasResistance = false;
         bool hasVoxels = false;
+        bool hasLifetime = false;
         float resistance = 0f;
         float resistanceMin = 0f;
         float resistanceMax = 0f;
         float voxels = 0f;
         float voxelsMin = 0f;
         float voxelsMax = 0f;
+        float lifetime = 0f;
+        float lifetimeMin = 0f;
+        float lifetimeMax = 0f;
 
         string? domain = string.IsNullOrWhiteSpace(metricDomain) ? null : metricDomain.Trim();
         if (IsResistanceDomain(domain))
@@ -599,6 +622,13 @@ public static class Deed
             voxels = metric;
             voxelsMin = metricMin;
             voxelsMax = metricMax;
+        }
+        else if (IsLifetimeDomain(domain))
+        {
+            hasLifetime = true;
+            lifetime = metric;
+            lifetimeMin = metricMin;
+            lifetimeMax = metricMax;
         }
         else if (domain == null && (metric > 0f || metricMax > metricMin))
         {
@@ -640,7 +670,12 @@ public static class Deed
             quantityUnits,
             shares.Count > 0 ? shares : null,
             NormalizeUid(makerUid),
-            NormalizeUid(selectedContributorUid));
+            NormalizeUid(selectedContributorUid),
+            lifetime,
+            lifetimeMin,
+            lifetimeMax,
+            hasLifetime,
+            Math.Max(0, growthStages));
     }
 
     /// <summary>Drop blank uids and non-positive weights; preserve order.</summary>
@@ -725,6 +760,12 @@ public static class Deed
         if (baseAmount <= 0f)
         {
             return 0f;
+        }
+
+        if (XpPayChannels.UsesLifetime(pay))
+        {
+            int stages = Math.Max(1, channels.GrowthStages);
+            return baseAmount / stages;
         }
 
         if (XpPayChannels.IsFlat(pay))
@@ -818,6 +859,11 @@ public static class Deed
                 min = AmountTableMath.IngredientsMin;
                 max = AmountTableMath.IngredientsMax;
                 return;
+            case XpPayChannel.Lifetime when channels.HasLifetime:
+                value = channels.Lifetime;
+                min = channels.LifetimeMin;
+                max = channels.LifetimeMax;
+                return;
         }
 
         // Selected but empty → missing metric → AmountTableMath uses index 0.
@@ -828,6 +874,10 @@ public static class Deed
         && (domain.Equals(BlockBreakHardnessCatalog.DomainDig, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainMine, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainChop, StringComparison.OrdinalIgnoreCase));
+
+    static bool IsLifetimeDomain(string? domain) =>
+        domain != null
+        && domain.Equals(MetricDomainCropLifetime, StringComparison.OrdinalIgnoreCase);
 
     static bool IsVoxelsDomain(string? domain) =>
         domain != null
@@ -924,6 +974,14 @@ public static class Deed
         {
             min = mod.ClayFormingRecipes.MinVoxelsPerUnit;
             max = mod.ClayFormingRecipes.MaxVoxelsPerUnit;
+            return;
+        }
+
+        if (domain.Equals(MetricDomainCropLifetime, StringComparison.OrdinalIgnoreCase)
+            && mod.CropLifetime != null
+            && mod.CropLifetime.TryGetRange(out min, out max))
+        {
+            return;
         }
     }
 }

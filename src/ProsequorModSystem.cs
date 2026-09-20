@@ -60,6 +60,7 @@ public class ProsequorModSystem : ModSystem
     public ClayFormingRecipeCatalog? ClayFormingRecipes { get; private set; }
     public SmithingRecipeCatalog? SmithingRecipes { get; private set; }
     public BlockBreakHardnessCatalog? BlockBreakHardness { get; private set; }
+    public CropLifetimeCatalog? CropLifetime { get; private set; }
     public ProgressNetwork Network { get; } = new();
     public ContentFingerprint? Fingerprint { get; private set; }
 
@@ -85,6 +86,7 @@ public class ProsequorModSystem : ModSystem
     CraftXpAdapter? craftXpAdapter;
     ClayFormXpAdapter? clayFormXpAdapter;
     long activityWatchListenerId;
+    long progressFlushListenerId;
     bool holdsPatches;
 
     public ProsequorModSystem()
@@ -260,6 +262,20 @@ public class ProsequorModSystem : ModSystem
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainDig);
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainMine);
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainChop);
+
+            CropLifetime = CropLifetimeCatalog.Build(api);
+            if (CropLifetime.TryGet() is CropLifetimeCatalog.Range cropSpan)
+            {
+                api.Logger.Notification(
+                    "[prosequor] Crop lifetime catalog: {0} blocks, growth days {1:0.###}–{2:0.###}.",
+                    cropSpan.BlockCount,
+                    cropSpan.Min,
+                    cropSpan.Max);
+            }
+            else
+            {
+                api.Logger.Notification("[prosequor] Crop lifetime catalog: none.");
+            }
         });
 
         void LogHardnessDomain(ICoreAPI api, string domain)
@@ -304,6 +320,9 @@ public class ProsequorModSystem : ModSystem
         activityWatchListenerId = api.Event.RegisterGameTickListener(
             OnActivityWatchTick,
             PlayerWorkBuckets.TickMs);
+        progressFlushListenerId = api.Event.RegisterGameTickListener(
+            OnProgressFlushTick,
+            150);
     }
 
     public override void StartClientSide(ICoreClientAPI api)
@@ -388,6 +407,12 @@ public class ProsequorModSystem : ModSystem
             {
                 sapi.Event.UnregisterGameTickListener(activityWatchListenerId);
                 activityWatchListenerId = 0;
+            }
+
+            if (progressFlushListenerId != 0)
+            {
+                sapi.Event.UnregisterGameTickListener(progressFlushListenerId);
+                progressFlushListenerId = 0;
             }
 
             Effort.UnregisterPoll(Effort.PollIdMount);
@@ -574,6 +599,22 @@ public class ProsequorModSystem : ModSystem
         RidingPlayerStats.Tick(slice);
         ActivityWatch.TickMaintenance(slice, generation);
         ActivityWatch.Advance();
+    }
+
+    void OnProgressFlushTick(float dt)
+    {
+        if (sapi == null)
+        {
+            return;
+        }
+
+        foreach (IPlayer player in sapi.World.AllOnlinePlayers)
+        {
+            if (TryGetLiveProgress(player) is EntityBehaviorProgress progress)
+            {
+                progress.FlushPendingCoalesced();
+            }
+        }
     }
 
     /// <summary>Register a thin activity wrapper (other mods). Last register for the same id wins.

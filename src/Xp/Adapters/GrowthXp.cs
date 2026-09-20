@@ -1,5 +1,6 @@
 using HarmonyLib;
 using Prosequor.Ability;
+using Prosequor.Xp;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -127,12 +128,30 @@ public static class GrowthXp
             return;
         }
 
+        float metric = 0f;
+        string? metricDomain = null;
+        int growthStages = 0;
+        BlockCropProperties? props = targetBlock.CropProps;
+        if (props != null && AbilityBootstrap.IsCropBlock(targetBlock))
+        {
+            float daysPerMonth = (float)(api.World?.Calendar?.DaysPerMonth ?? 0);
+            float days = CropLifetimeMath.TotalGrowthDays(props, daysPerMonth);
+            if (days > 0f)
+            {
+                metric = days;
+                metricDomain = Deed.MetricDomainCropLifetime;
+                growthStages = CropLifetimeMath.GrowthStages(props);
+            }
+        }
+
         api.Logger.VerboseDebug(
-            "[prosequor] deed grown+domesticated {0} maker={1} contributors={2} craftCount={3}",
+            "[prosequor] deed grown+domesticated {0} maker={1} contributors={2} craftCount={3} lifetimeDays={4} stages={5}",
             targetBlock.Code,
             planterUid,
             contributors?.Count ?? 0,
-            craftCount);
+            craftCount,
+            metric,
+            growthStages);
 
         Deed.Emit(
             api,
@@ -140,10 +159,13 @@ public static class GrowthXp
             [DeedToken.Grown.ToTag(), HarvestXp.TokenDomesticated],
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(targetBlock),
+            metric: metric,
+            metricDomain: metricDomain,
             craftCount: craftCount,
             position: position,
             contributors: contributors,
-            makerUid: planterUid);
+            makerUid: planterUid,
+            growthStages: growthStages);
     }
 
     static bool TryResolveFruitTreeRoot(BlockEntityFruitTreePart? part, out BlockEntity? rootBe)

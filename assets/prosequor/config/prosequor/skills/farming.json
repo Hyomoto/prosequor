@@ -24,7 +24,7 @@
     },
     {
       "id": "prosequor:till-soil",
-      "amount": 0.5,
+      "amount": 0.017,
       "when": {
         "activity": "prosequor:deed",
         "tags": ["till-soil"]
@@ -32,7 +32,8 @@
     },
     {
       "id": "prosequor:crop-grown-farming",
-      "amount": 0.01,
+      "amount": [2, 7, 20],
+      "pay": "lifetime",
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
@@ -61,7 +62,7 @@
     },
     {
       "id": "prosequor:water-farmland",
-      "rate": 0.01,
+      "rate": 0.015,
       "when": {
         "activity": "prosequor:effort",
         "tags": ["interacting", "caller:<watering-can>", "target:<farmland>"]

@@ -381,6 +381,36 @@ public class HarmonyPatchAllSmokeTests
     [Fact]
     [Trait("Layer", "Harmony")]
     [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeOreBlockBroken()
+    {
+        MethodInfo? oreBroken = AccessTools.DeclaredMethod(
+            typeof(BlockOre),
+            nameof(BlockOre.OnBlockBroken));
+        Assert.NotNull(oreBroken);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.orebroken.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+            Assert.Contains(oreBroken, harmony.GetPatchedMethods());
+            Patches? oreInfo = Harmony.GetPatchInfo(oreBroken);
+            Assert.NotNull(oreInfo);
+            Assert.True(
+                oreInfo!.Postfixes.Count > 0,
+                "Expected BlockOre.OnBlockBroken mining XP postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
     public void PatchAll_Should_IncludeBombCombustAndBlockExploded()
     {
         MethodInfo? combust = AccessTools.Method(

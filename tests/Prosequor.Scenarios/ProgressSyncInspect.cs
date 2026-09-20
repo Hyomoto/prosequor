@@ -1,19 +1,16 @@
-using System.IO;
 using Prosequor.Data;
+using Prosequor.Network;
 using Prosequor.Player;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.Server;
 using Xunit;
 
 namespace Prosequor.Scenarios;
 
 /// <summary>
-/// Live / WatchedAttributes mirror / ModData views of one player's progress, plus the
-/// byte sizes that stand in for today's full-tree packet and persist blob.
-/// Atlas has no client process; <see cref="Mirrored"/> is what
-/// <see cref="EntityBehaviorProgress"/> hydrates on a real client.
+/// Live / public WatchedAttributes / ModData views of one player's progress, plus the
+/// byte sizes that stand in for public wire cost. Private XP rides the owner channel.
 /// </summary>
 sealed class ProgressSyncInspect
 {
@@ -21,28 +18,24 @@ sealed class ProgressSyncInspect
     public const string Mining = "mining";
 
     public required PlayerProgressState Live { get; init; }
-    public required PlayerProgressState Mirrored { get; init; }
+    public required PlayerProgressState PublicMirror { get; init; }
     public PlayerProgressState? Stored { get; init; }
-    public required int MirrorTreeBytes { get; init; }
+    public required int PublicTreeBytes { get; init; }
     public required int ModDataBytes { get; init; }
-    public required int SkillKeys { get; init; }
+    public required int UnlockSkillKeys { get; init; }
     public required int UnlockKeys { get; init; }
     public required int RegisteredSkillCount { get; init; }
-    public required bool TreeHasSkillMeters { get; init; }
+    public required bool HasLegacyTree { get; init; }
+    public required bool HasScoreTree { get; init; }
 
-    public static ProgressSyncInspect Capture(
-        IPlayer player,
-        ISkillRegistry registry)
+    public static ProgressSyncInspect Capture(IPlayer player, ISkillRegistry registry)
     {
         EntityBehaviorProgress live = RequireLive(player);
         Entity entity = player.Entity;
         Assert.NotNull(entity);
 
-        PlayerProgressState? mirrored = ProgressStore.ReadFromEntity(entity);
-        Assert.NotNull(mirrored);
-
-        ITreeAttribute? tree = entity.WatchedAttributes.GetTreeAttribute(ProgressStore.AttrTree);
-        Assert.NotNull(tree);
+        PlayerProgressState publicMirror = new() { Schema = PlayerProgressState.CurrentSchema };
+        ProgressStore.MergePublicFromEntity(entity, publicMirror);
 
         byte[]? modBytes = ProgressStore.ReadModData(player);
         PlayerProgressState? stored = null;
@@ -54,14 +47,15 @@ sealed class ProgressSyncInspect
         return new ProgressSyncInspect
         {
             Live = live.State,
-            Mirrored = mirrored!,
+            PublicMirror = publicMirror,
             Stored = stored,
-            MirrorTreeBytes = TreeBytes(tree!),
+            PublicTreeBytes = ProgressStore.PublicTreeBytes(entity),
             ModDataBytes = modBytes?.Length ?? 0,
-            SkillKeys = CountSkillKeys(tree!),
-            UnlockKeys = CountUnlockKeys(tree!),
+            UnlockSkillKeys = ProgressStore.CountUnlockSkillKeys(entity),
+            UnlockKeys = ProgressStore.CountUnlockNodeKeys(entity),
             RegisteredSkillCount = registry.All.Count,
-            TreeHasSkillMeters = TreeHasMeterFields(tree!)
+            HasLegacyTree = ProgressStore.HasLegacyTree(entity),
+            HasScoreTree = entity.WatchedAttributes.HasAttribute(ProgressStore.AttrScores)
         };
     }
 
@@ -85,17 +79,16 @@ sealed class ProgressSyncInspect
         return (IServerPlayer)player;
     }
 
-    /// <summary>
-    /// Fields a real client reads from the entity tree: player track, skill XP/levels/unlocks,
-    /// attribute scores and growth buckets. Skill saturation meters are server-only.
-    /// </summary>
-    public void AssertVisibleParity(string because)
+    /// <summary>Public WA carries unlocks + attribute scores only.</summary>
+    public void AssertPublicParity(string because)
     {
-        AssertVisibleTracks(Live, Mirrored, because + " (mirror)");
-        if (Stored != null)
-        {
-            AssertVisibleTracks(Live, Stored, because + " (moddata)");
-        }
+        AssertPublicFields(Live, PublicMirror, because + " (public WA)");
+    }
+
+    public void AssertStoredParity(string because)
+    {
+        Assert.NotNull(Stored);
+        AssertFullParity(Live, Stored!, because + " (moddata)");
     }
 
     public void AssertStoredIncludesSkillMeters(string skillId, string because)
@@ -109,7 +102,36 @@ sealed class ProgressSyncInspect
             $"{because}: stored fill={storedSkill.Fill} accrued={storedSkill.Accrued} live fill={liveSkill.Fill} accrued={liveSkill.Accrued}.");
     }
 
-    public static void AssertVisibleTracks(
+    public static void AssertPublicFields(
+        PlayerProgressState expected,
+        PlayerProgressState actual,
+        string because)
+    {
+        foreach (string id in AttributeIds.All)
+        {
+            Assert.True(
+                expected.GetAttribute(id) == actual.GetAttribute(id),
+                $"{because}: attribute score {id} live={expected.GetAttribute(id)} actual={actual.GetAttribute(id)}.");
+        }
+
+        HashSet<string> ids = new(expected.Skills.Keys, StringComparer.OrdinalIgnoreCase);
+        ids.UnionWith(actual.Skills.Keys);
+        foreach (string skillId in ids)
+        {
+            SkillProgressState expectedSkill = expected.GetOrCreateSkill(skillId);
+            SkillProgressState actualSkill = actual.GetOrCreateSkill(skillId);
+            HashSet<string> nodes = new(expectedSkill.UnlockTiers.Keys, StringComparer.OrdinalIgnoreCase);
+            nodes.UnionWith(actualSkill.UnlockTiers.Keys);
+            foreach (string nodeId in nodes)
+            {
+                Assert.True(
+                    expectedSkill.GetTier(nodeId) == actualSkill.GetTier(nodeId),
+                    $"{because}: {skillId}/{nodeId} live tier={expectedSkill.GetTier(nodeId)} actual={actualSkill.GetTier(nodeId)}.");
+            }
+        }
+    }
+
+    public static void AssertFullParity(
         PlayerProgressState expected,
         PlayerProgressState actual,
         string because)
@@ -148,86 +170,6 @@ sealed class ProgressSyncInspect
                     $"{because}: {skillId}/{nodeId} live tier={expectedSkill.GetTier(nodeId)} actual={actualSkill.GetTier(nodeId)}.");
             }
         }
-    }
-
-    public static int TreeBytes(ITreeAttribute tree)
-    {
-        using MemoryStream stream = new();
-        using BinaryWriter writer = new(stream);
-        tree.ToBytes(writer);
-        writer.Flush();
-        return (int)stream.Length;
-    }
-
-    static int CountSkillKeys(ITreeAttribute root)
-    {
-        ITreeAttribute? skills = root.GetTreeAttribute("skills");
-        return skills == null ? 0 : CountEntries(skills);
-    }
-
-    static int CountUnlockKeys(ITreeAttribute root)
-    {
-        ITreeAttribute? skills = root.GetTreeAttribute("skills");
-        if (skills == null)
-        {
-            return 0;
-        }
-
-        int total = 0;
-        foreach (KeyValuePair<string, IAttribute> skill in skills)
-        {
-            if (skill.Value is not ITreeAttribute skillTree)
-            {
-                continue;
-            }
-
-            ITreeAttribute? tiers = skillTree.GetTreeAttribute("unlockTiers");
-            if (tiers != null)
-            {
-                total += CountEntries(tiers);
-            }
-        }
-
-        return total;
-    }
-
-    static bool TreeHasMeterFields(ITreeAttribute root)
-    {
-        ITreeAttribute? skills = root.GetTreeAttribute("skills");
-        if (skills == null)
-        {
-            return false;
-        }
-
-        foreach (KeyValuePair<string, IAttribute> skill in skills)
-        {
-            if (skill.Value is not ITreeAttribute skillTree)
-            {
-                continue;
-            }
-
-            if (skillTree.HasAttribute("fill")
-                || skillTree.HasAttribute("accrued")
-                || skillTree.HasAttribute("cachedCap")
-                || skillTree.HasAttribute("lastAccrualTotalHours")
-                || skillTree.HasAttribute("lastDrainTotalHours"))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static int CountEntries(ITreeAttribute tree)
-    {
-        int count = 0;
-        foreach (KeyValuePair<string, IAttribute> _ in tree)
-        {
-            count++;
-        }
-
-        return count;
     }
 
     static bool NearlyEqual(float a, float b) => Math.Abs(a - b) <= 0.001f;

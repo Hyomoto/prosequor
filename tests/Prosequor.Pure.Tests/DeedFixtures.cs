@@ -20,8 +20,10 @@ public static class DeedFixtures
         VerifyMultiSkillPlanPays();
         VerifyBombCallerPaysMining();
         VerifyAmountTableMetric();
+        VerifyLifetimePay();
         VerifyFlatIgnoresQuantity();
         VerifyMissingResistanceUsesTableZero();
+        VerifyMissingLifetimeUsesTableZeroOverStages();
         VerifyPayCompileRejects();
         VerifyQuantityExclude();
         VerifyDomesticatedHarvestQuantity();
@@ -403,6 +405,191 @@ public static class DeedFixtures
         }
     }
 
+    static void VerifyLifetimePay()
+    {
+        CollectionIndex collections = new();
+        List<TagCriterion> grownCriteria =
+        [
+            new TokenCriterion { Token = DeedTokenTags.Grown },
+            new TokenCriterion { Token = HarvestXp.TokenDomesticated }
+        ];
+        XpRule lifetimeRule = new()
+        {
+            Id = "crop-life",
+            Activity = Deed.Activity,
+            SkillId = "farming",
+            Amount = 0f,
+            AmountTable = [2f, 7f, 20f],
+            Rate = 0f,
+            Pay = XpPayChannel.Lifetime,
+            Criteria = grownCriteria,
+            Priority = 0,
+            SourceOrder = 1,
+            MatchScore = XpRuleMatcher.Score(grownCriteria, 0, 1)
+        };
+
+        FixedAmountRules rules = new(lifetimeRule);
+        HashSet<string> tokens = new(StringComparer.OrdinalIgnoreCase)
+        {
+            DeedTokenTags.Grown,
+            HarvestXp.TokenDomesticated
+        };
+
+        // Min knot 2 / 5 stages = 0.4
+        IReadOnlyList<Deed.PlannedPay> low = Deed.PlanPays(
+            rules,
+            collections,
+            "p",
+            tokens,
+            caller: CallerIdentities.Hand,
+            target: "game:crop-turnip-2",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 9f,
+            metricMin: 9f,
+            metricMax: 30f,
+            totalUnits: 0,
+            craftCount: 1,
+            metricDomain: Deed.MetricDomainCropLifetime,
+            growthStages: 5);
+        // Mid of [9,30] → knot 7 / 5 = 1.4
+        IReadOnlyList<Deed.PlannedPay> mid = Deed.PlanPays(
+            rules,
+            collections,
+            "p",
+            tokens,
+            caller: CallerIdentities.Hand,
+            target: "game:crop-carrot-2",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 19.5f,
+            metricMin: 9f,
+            metricMax: 30f,
+            totalUnits: 0,
+            craftCount: 1,
+            metricDomain: Deed.MetricDomainCropLifetime,
+            growthStages: 5);
+        // Max knot 20 / 5 = 4
+        IReadOnlyList<Deed.PlannedPay> high = Deed.PlanPays(
+            rules,
+            collections,
+            "p",
+            tokens,
+            caller: CallerIdentities.Hand,
+            target: "game:crop-pineapple-2",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 30f,
+            metricMin: 9f,
+            metricMax: 30f,
+            totalUnits: 0,
+            craftCount: 1,
+            metricDomain: Deed.MetricDomainCropLifetime,
+            growthStages: 5);
+        // Scalar lifetime 10 / 5 stages = 2 (table path with constant via ResolveAmount)
+        XpRule scalarLife = new()
+        {
+            Id = "crop-life-scalar",
+            Activity = Deed.Activity,
+            SkillId = "farming",
+            Amount = 10f,
+            AmountTable = null,
+            Rate = 0f,
+            Pay = XpPayChannel.Lifetime,
+            Criteria = grownCriteria,
+            Priority = 0,
+            SourceOrder = 1,
+            MatchScore = XpRuleMatcher.Score(grownCriteria, 0, 1)
+        };
+        IReadOnlyList<Deed.PlannedPay> split = Deed.PlanPays(
+            new FixedAmountRules(scalarLife),
+            collections,
+            "p",
+            tokens,
+            caller: CallerIdentities.Hand,
+            target: "game:crop-carrot-2",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 15f,
+            metricMin: 9f,
+            metricMax: 30f,
+            totalUnits: 0,
+            craftCount: 1,
+            metricDomain: Deed.MetricDomainCropLifetime,
+            growthStages: 5);
+
+        if (low.Count != 1
+            || Math.Abs(low[0].Amount - 0.4f) > 0.0001f
+            || mid.Count != 1
+            || Math.Abs(mid[0].Amount - 1.4f) > 0.0001f
+            || high.Count != 1
+            || Math.Abs(high[0].Amount - 4f) > 0.0001f
+            || split.Count != 1
+            || Math.Abs(split[0].Amount - 2f) > 0.0001f)
+        {
+            Assert.Fail(
+                $"[prosequor] Lifetime pay failed: low={Fmt(low)} mid={Fmt(mid)} high={Fmt(high)} split={Fmt(split)}.");
+        }
+
+        static string Fmt(IReadOnlyList<Deed.PlannedPay> pays) =>
+            pays.Count == 0 ? "none" : pays[0].Amount.ToString("0.###");
+    }
+
+    static void VerifyMissingLifetimeUsesTableZeroOverStages()
+    {
+        CollectionIndex collections = new();
+        List<TagCriterion> grownCriteria = [new TokenCriterion { Token = DeedTokenTags.Grown }];
+        XpRule tableRule = new()
+        {
+            Id = "life-miss",
+            Activity = Deed.Activity,
+            SkillId = "farming",
+            Amount = 0f,
+            AmountTable = [2f, 7f, 20f],
+            Rate = 0f,
+            Pay = XpPayChannel.Lifetime,
+            Criteria = grownCriteria,
+            Priority = 0,
+            SourceOrder = 1,
+            MatchScore = XpRuleMatcher.Score(grownCriteria, 0, 1)
+        };
+
+        // No lifetime channel — amount[0]=2 / 5 stages = 0.4
+        Deed.Channels emptyLife = new(
+            Resistance: 0f,
+            ResistanceMin: 0f,
+            ResistanceMax: 0f,
+            HasResistance: false,
+            Voxels: 0f,
+            VoxelsMin: 0f,
+            VoxelsMax: 0f,
+            HasVoxels: false,
+            Quantity: 1,
+            Ingredients: 0,
+            GrowthStages: 5);
+
+        IReadOnlyList<Deed.PlannedPay> pays = Deed.PlanPays(
+            new FixedAmountRules(tableRule),
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Grown },
+            caller: CallerIdentities.Hand,
+            target: null,
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            emptyLife);
+
+        if (pays.Count != 1 || Math.Abs(pays[0].Amount - 0.4f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Missing lifetime should fall back to amount[0] / stages.");
+        }
+    }
+
     static void VerifyFlatIgnoresQuantity()
     {
         CollectionIndex collections = new();
@@ -578,6 +765,32 @@ public static class DeedFixtures
                 "[prosequor] exclude without quantity should reject: {0}",
                 excludeError));
         }
+
+        if (!XpRuleCompiler.TryCompile(
+                new XpRuleJson
+                {
+                    id = "lifetime-table",
+                    amount = new Newtonsoft.Json.Linq.JArray(2, 7, 20),
+                    pay = new Newtonsoft.Json.Linq.JValue("lifetime"),
+                    when = new XpRuleWhenJson
+                    {
+                        activity = Deed.Activity,
+                        tags = ["grown", "domesticated"]
+                    }
+                },
+                "farming",
+                5,
+                collections,
+                out XpRule lifetime,
+                out string lifeError)
+            || lifetime.Pay != XpPayChannel.Lifetime
+            || lifetime.AmountTable == null
+            || lifetime.AmountTable.Count != 3)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] pay lifetime with amount table should compile: {0}",
+                lifeError));
+        }
     }
 
     static void VerifyQuantityExclude()
@@ -686,6 +899,7 @@ public static class DeedFixtures
         collections.EnsureKey("seed");
         collections.EnsureKey("crop");
         collections.EnsureKey("berry-bush");
+        collections.EnsureKey("fruit-tree");
         collections.AddCode("seed", "game:seeds-carrot");
         collections.AddCode("crop", "game:crop-carrot-9");
         collections.AddCode("berry-bush", "game:fruitingbush-blueberry-ripe");

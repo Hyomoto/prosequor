@@ -8,7 +8,9 @@ using Vintagestory.API.Server;
 
 namespace Prosequor.Network;
 
-/// <summary>Client→server unlock purchase channel. Server derives player identity from the packet sender.</summary>
+/// <summary>
+/// Unlock purchase, HUD, fingerprint, and owner-only progress snapshot/delta channel.
+/// </summary>
 public class ProgressNetwork
 {
     public const string ChannelName = "prosequor";
@@ -25,6 +27,8 @@ public class ProgressNetwork
     public event Action<LevelUpHudPacket>? LevelUpHudReceived;
     public event Action? SkillWaitingDumpRequested;
     public event Action<ContentFingerprintMismatchPacket>? ContentMismatchReceived;
+    public event Action<ProgressSnapshotPacket>? ProgressSnapshotReceived;
+    public event Action<ProgressDeltaPacket>? ProgressDeltaReceived;
 
     public void StartServer(ICoreServerAPI api)
     {
@@ -38,9 +42,13 @@ public class ProgressNetwork
             .RegisterMessageType<SkillWaitingHudDumpRequestPacket>()
             .RegisterMessageType<ContentFingerprintPacket>()
             .RegisterMessageType<ContentFingerprintMismatchPacket>()
+            .RegisterMessageType<ProgressSnapshotPacket>()
+            .RegisterMessageType<ProgressDeltaPacket>()
+            .RegisterMessageType<ProgressResyncRequestPacket>()
             .SetMessageHandler<UnlockNodeRequestPacket>(OnUnlockRequest)
             .SetMessageHandler<SkillWaitingHudStatusPacket>(OnSkillWaitingStatusFromClient)
-            .SetMessageHandler<ContentFingerprintPacket>(OnFingerprintFromClient);
+            .SetMessageHandler<ContentFingerprintPacket>(OnFingerprintFromClient)
+            .SetMessageHandler<ProgressResyncRequestPacket>(OnResyncRequest);
     }
 
     public void StartClient(ICoreClientAPI api)
@@ -55,10 +63,15 @@ public class ProgressNetwork
             .RegisterMessageType<SkillWaitingHudDumpRequestPacket>()
             .RegisterMessageType<ContentFingerprintPacket>()
             .RegisterMessageType<ContentFingerprintMismatchPacket>()
+            .RegisterMessageType<ProgressSnapshotPacket>()
+            .RegisterMessageType<ProgressDeltaPacket>()
+            .RegisterMessageType<ProgressResyncRequestPacket>()
             .SetMessageHandler<UnlockNodeResultPacket>(OnUnlockResult)
             .SetMessageHandler<LevelUpHudPacket>(OnLevelUpHud)
             .SetMessageHandler<SkillWaitingHudDumpRequestPacket>(_ => SkillWaitingDumpRequested?.Invoke())
-            .SetMessageHandler<ContentFingerprintMismatchPacket>(OnContentMismatch);
+            .SetMessageHandler<ContentFingerprintMismatchPacket>(OnContentMismatch)
+            .SetMessageHandler<ProgressSnapshotPacket>(OnProgressSnapshot)
+            .SetMessageHandler<ProgressDeltaPacket>(OnProgressDelta);
         fingerprintListenerId = api.Event.RegisterGameTickListener(OnFingerprintTick, FingerprintTickMs);
     }
 
@@ -77,10 +90,30 @@ public class ProgressNetwork
         serverChannel?.SendPacket(packet, player);
     }
 
+    public void SendProgressSnapshot(IServerPlayer player, ProgressSnapshotPacket packet)
+    {
+        serverChannel?.SendPacket(packet, player);
+    }
+
+    public void SendProgressDelta(IServerPlayer player, ProgressDeltaPacket packet)
+    {
+        serverChannel?.SendPacket(packet, player);
+    }
+
     /// <summary>Asks the player's client to print skill-waiting HUD status to chat.</summary>
     public void RequestSkillWaitingDump(IServerPlayer player)
     {
         serverChannel?.SendPacket(new SkillWaitingHudDumpRequestPacket(), player);
+    }
+
+    public void RequestProgressResync(int lastSeq)
+    {
+        if (clientChannel is not { Connected: true })
+        {
+            return;
+        }
+
+        clientChannel.SendPacket(new ProgressResyncRequestPacket { LastSeq = lastSeq });
     }
 
     /// <summary>
@@ -159,6 +192,12 @@ public class ProgressNetwork
         ContentMismatchReceived?.Invoke(packet);
     }
 
+    void OnResyncRequest(IServerPlayer fromPlayer, ProgressResyncRequestPacket packet)
+    {
+        EntityBehaviorProgress? progress = ProsequorModSystem.TryGetLiveProgress(fromPlayer);
+        progress?.SendOwnerSnapshot();
+    }
+
     void UnregisterFingerprintTick()
     {
         if (capi == null || fingerprintListenerId == 0)
@@ -207,5 +246,35 @@ public class ProgressNetwork
     void OnLevelUpHud(LevelUpHudPacket packet)
     {
         LevelUpHudReceived?.Invoke(packet);
+    }
+
+    void OnProgressSnapshot(ProgressSnapshotPacket packet)
+    {
+        ApplySnapshotToLocalPlayer(packet);
+        ProgressSnapshotReceived?.Invoke(packet);
+    }
+
+    void OnProgressDelta(ProgressDeltaPacket packet)
+    {
+        ApplyDeltaToLocalPlayer(packet);
+        ProgressDeltaReceived?.Invoke(packet);
+    }
+
+    void ApplySnapshotToLocalPlayer(ProgressSnapshotPacket packet)
+    {
+        EntityBehaviorProgress? progress = TryLocalProgress();
+        progress?.ApplyOwnerSnapshot(packet);
+    }
+
+    void ApplyDeltaToLocalPlayer(ProgressDeltaPacket packet)
+    {
+        EntityBehaviorProgress? progress = TryLocalProgress();
+        progress?.ApplyOwnerDelta(packet);
+    }
+
+    EntityBehaviorProgress? TryLocalProgress()
+    {
+        IClientPlayer? player = capi?.World?.Player;
+        return ProsequorModSystem.TryGetLiveProgress(player);
     }
 }

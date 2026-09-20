@@ -762,7 +762,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance`, `voxels`, or `ingredients`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40.
+`amount` arrays require a measure channel (`resistance`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`.
 
 ### XP `when`
 
@@ -791,6 +791,7 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `voxels` | Lerp `amount` table against clay voxels-per-unit |
 | `quantity` | Multiply by emit quantity (crafts, voxels, drops, …) |
 | `ingredients` | Lerp `amount` table against recipe ingredient units (1–40) |
+| `lifetime` | Lerp `amount` table against crop growth days (catalog min–max), then divide by `GrowthStages` |
 
 | `payee` | Who receives the grant |
 | --- | --- |

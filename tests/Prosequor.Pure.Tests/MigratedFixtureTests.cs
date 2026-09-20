@@ -20,6 +20,9 @@ public class MigratedFixtureTests
     public void ProgressParkFixtures_Should_Pass() => ProgressParkFixtures.VerifyAll();
 
     [Fact]
+    public void ProgressSyncFixtures_Should_Pass() => ProgressSyncFixtures.VerifyAll();
+
+    [Fact]
     public void ClayFormXpFixtures_Should_Pass() => ClayFormXpFixtures.VerifyAll();
 
     [Fact]
@@ -45,6 +48,9 @@ public class MigratedFixtureTests
 
     [Fact]
     public void AmountTableFixtures_Should_Pass() => AmountTableFixtures.VerifyAll();
+
+    [Fact]
+    public void CropLifetimeFixtures_Should_Pass() => CropLifetimeFixtures.VerifyAll();
 
     [Fact]
     public void QualityMathFixtures_Should_Pass() => QualityMathFixtures.VerifyAll();

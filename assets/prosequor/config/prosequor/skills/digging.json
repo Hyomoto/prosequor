@@ -12,39 +12,30 @@
   ],
   "xpRules": [
     {
-      "id": "prosequor:dig-clay-digging",
-      "amount": 0.2,
+      "id": "prosequor:dig-cheap-drop-digging",
+      "amount": 0.15,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["block-broken", "target:<clay>", "caller:<shovel>"]
+        "tags": ["block-broken", "target:<clay, peat>", "caller:<shovel>"]
       }
     },
     {
-      "id": "prosequor:dig-charcoal-digging",
-      "amount": 0.1,
+      "id": "prosequor:dig-expensive-drop-digging",
+      "amount": 0.33,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["block-broken", "target:<charcoal>", "caller:<shovel>"]
-      }
-    },
-    {
-      "id": "prosequor:dig-saltpeter-digging",
-      "amount": 0.2,
-      "pay": "quantity",
-      "when": {
-        "activity": "prosequor:deed",
-        "tags": ["block-broken", "target:<saltpeter>", "caller:<shovel>"]
+        "tags": ["block-broken", "target:<saltpeter, charcoal>", "caller:<shovel>"]
       }
     },
     {
       "id": "prosequor:dig-digging",
-      "amount": [1, 2, 3],
+      "amount": [0.4, 0.75, 1.1],
       "pay": "resistance",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["block-broken", "target:<soil>" ]
+        "tags": ["block-broken", "target:<soil, sand, gravel>" ]
       }
     }
   ],

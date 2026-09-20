@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Atlas.Api;
 using Atlas.XUnit;
 using Prosequor.Data;
+using Prosequor.Network;
 using Prosequor.Player;
 using Prosequor.Xp;
 using Vintagestory.API.Common;
@@ -11,9 +12,8 @@ using Xunit.Abstractions;
 namespace Prosequor.Scenarios;
 
 /// <summary>
-/// Point-of-comparison for progress transport cost. Numbers print; a few shape asserts
-/// lock today's full-tree WatchedAttributes blob so a cheaper follow-up has to beat them
-/// on purpose rather than by accident.
+/// Point-of-comparison for sparse progress transport. Shape asserts lock the cheap public
+/// WA + owner-channel design; numbers print for local scale feel.
 /// </summary>
 public class ProgressSyncCostScenarios : AtlasScenarioBase
 {
@@ -27,7 +27,7 @@ public class ProgressSyncCostScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Profile")]
     [Trait("Kind", "ProgressSync")]
-    public async Task MirrorBlob_Should_ReportEmptyVsGrown_AndStayFullTreeOnXpTick()
+    public async Task PublicMirror_Should_StaySparse_AndXpShouldRideOwnerChannel()
     {
         ITestPlayer joined = await World.JoinPlayer("SyncCost");
         IPlayer player = joined.Player;
@@ -37,40 +37,53 @@ public class ProgressSyncCostScenarios : AtlasScenarioBase
         ProgressSyncInspect empty = ProgressSyncInspect.Capture(player, registry);
         Report(empty, "empty-join");
 
-        // Today's mirror writes a row for every registered skill, even at 0/0.
-        Assert.Equal(empty.RegisteredSkillCount, empty.SkillKeys);
-        Assert.True(empty.RegisteredSkillCount >= 10, "Expected a multi-skill catalog for this cost baseline.");
-        Assert.True(empty.MirrorTreeBytes > 0);
-        Assert.False(empty.TreeHasSkillMeters);
+        Assert.True(empty.RegisteredSkillCount >= 10);
+        Assert.False(empty.HasLegacyTree);
+        Assert.Equal(0, empty.UnlockSkillKeys);
+        Assert.Equal(0, empty.UnlockKeys);
+        Assert.Equal(0, empty.ModDataBytes);
+        Assert.True(empty.HasScoreTree);
+        // Attribute scores only — far below the old ~1065B full skill blob.
+        Assert.True(
+            empty.PublicTreeBytes < 400,
+            $"Empty public WA should be scores-only; got {empty.PublicTreeBytes}B.");
 
+        joined.Client.Clear();
         live.AddSkillXp(Farming, 1f, mode: XpAwardMode.Grant);
+        live.FlushPendingCoalesced();
         ProgressSyncInspect oneTick = ProgressSyncInspect.Capture(player, registry);
         Report(oneTick, "one-farming-xp");
 
-        Assert.Equal(empty.SkillKeys, oneTick.SkillKeys);
-        Assert.Equal(0, inspectTier(oneTick.Mirrored, ProgressSyncInspect.Mining, "miner"));
+        Assert.Equal(0, oneTick.UnlockSkillKeys);
+        Assert.Equal(0, oneTick.ModDataBytes);
         Assert.True(
-            oneTick.MirrorTreeBytes >= empty.MirrorTreeBytes * 9 / 10,
-            $"A one-skill XP tick still dirties the whole prosequor tree; expected payload near the empty blob ({empty.MirrorTreeBytes}B), got {oneTick.MirrorTreeBytes}B.");
-        Assert.True(
-            Math.Abs(oneTick.MirrorTreeBytes - empty.MirrorTreeBytes) < 64,
-            $"XP-only ticks should not grow the tree structure; empty={empty.MirrorTreeBytes}B after={oneTick.MirrorTreeBytes}B.");
+            Math.Abs(oneTick.PublicTreeBytes - empty.PublicTreeBytes) < 32,
+            $"XP-only ticks must not grow public WA; empty={empty.PublicTreeBytes}B after={oneTick.PublicTreeBytes}B.");
+        Assert.Contains(
+            joined.Client.Packets<ProgressDeltaPacket>(ProgressNetwork.ChannelName),
+            d => d.Skills.Exists(s =>
+                string.Equals(s.SkillId, Farming, StringComparison.OrdinalIgnoreCase)));
 
         GrantFarmingTree(live, registry);
         live.AddSkillXp(Farming, 25f, mode: XpAwardMode.Grant);
+        live.FlushPendingCoalesced();
         ProgressSyncInspect grown = ProgressSyncInspect.Capture(player, registry);
         Report(grown, "grown-farming");
 
-        Assert.Equal(empty.SkillKeys, grown.SkillKeys);
         Assert.True(grown.UnlockKeys > 0);
+        Assert.True(grown.UnlockSkillKeys > 0);
+        Assert.True(grown.UnlockSkillKeys < grown.RegisteredSkillCount);
+        Assert.False(grown.HasLegacyTree);
         Assert.True(
-            grown.MirrorTreeBytes > empty.MirrorTreeBytes,
-            $"Owned unlocks should enlarge the blob; empty={empty.MirrorTreeBytes}B grown={grown.MirrorTreeBytes}B.");
-        Assert.True(
-            grown.ModDataBytes > empty.ModDataBytes,
-            $"Owned unlocks should enlarge ModData; empty={empty.ModDataBytes}B grown={grown.ModDataBytes}B.");
-        grown.AssertVisibleParity("grown farming");
-        Assert.False(grown.TreeHasSkillMeters);
+            grown.PublicTreeBytes > empty.PublicTreeBytes,
+            $"Owned unlocks should enlarge public WA; empty={empty.PublicTreeBytes}B grown={grown.PublicTreeBytes}B.");
+        Assert.Equal(0, grown.ModDataBytes);
+        grown.AssertPublicParity("grown farming");
+
+        live.FlushSave();
+        ProgressSyncInspect persisted = ProgressSyncInspect.Capture(player, registry);
+        Assert.True(persisted.ModDataBytes > 0);
+        Report(persisted, "grown-flushed");
 
         TimeSerialize("serialize/grown", player, registry);
     }
@@ -131,11 +144,11 @@ public class ProgressSyncCostScenarios : AtlasScenarioBase
             long before = Stopwatch.GetTimestamp();
             ProgressSyncInspect snap = ProgressSyncInspect.Capture(player, registry);
             long elapsed = Stopwatch.GetTimestamp() - before;
-            lastBytes = snap.MirrorTreeBytes;
+            lastBytes = snap.PublicTreeBytes;
             if (i == 0)
             {
                 firstTicks = elapsed;
-                firstBytes = snap.MirrorTreeBytes;
+                firstBytes = snap.PublicTreeBytes;
             }
         }
 
@@ -151,7 +164,7 @@ public class ProgressSyncCostScenarios : AtlasScenarioBase
     void Report(ProgressSyncInspect snap, string label)
     {
         ReportLine(
-            $"{label} tree={snap.MirrorTreeBytes}B moddata={snap.ModDataBytes}B skills={snap.SkillKeys}/{snap.RegisteredSkillCount} unlocks={snap.UnlockKeys} metersOnTree={snap.TreeHasSkillMeters} stored={(snap.Stored != null)}");
+            $"{label} public={snap.PublicTreeBytes}B moddata={snap.ModDataBytes}B unlockSkills={snap.UnlockSkillKeys}/{snap.RegisteredSkillCount} unlocks={snap.UnlockKeys} legacy={snap.HasLegacyTree} scores={snap.HasScoreTree} stored={(snap.Stored != null)}");
     }
 
     void ReportLine(string line)
@@ -160,7 +173,4 @@ public class ProgressSyncCostScenarios : AtlasScenarioBase
         output.WriteLine(text);
         Console.WriteLine(text);
     }
-
-    static int inspectTier(PlayerProgressState state, string skillId, string nodeId) =>
-        state.GetOrCreateSkill(skillId).GetTier(nodeId);
 }

@@ -10,8 +10,8 @@ namespace Prosequor.Scenarios;
 
 /// <summary>
 /// Atlas has no client process — <see cref="Atlas.Api.IClientObservations"/> only sees
-/// server→client traffic. This scenario proves the server mirrors unlock points onto the
-/// entity (what a real client's <see cref="EntityBehaviorProgress"/> would hydrate).
+/// server→client traffic. Unlock points ride the owner channel; this scenario proves the
+/// server updates live progress (what a real client's snapshot/delta would carry).
 /// In-game HUD path: use <c>/prosequor skillhint</c> on a real client.
 /// </summary>
 public class SkillWaitingHudScenarios : AtlasScenarioBase
@@ -19,7 +19,7 @@ public class SkillWaitingHudScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Server")]
     [Trait("Kind", "Hud")]
-    public async Task UnlockPoints_Should_MirrorToEntity_When_Granted()
+    public async Task UnlockPoints_Should_UpdateLiveProgress_When_Granted()
     {
         ITestPlayer joined = await World.JoinPlayer("SkillHint");
 
@@ -28,18 +28,6 @@ public class SkillWaitingHudScenarios : AtlasScenarioBase
 
         progress.AddUnlockPoints(1);
         Assert.Equal(1, progress.UnlockPoints);
-
-        await World.Until(
-            () =>
-            {
-                PlayerProgressState? mirrored = ProgressStore.ReadFromEntity(joined.Entity);
-                return mirrored is { UnlockPoints: > 0 };
-            },
-            timeoutTicks: 2000);
-
-        PlayerProgressState? after = ProgressStore.ReadFromEntity(joined.Entity);
-        Assert.NotNull(after);
-        Assert.Equal(1, after.UnlockPoints);
         Assert.True(progress.HasSyncedMirror);
     }
 

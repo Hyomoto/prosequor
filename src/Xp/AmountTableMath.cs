@@ -130,7 +130,7 @@ public static class AmountTableMath
 
     /// <summary>
     /// Scalar amount, or lerped table lookup when <paramref name="amountTable"/> is set.
-    /// XP measure channels (resistance, voxels, ingredients) use this path.
+    /// XP measure channels (resistance, voxels, ingredients, lifetime) use this path.
     /// </summary>
     public static float ResolveAmount(
         float scalarAmount,

@@ -60,7 +60,7 @@ public static class BlockBreakClassification
     }
 
     /// <summary>
-    /// Clay / charcoal piles / saltpeter coatings — dig XP and shovel-class drops,
+    /// Clay / peat / charcoal piles / saltpeter coatings — dig XP and shovel-class drops,
     /// even when block material is not Soil/Sand/Gravel.
     /// </summary>
     public static bool IsSpecialtyDigBlock(Block block)
@@ -71,6 +71,7 @@ public static class BlockBreakClassification
         }
 
         return AbilityBootstrap.IsRawClayBlockPath(path)
+            || AbilityBootstrap.IsPeatBlockPath(path)
             || AbilityBootstrap.IsCharcoalBlockPath(path)
             || AbilityBootstrap.IsSaltpeterBlockPath(path);
     }
@@ -188,6 +189,12 @@ public static class BlockBreakClassification
             || (path != null && AbilityBootstrap.IsGravelPath(path)))
         {
             tags.Add(AbilityBootstrap.GravelTag);
+            return;
+        }
+
+        if (path != null && AbilityBootstrap.IsPeatBlockPath(path))
+        {
+            tags.Add(AbilityBootstrap.PeatTag);
             return;
         }
 

@@ -171,12 +171,14 @@ Read levels, XP, unlocks, tiers, attributes, and bars from `src/Player/IPlayerPr
 
 | Store | Key | Role |
 |-------|-----|------|
-| Player ModData | `ProgressStore.ModDataKey` (`prosequor-progress`) | Authoritative blob (`PlayerProgressState`) |
-| Entity WatchedAttributes | `ProgressStore.AttrTree` (`prosequor`) | Client mirror |
+| Player ModData | `ProgressStore.ModDataKey` (`prosequor-progress`) | Authoritative blob (`PlayerProgressState`); debounced ~32s + disconnect |
+| Entity WatchedAttributes | `ProgressStore.AttrUnlocks` (`prosequorU`) | Public unlock tiers (omit empty skills) |
+| Entity WatchedAttributes | `ProgressStore.AttrScores` (`prosequorA`) | Public attribute scores |
+| Owner channel | `ProgressNetwork` snapshot / delta | Private XP, unlock points, attribute buckets (owning client only) |
 | World save | `FatherXp.SaveDataKey` (`prosequor-father-xp`) | Offline XP mailbox |
 | `ProgressPark` | player uid, RAM | Offline reads this uptime only |
 
-Blob schema version is `PlayerProgressState.CurrentSchema`. XP is truth — load reconciles levels from lifetime XP. Client UI must wait for `HasSyncedMirror` before treating zeros as real. Unlock purchases: `src/Network/ProgressNetwork.cs` (client request, server `TryPurchaseNode`). There is no custom progress snapshot packet.
+Blob schema version is `PlayerProgressState.CurrentSchema`. XP is truth — load reconciles levels from lifetime XP. Client UI must wait for `HasSyncedMirror` before treating zeros as real (local player: owner snapshot received; other players: public WA). Unlock purchases: `src/Network/ProgressNetwork.cs` (client request, server `TryPurchaseNode`). Visible mutations accumulate in `PendingProgressFlush`; XP coalesces (~150ms), unlocks/level-ups flush immediately. Legacy root `prosequor` is removed on write.
 
 `src/Data/UnlockIdRemap.cs` is a **one-hop** rename table applied when stored schema is older than `UnlockIdRemap.Schema`. Do not list or extend it for new nodes. Touch it only when renaming an id that already exists in player saves, and bump schema with a migration in `ProgressStore.TryHydrateStored`. Lookups are not chained.
 

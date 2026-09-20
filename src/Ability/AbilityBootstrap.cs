@@ -961,8 +961,12 @@ public static class AbilityBootstrap
                 leavesBlocks++;
             }
 
-            if (block.BlockMaterial == EnumBlockMaterial.Soil
+            if ((block.BlockMaterial == EnumBlockMaterial.Soil
                 || BlockBreakClassification.IsDiggableTerrain(block))
+                && !IsPeatBlockPath(path)
+                && !IsSandPath(path)
+                && !IsGravelPath(path)
+                && block.BlockMaterial is not (EnumBlockMaterial.Sand or EnumBlockMaterial.Gravel))
             {
                 addBlock(SoilTag, block);
                 addBlock(DirtTag, block);

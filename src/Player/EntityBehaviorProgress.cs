@@ -12,7 +12,8 @@ using Vintagestory.API.Server;
 namespace Prosequor.Player;
 
 /// <summary>
-/// Player-attached progress. Server owns ModData truth; client reads the WatchedAttributes mirror.
+/// Player-attached progress. Server owns ModData truth; clients merge sparse public
+/// WatchedAttributes plus (for the owning client) owner-channel snapshot/deltas.
 /// </summary>
 public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityComposeCache
 {
@@ -21,6 +22,11 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     PlayerProgressState state = new();
     bool loaded;
     bool dirty;
+    bool publicMirrorReady;
+    bool ownerChannelSynced;
+    int syncSeq;
+    int clientLastSeq;
+    readonly PendingProgressFlush pending = new();
     ActiveAbilityRuleCache? abilityCache;
     readonly ComposeMemo composeMemo = new();
 
@@ -41,10 +47,27 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     public int UnlockPoints => state.UnlockPoints;
 
     /// <summary>
-    /// True after server ModData load or a successful client WatchedAttributes hydrate.
+    /// True after server ModData load, or on the client after the owning channel snapshot
+    /// (local player) / public WatchedAttributes merge (other players).
     /// HUD observers must wait for this so an empty pre-mirror 0 is not treated as first-seen.
     /// </summary>
-    public bool HasSyncedMirror => loaded;
+    public bool HasSyncedMirror =>
+        entity.World.Side == EnumAppSide.Server
+            ? loaded
+            : IsOwningClient
+                ? ownerChannelSynced
+                : publicMirrorReady;
+
+    bool IsOwningClient =>
+        entity.World.Side == EnumAppSide.Client
+        && entity is EntityPlayer eplr
+        && eplr.Player?.PlayerUID != null
+        && string.Equals(
+            eplr.Player.PlayerUID,
+            entity.Api is Vintagestory.API.Client.ICoreClientAPI capi
+                ? capi.World.Player?.PlayerUID
+                : null,
+            StringComparison.Ordinal);
 
     public float PlayerXpUntilNext =>
         XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
@@ -55,7 +78,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
         if (entity.World.Side == EnumAppSide.Client)
         {
-            HydrateFromMirror();
+            MergePublicMirror();
+            entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrUnlocks, OnMirrorChanged);
+            entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrScores, OnMirrorChanged);
+            // Mid-upgrade hosts may still publish the legacy blob once.
             entity.WatchedAttributes.RegisterModifiedListener(ProgressStore.AttrTree, OnMirrorChanged);
             return;
         }
@@ -86,6 +112,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
         else
         {
+            FlushPendingWire(forceChannelSnapshot: false);
             FlushSave();
             if (entity is EntityPlayer eplr && !string.IsNullOrEmpty(eplr.PlayerUID))
             {
@@ -99,45 +126,60 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     void OnMirrorChanged()
     {
         Dictionary<(string SkillId, string NodeId), int>? beforeUnlocks =
-            entity.World.Side == EnumAppSide.Client && loaded
+            entity.World.Side == EnumAppSide.Client && publicMirrorReady
                 ? SnapshotUnlockTiers(state)
                 : null;
+        Dictionary<string, int>? beforeScores =
+            entity.World.Side == EnumAppSide.Client && publicMirrorReady
+                ? SnapshotAttributeScores(state)
+                : null;
 
-        if (!HydrateFromMirror())
+        if (!MergePublicMirror())
         {
             return;
         }
 
+        bool unlocksChanged = false;
         if (beforeUnlocks != null
             && entity is EntityPlayer eplr
             && eplr.Player != null)
         {
             foreach ((string skillId, string nodeId) in DiffUnlockTiers(beforeUnlocks, state))
             {
+                unlocksChanged = true;
                 CraftMutateOutputStation.TryRefreshOpenGrid(eplr.Player, skillId, nodeId);
+            }
+        }
+
+        bool scoresChanged = beforeScores != null && DiffAttributeScores(beforeScores, state);
+        if (unlocksChanged || scoresChanged || beforeUnlocks == null)
+        {
+            RebuildAbilityCache();
+            BumpProgressRevision();
+            if (scoresChanged || beforeScores == null)
+            {
+                NotifyAttributeEffectsApplied();
             }
         }
 
         Changed?.Invoke();
     }
 
-    bool HydrateFromMirror()
+    /// <summary>Merge public unlock tiers and attribute scores into the live state (in place).</summary>
+    bool MergePublicMirror()
     {
-        PlayerProgressState? mirrored = ProgressStore.ReadFromEntity(entity);
-        if (mirrored != null)
+        if (!ProgressStore.MergePublicFromEntity(entity, state))
         {
-            state = mirrored;
-            loaded = true;
-            RebuildAbilityCache();
-            // Fact fingerprints ignore attribute scores; drop stale compose memos after mirror replace.
-            BumpProgressRevision();
-            // Client never runs setattr notify — re-run attribute sinks (incl. basic-slots resize).
-            NotifyAttributeEffectsApplied();
-
-            return true;
+            return false;
         }
 
-        return false;
+        publicMirrorReady = true;
+        if (!IsOwningClient)
+        {
+            loaded = true;
+        }
+
+        return true;
     }
 
     static Dictionary<(string SkillId, string NodeId), int> SnapshotUnlockTiers(PlayerProgressState progress)
@@ -155,6 +197,31 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         return snapshot;
+    }
+
+    static Dictionary<string, int> SnapshotAttributeScores(PlayerProgressState progress)
+    {
+        Dictionary<string, int> snapshot = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in AttributeIds.All)
+        {
+            snapshot[id] = progress.GetAttribute(id);
+        }
+
+        return snapshot;
+    }
+
+    static bool DiffAttributeScores(Dictionary<string, int> before, PlayerProgressState after)
+    {
+        foreach (string id in AttributeIds.All)
+        {
+            before.TryGetValue(id, out int previous);
+            if (previous != after.GetAttribute(id))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     static IEnumerable<(string SkillId, string NodeId)> DiffUnlockTiers(
@@ -231,6 +298,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             ProgressStore.MirrorToEntity(entity, state);
             RebuildAbilityCache();
             NotifyAttributeEffectsApplied();
+            SendOwnerSnapshot();
             return;
         }
 
@@ -242,6 +310,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         RebuildAbilityCache();
         BumpProgressRevision();
         NotifyAttributeEffectsApplied();
+        SendOwnerSnapshot();
     }
 
     void NotifyAttributeScoreChanged(string attributeId)
@@ -318,7 +387,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         dirty = false;
     }
 
-    /// <summary>Server-only bucket mutations: debounced ModData write, no client mirror.</summary>
+    /// <summary>Server-only: debounced ModData write.</summary>
     void MarkPersistDirty()
     {
         dirty = true;
@@ -326,13 +395,199 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
     void NotifyVisibleProgress(VisibleProgressChange change)
     {
-        if (entity is EntityPlayer eplr && eplr.Player is IServerPlayer splr)
+        EnsureServer();
+        pending.Accumulate(change);
+        MarkPersistDirty();
+        if (change.Immediate)
         {
-            ProgressStore.ApplyVisibleMirror(entity, state, change);
-            ProgressStore.WriteModData(splr, state);
-            dirty = false;
+            FlushPendingWire(forceChannelSnapshot: false);
         }
 
+        Changed?.Invoke();
+    }
+
+    /// <summary>Coalesced flush of non-immediate XP/bucket dirty bits (~150ms tick).</summary>
+    public void FlushPendingCoalesced()
+    {
+        if (entity.World.Side != EnumAppSide.Server || !pending.Any || pending.Immediate)
+        {
+            // Immediate was already flushed; if only Immediate leftover flags somehow remain, clear.
+            if (pending.Immediate && pending.Any)
+            {
+                FlushPendingWire(forceChannelSnapshot: false);
+            }
+
+            return;
+        }
+
+        FlushPendingWire(forceChannelSnapshot: false);
+    }
+
+    void FlushPendingWire(bool forceChannelSnapshot)
+    {
+        if (entity.World.Side != EnumAppSide.Server || !pending.Any && !forceChannelSnapshot)
+        {
+            return;
+        }
+
+        if (entity is not EntityPlayer eplr || eplr.Player is not IServerPlayer splr)
+        {
+            pending.Clear();
+            return;
+        }
+
+        if (ProgressChannelCodec.NeedsPublic(pending))
+        {
+            if (pending.Unlocks.Count > 1 || (pending.AttributeScores && pending.Unlocks.Count > 0))
+            {
+                ProgressStore.MirrorToEntity(entity, state);
+            }
+            else
+            {
+                ProgressStore.ApplyVisibleMirror(entity, state, pending.ToPublicChange());
+            }
+        }
+
+        ProgressNetwork? network = ProsequorModSystem.For(entity.Api)?.Network;
+        if (network != null)
+        {
+            if (forceChannelSnapshot)
+            {
+                syncSeq++;
+                network.SendProgressSnapshot(splr, ProgressChannelCodec.BuildSnapshot(state, syncSeq));
+            }
+            else if (ProgressChannelCodec.NeedsChannel(pending))
+            {
+                syncSeq++;
+                network.SendProgressDelta(
+                    splr,
+                    ProgressChannelCodec.BuildDelta(state, pending, syncSeq));
+            }
+        }
+
+        pending.Clear();
+    }
+
+    /// <summary>Owner-channel full private snapshot (join / resync / clear).</summary>
+    public void SendOwnerSnapshot()
+    {
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        if (entity is not EntityPlayer eplr || eplr.Player is not IServerPlayer splr)
+        {
+            return;
+        }
+
+        ProgressNetwork? network = ProsequorModSystem.For(entity.Api)?.Network;
+        if (network == null)
+        {
+            return;
+        }
+
+        syncSeq++;
+        network.SendProgressSnapshot(splr, ProgressChannelCodec.BuildSnapshot(state, syncSeq));
+    }
+
+    /// <summary>Client: apply a private snapshot in place.</summary>
+    public void ApplyOwnerSnapshot(ProgressSnapshotPacket packet)
+    {
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            // Accept any snapshot; reset private tracks then fill.
+            state.PlayerLevel = packet.PlayerLevel;
+            state.PlayerXp = packet.PlayerXp;
+            state.UnlockPoints = packet.UnlockPoints;
+            foreach (SkillProgressState skill in state.Skills.Values)
+            {
+                skill.Level = 0;
+                skill.Xp = 0f;
+            }
+
+            foreach (ProgressSkillTrackDto skill in packet.Skills)
+            {
+                if (string.IsNullOrWhiteSpace(skill.SkillId))
+                {
+                    continue;
+                }
+
+                SkillProgressState row = state.GetOrCreateSkill(skill.SkillId);
+                row.Level = skill.Level;
+                row.Xp = skill.Xp;
+            }
+
+            PlayerProgressState.EnsureAttributeEntries(state);
+            foreach (ProgressAttributeBucketDto bucket in packet.AttributeBuckets)
+            {
+                string? canonical = AttributeIds.Canonicalize(bucket.Id);
+                if (canonical != null)
+                {
+                    state.AttributeBuckets[canonical] = bucket.Fill;
+                }
+            }
+
+            clientLastSeq = packet.Seq;
+            ownerChannelSynced = true;
+            loaded = true;
+            Changed?.Invoke();
+        }
+    }
+
+    /// <summary>Client: apply a private delta in place; request resync on sequence gap.</summary>
+    public void ApplyOwnerDelta(ProgressDeltaPacket packet)
+    {
+        if (entity.World.Side == EnumAppSide.Server)
+        {
+            return;
+        }
+
+        if (!ownerChannelSynced)
+        {
+            ProsequorModSystem.For(entity.Api)?.Network.RequestProgressResync(clientLastSeq);
+            return;
+        }
+
+        if (packet.Seq != clientLastSeq + 1)
+        {
+            ProsequorModSystem.For(entity.Api)?.Network.RequestProgressResync(clientLastSeq);
+            return;
+        }
+
+        if (packet.HasPlayerTrack)
+        {
+            state.PlayerLevel = packet.PlayerLevel;
+            state.PlayerXp = packet.PlayerXp;
+            state.UnlockPoints = packet.UnlockPoints;
+        }
+
+        foreach (ProgressSkillTrackDto skill in packet.Skills)
+        {
+            if (string.IsNullOrWhiteSpace(skill.SkillId))
+            {
+                continue;
+            }
+
+            SkillProgressState row = state.GetOrCreateSkill(skill.SkillId);
+            row.Level = skill.Level;
+            row.Xp = skill.Xp;
+        }
+
+        if (packet.HasAttributeBuckets)
+        {
+            PlayerProgressState.EnsureAttributeEntries(state);
+            foreach (ProgressAttributeBucketDto bucket in packet.AttributeBuckets)
+            {
+                string? canonical = AttributeIds.Canonicalize(bucket.Id);
+                if (canonical != null)
+                {
+                    state.AttributeBuckets[canonical] = bucket.Fill;
+                }
+            }
+        }
+
+        clientLastSeq = packet.Seq;
         Changed?.Invoke();
     }
 
@@ -340,9 +595,11 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     {
         if (entity is EntityPlayer eplr && eplr.Player is IServerPlayer splr)
         {
+            pending.Clear();
             ProgressStore.MirrorToEntity(entity, state);
             ProgressStore.WriteModData(splr, state);
             dirty = false;
+            SendOwnerSnapshot();
         }
         else
         {
@@ -489,7 +746,16 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             return;
         }
 
-        NotifyVisibleProgress(VisibleProgressChange.PlayerTrack());
+        bool leveled = state.PlayerLevel > beforeLevel;
+        NotifyVisibleProgress(
+            leveled || attributeGains.Count > 0
+                ? new VisibleProgressChange
+                {
+                    MirrorPlayerTrack = true,
+                    MirrorAttributeScores = attributeGains.Count > 0,
+                    Immediate = true
+                }
+                : VisibleProgressChange.PlayerTrack(immediate: false));
         PublishExperienceGained(
             ProgressTrack.Player,
             null,
@@ -750,7 +1016,15 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             }
         }
 
-        NotifyVisibleProgress(VisibleProgressChange.PlayerTrack());
+        NotifyVisibleProgress(
+            gained > 0 || attributeGains.Count > 0
+                ? new VisibleProgressChange
+                {
+                    MirrorPlayerTrack = true,
+                    MirrorAttributeScores = attributeGains.Count > 0,
+                    Immediate = true
+                }
+                : VisibleProgressChange.PlayerTrack());
         PublishLevelUp(ProgressTrack.Player, null, before, state.PlayerLevel);
         TrySendLevelUpHud(
             skillId: null,
@@ -774,7 +1048,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
         PlayerProgressState.EnsureAttributeEntries(state);
         state.AttributeBuckets[canonical] = Math.Max(0f, state.AttributeBuckets[canonical] + amount);
-        NotifyVisibleProgress(VisibleProgressChange.Attributes());
+        NotifyVisibleProgress(VisibleProgressChange.AttributeBuckets());
     }
 
     public void SetAttribute(string id, int score)
@@ -794,7 +1068,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         state.Attributes[canonical] = score;
-        NotifyVisibleProgress(VisibleProgressChange.Attributes());
+        NotifyVisibleProgress(VisibleProgressChange.AttributeScores());
         NotifyAttributeScoreChanged(canonical);
     }
 
@@ -857,8 +1131,14 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         NotifyVisibleProgress(
-            milestonePoints > 0
-                ? VisibleProgressChange.SkillAndPlayer(skillId)
+            before != level || milestonePoints > 0
+                ? new VisibleProgressChange
+                {
+                    SkillId = skillId,
+                    MirrorSkillTrack = true,
+                    MirrorPlayerTrack = milestonePoints > 0,
+                    Immediate = true
+                }
                 : VisibleProgressChange.SkillTrack(skillId));
         PublishLevelUp(ProgressTrack.Skill, skillId, before, skill.Level);
         TrySendLevelUpHud(
