@@ -1,0 +1,321 @@
+{
+  "id": "construction",
+  "nameLang": "skill-construction",
+  "descriptionLang": "skilldesc-construction",
+  "descriptionParams": [
+    { "sum": [ "0.chance.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/construction-skill.svg",
+  "attributeScores": [
+    { "id": "strength", "value": 1.0 },
+    { "id": "perception", "value": 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-masonry-construction",
+      "amount": 0.05,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<masonry-blocks>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-frame-construction",
+      "amount": 0.05,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<frame-blocks>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-mortar-construction",
+      "amount": 2,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<mortar>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-daub-construction",
+      "amount": 2,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "target:<daub>" ]
+      }
+    },
+    {
+      "id": "prosequor:reinforce-construction",
+      "amount": 0.25,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "reinforced" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:crafting-interaction",
+      "verb": "prosequor:mutate-output",
+      "phase": "refund",
+      "action": "prosequor:chance",
+      "when": {
+        "tags": [ "block", "input:<construction-base>" ]
+      },
+      "params": {
+        "chance": { "base": 0, "perSkillLevel": 0.002, "cap": 0 },
+        "onSuccess": {
+          "action": "prosequor:refund-ingredients",
+          "params": { "match": "<construction-base>", "amount": 1, "retain": 0 }
+        }
+      }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "stonelayer",
+        "nameLang": "unlock-construction-stonelayer",
+        "icon": "textures/icons/construction/bricklayer.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-construction-stonelayer",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<masonry-blocks>" ]
+                },
+                "params": { "op": "scale", "base": 0.25, "perSkillLevel": 0, "cap": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1.0, "perSkillLevel": 0, "cap": 1.0 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "perfectionist",
+        "nameLang": "unlock-construction-perfectionist",
+        "icon": "textures/icons/construction/perfectionist.svg",
+        "cost": 1,
+        "minSkillLevel": 25,
+        "descriptionLang": "unlockdesc-construction-perfectionist",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "requires": [ "stonelayer" ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:heat-structure-damage",
+                "phase": "skip",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<heat-structure>" ]
+                },
+                "params": { "op": "add", "value": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.5 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "material-mixer",
+        "nameLang": "unlock-construction-material-mixer",
+        "icon": "textures/icons/construction/material-mixer.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-construction-material-mixer",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-process",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<mortar>", "barrel" ]
+                },
+                "params": { "op": "scale", "base": 0.2, "perSkillLevel": 0, "cap": 0.2 }
+              },
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-process",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<daub>", "barrel" ]
+                },
+                "params": { "op": "scale", "base": 0.2, "perSkillLevel": 0, "cap": 0.2 }
+              },
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<daub>" ]
+                },
+                "params": { "op": "scale", "base": 0.2, "perSkillLevel": 0, "cap": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              },
+              {
+                "replicate": 1,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              },
+              {
+                "replicate": 2,
+                "params": { "base": 0.3, "perSkillLevel": 0, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              },
+              {
+                "replicate": 1,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              },
+              {
+                "replicate": 2,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "framemaker",
+        "nameLang": "unlock-construction-framemaker",
+        "icon": "textures/icons/construction/framemaker.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-construction-framemaker",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:mutate-output",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<frame-blocks>" ]
+                },
+                "params": { "op": "scale", "base": 0.25, "perSkillLevel": 0, "cap": 0.25 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.5, "perSkillLevel": 0, "cap": 0.5 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 1.0, "perSkillLevel": 0, "cap": 1.0 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "reinforcement",
+        "nameLang": "unlock-construction-reinforcement",
+        "icon": "textures/icons/construction/reinforcement.svg",
+        "cost": 1,
+        "minSkillLevel": 25,
+        "descriptionLang": "unlockdesc-construction-reinforcement",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" }
+        ],
+        "requires": [ "framemaker" ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:reinforce",
+                "phase": "strength",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "base": 0.1, "perSkillLevel": 0, "cap": 0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.25, "perSkillLevel": 0, "cap": 0.25 }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

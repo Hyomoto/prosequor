@@ -103,6 +103,18 @@ public static class HookIds
     public static readonly PhaseId QualityRolls = new("quality-rolls");
     /// <summary>Craft quality fold: global bonus added to every quality rule (seed 0).</summary>
     public static readonly PhaseId QualityBonus = new("quality-bonus");
+
+    /// <summary>Plumb-and-square reinforcement strength fold.</summary>
+    public static readonly PhaseId Strength = new("strength");
+
+    /// <summary>Heat-structure damage skip probability fold.</summary>
+    public static readonly PhaseId Skip = new("skip");
+
+    /// <summary>Bleed-out / tend / revive scalar folds.</summary>
+    public static readonly PhaseId Rate = new("rate");
+    public static readonly PhaseId Health = new("health");
+    public static readonly PhaseId ApplicationRate = new("application-rate");
+    public static readonly PhaseId Duration = new("duration");
 }
 
 /// <summary>Built-in verb identifiers (moments on a surface).</summary>
@@ -185,6 +197,24 @@ public static class VerbIds
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
     public static readonly VerbId VoxelCopy = new("prosequor:voxel-copy");
     public static readonly VerbId VoxelRefill = new("prosequor:voxel-refill");
+
+    /// <summary>Plumb-and-square block reinforcement strength.</summary>
+    public static readonly VerbId Reinforce = new("prosequor:reinforce");
+
+    /// <summary>Beehive kiln / stone coffin structure heat damage.</summary>
+    public static readonly VerbId HeatStructureDamage = new("prosequor:heat-structure-damage");
+
+    /// <summary>Mortally-wounded window length multiplier (seed 1).</summary>
+    public static readonly VerbId BleedOut = new("prosequor:bleed-out");
+
+    /// <summary>Healing-item tend folds (health total / application rate).</summary>
+    public static readonly VerbId Tend = new("prosequor:tend");
+
+    /// <summary>Post-revive triage regen holdback.</summary>
+    public static readonly VerbId Revive = new("prosequor:revive");
+
+    /// <summary>Craft-grid recipe unlock gate (bool).</summary>
+    public static readonly VerbId RecipeAvailable = new("prosequor:recipe-available");
 }
 
 /// <summary>Built-in action identifiers.</summary>

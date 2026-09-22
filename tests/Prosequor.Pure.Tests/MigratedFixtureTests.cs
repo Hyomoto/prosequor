@@ -89,6 +89,9 @@ public class MigratedFixtureTests
     public void LiquidContentChromeFixtures_Should_Pass() => LiquidContentChromeFixtures.VerifyAll();
 
     [Fact]
+    public void HoverStatLineStripperFixtures_Should_Pass() => HoverStatLineStripperFixtures.VerifyAll();
+
+    [Fact]
     public void LiquorQualityStampFixtures_Should_Pass() => LiquorQualityStampFixtures.VerifyAll();
 
     [Fact]
@@ -114,6 +117,9 @@ public class MigratedFixtureTests
 
     [Fact]
     public void ContributionDependsOnFixtures_Should_Pass() => ContributionDependsOnFixtures.VerifyAll();
+
+    [Fact]
+    public void ProsequorPlusCompatFixtures_Should_Pass() => ProsequorPlusCompatFixtures.VerifyAll();
 
     [Fact]
     public void LevelUpHudFixtures_Should_Pass() => LevelUpHudFixtures.VerifyAll();
@@ -144,6 +150,12 @@ public class MigratedFixtureTests
 
     [Fact]
     public void AbilityFixtures_Should_Pass() => AbilityFixtures.VerifyAll();
+
+    [Fact]
+    public void ConstructionAbilityFixtures_Should_Pass() => ConstructionAbilityFixtures.VerifyAll();
+
+    [Fact]
+    public void MedicineAbilityFixtures_Should_Pass() => MedicineAbilityFixtures.VerifyAll();
 
     [Fact]
     public void HobbySkillFixtures_Should_Pass() => HobbySkillFixtures.VerifyAll();

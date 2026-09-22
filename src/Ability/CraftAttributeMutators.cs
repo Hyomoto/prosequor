@@ -240,6 +240,27 @@ public sealed class IntoxicationAttributeMutator : ICraftAttributeMutator
 }
 
 /// <summary>
+/// Healing-item regen factor (Herbal Remedies / Chirurgeon). Storage-only; read at apply.
+/// </summary>
+public sealed class RegenAttributeMutator : ICraftAttributeMutator
+{
+    public const string KeyName = "regen";
+
+    public string Key => KeyName;
+
+    public bool Accepts(ItemStack stack) =>
+        stack?.Collectible?.GetCollectibleBehavior<CollectibleBehaviorHealingItem>(false) != null;
+
+    public void OnStamped(ItemStack stack, float factor, float previousFactor, IWorldAccessor? world)
+    {
+        _ = stack;
+        _ = factor;
+        _ = previousFactor;
+        _ = world;
+    }
+}
+
+/// <summary>
 /// Distilled merchant-price factor (Prized Liquors). Storage-only; sale reader is a follow-up.
 /// </summary>
 public sealed class PriceAttributeMutator : ICraftAttributeMutator

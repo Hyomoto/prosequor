@@ -20,6 +20,30 @@ Authors
 
 Game-icons.net (CC BY 3.0)
 ----------------------------------------------------------
+  textures/icons/construction.svg                    Brick Wall — Delapouite
+    https://game-icons.net/1x1/delapouite/brick-wall.html
+  textures/icons/construction/bricklayer.svg         Brick Pile — Delapouite
+    https://game-icons.net/1x1/delapouite/brick-pile.html
+  textures/icons/construction/perfectionist.svg      Ancient ruins — Delapouite
+    https://game-icons.net/1x1/delapouite/ancient-ruins.html
+  textures/icons/construction/framemaker.svg         Wooden frame — Delapouite
+    https://game-icons.net/1x1/delapouite/wood-frame.html
+  textures/icons/construction/reinforcement.svg      Defensive wall — HeavenlyDog
+    https://game-icons.net/1x1/heavenlydog/defensive-wall.html
+  textures/icons/construction/material-mixer.svg     Cauldron — DarkZaitzev
+    https://game-icons.net/1x1/darkzaitzev/cauldron.html
+  textures/icons/medicine.svg                        Apothecary — DarkZaitzev
+    https://game-icons.net/1x1/darkzaitzev/apothecary.html
+  textures/icons/medicine/first-aid.svg              Health normal — sbed
+    https://game-icons.net/1x1/sbed/health-normal.html
+  textures/icons/medicine/herbal-remedies.svg        Herbs bundle — Delapouite
+    https://game-icons.net/1x1/delapouite/herbs-bundle.html
+  textures/icons/medicine/triage.svg                 Heart beats — Delapouite
+    https://game-icons.net/1x1/delapouite/heart-beats.html
+  textures/icons/medicine/chirurgeon.svg             Arm bandage — Delapouite
+    https://game-icons.net/1x1/delapouite/arm-bandage.html
+  textures/icons/medicine/improvised-medicine.svg    Square bottle — Lorc
+    https://game-icons.net/1x1/lorc/square-bottle.html
   textures/icons/forager.svg                         Grab — Lorc
     https://game-icons.net/1x1/lorc/grab.html
   textures/icons/adaptation.svg                      Gears — Lorc

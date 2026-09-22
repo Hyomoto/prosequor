@@ -7,7 +7,7 @@ namespace Prosequor.Client;
 
 /// <summary>
 /// Bakes SVG icons as alpha masks with drop shadow + cool-grey diagonal gradient
-/// (same recipe as skill-tree node icons). Tint is applied at blit, not bake.
+/// (same recipe as skill-tree node icons). Tint is applied at blit / Cairo paint, not bake.
 /// </summary>
 public sealed class StyledSvgIconCache : IDisposable
 {
@@ -16,6 +16,7 @@ public sealed class StyledSvgIconCache : IDisposable
 
     readonly ICoreClientAPI capi;
     readonly Dictionary<string, LoadedTexture> textures = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, ImageSurface> surfaces = new(StringComparer.OrdinalIgnoreCase);
 
     public StyledSvgIconCache(ICoreClientAPI capi)
     {
@@ -35,6 +36,88 @@ public sealed class StyledSvgIconCache : IDisposable
             return existing.TextureId > 0 ? existing : null;
         }
 
+        ImageSurface? surface = GetOrBakeSurface(loc, px, fallback);
+        if (surface == null)
+        {
+            return null;
+        }
+
+        LoadedTexture texture = new(capi);
+        capi.Gui.LoadOrUpdateCairoTexture(surface, linearMag: true, ref texture);
+        textures[cacheKey] = texture;
+        return texture;
+    }
+
+    /// <summary>
+    /// Paint a styled SVG onto a Cairo context at the given pixel rect.
+    /// Optional ARGB tint multiplies the baked grey gradient (same idea as GPU blit tint).
+    /// </summary>
+    public bool TryPaint(
+        Context ctx,
+        AssetLocation loc,
+        double x,
+        double y,
+        double size,
+        int? tintArgb = null,
+        AssetLocation? fallback = null)
+    {
+        int px = Math.Max(8, (int)Math.Ceiling(size));
+        ImageSurface? surface = GetOrBakeSurface(loc, px, fallback);
+        if (surface == null)
+        {
+            return false;
+        }
+
+        ctx.Save();
+        try
+        {
+            double scale = size / px;
+            ctx.Translate(x, y);
+            if (Math.Abs(scale - 1.0) > 0.001)
+            {
+                ctx.Scale(scale, scale);
+            }
+
+            ctx.SetSourceSurface(surface, 0, 0);
+            ctx.Paint();
+
+            if (tintArgb is int argb)
+            {
+                Vec4f tint = TintFromArgb(argb);
+                ctx.Operator = Operator.Multiply;
+                ctx.SetSourceRGBA(tint.R, tint.G, tint.B, tint.A);
+                ctx.Rectangle(0, 0, px, px);
+                ctx.Fill();
+                ctx.Operator = Operator.Over;
+            }
+        }
+        finally
+        {
+            ctx.Restore();
+        }
+
+        return true;
+    }
+
+    ImageSurface? GetOrBakeSurface(AssetLocation loc, int px, AssetLocation? fallback)
+    {
+        string cacheKey = loc.ToString() + "@" + px;
+        if (surfaces.TryGetValue(cacheKey, out ImageSurface? existing))
+        {
+            return existing;
+        }
+
+        ImageSurface? baked = BakeSurface(loc, px, fallback);
+        if (baked != null)
+        {
+            surfaces[cacheKey] = baked;
+        }
+
+        return baked;
+    }
+
+    ImageSurface? BakeSurface(AssetLocation loc, int px, AssetLocation? fallback)
+    {
         IAsset? asset = capi.Assets.TryGet(loc);
         if (asset == null && fallback != null && fallback != loc)
         {
@@ -67,15 +150,16 @@ public sealed class StyledSvgIconCache : IDisposable
             ctx.SetSource(gradient);
             ctx.MaskSurface(mask, 0, 0);
 
-            LoadedTexture texture = new(capi);
-            capi.Gui.LoadOrUpdateCairoTexture(surface, linearMag: true, ref texture);
-            textures[cacheKey] = texture;
-            return texture;
+            return surface;
+        }
+        catch
+        {
+            surface.Dispose();
+            throw;
         }
         finally
         {
             ctx.Dispose();
-            surface.Dispose();
             mask.Dispose();
         }
     }
@@ -119,5 +203,12 @@ public sealed class StyledSvgIconCache : IDisposable
         }
 
         textures.Clear();
+
+        foreach (ImageSurface surface in surfaces.Values)
+        {
+            surface.Dispose();
+        }
+
+        surfaces.Clear();
     }
 }

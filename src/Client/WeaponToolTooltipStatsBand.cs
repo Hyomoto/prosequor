@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -11,7 +10,8 @@ namespace Prosequor.Client;
 /// melee → tier | damage | range | durability;
 /// bow → tier | damage | accuracy | durability;
 /// durable tool without melee/mining/bow → durability only.
-/// Strips matching vanilla GetHeldItemInfo lines from hover text only.
+/// Strips matching vanilla GetHeldItemInfo lines from hover text by localized template
+/// (values are wildcards), not by reconstructing formatted strings.
 /// </summary>
 public static class WeaponToolTooltipStatsBand
 {
@@ -33,6 +33,18 @@ public static class WeaponToolTooltipStatsBand
     /// <summary>Cool tint for range / accuracy icons (RGBA).</summary>
     const int CoolTintArgb = unchecked((int)0xFF85A9C4);
 
+    const string DurabilityKey = "Durability: {0} / {1}";
+    const string ToolTierKey = "Tool Tier: {0}";
+    const string AttackPowerDamageKey = "Attack power: {0} damage";
+    const string AttackPowerHpKey = "Attack power: -{0} hp";
+    const string AttackTierKey = "Attack tier: {0}";
+    const string AttackRangeKey = "Attack range: {0} m";
+    const string BowPiercingKey = "bow-piercingdamage";
+    const string BowAccuracyKey = "bow-accuracybonus";
+
+    static string? cachedLocale;
+    static readonly Dictionary<StatsLayout, string[]> CachedTemplates = new();
+
     public static bool IsEligible(ItemSlot? slot) => ResolveLayout(slot) != StatsLayout.None;
 
     public static ItemTooltipStatsBandRequest? TryProvide(ItemSlot slot)
@@ -53,8 +65,8 @@ public static class WeaponToolTooltipStatsBand
     }
 
     /// <summary>
-    /// Removes vanilla lines that the active band layout replaces.
-    /// Leaves mining speed and other description content alone.
+    /// Removes vanilla lines that the active band layout replaces, by matching localized
+    /// lang templates. Leaves mining speed and other description content alone.
     /// </summary>
     public static string StripHoverLines(string desc, ItemSlot? slot)
     {
@@ -64,52 +76,7 @@ public static class WeaponToolTooltipStatsBand
             return desc;
         }
 
-        HashSet<string> drop = BuildStripLines(slot!.Itemstack!, layout);
-        if (drop.Count == 0)
-        {
-            return desc;
-        }
-
-        string[] lines = desc.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        var kept = new List<string>(lines.Length);
-        foreach (string line in lines)
-        {
-            string trimmed = line.TrimEnd();
-            if (drop.Contains(trimmed) || drop.Contains(line))
-            {
-                continue;
-            }
-
-            kept.Add(line);
-        }
-
-        var sb = new StringBuilder();
-        bool pendingBlank = false;
-        for (int i = 0; i < kept.Count; i++)
-        {
-            string line = kept[i];
-            bool blank = string.IsNullOrWhiteSpace(line);
-            if (blank)
-            {
-                pendingBlank = sb.Length > 0;
-                continue;
-            }
-
-            if (pendingBlank)
-            {
-                sb.Append('\n');
-                pendingBlank = false;
-            }
-
-            if (sb.Length > 0)
-            {
-                sb.Append('\n');
-            }
-
-            sb.Append(line);
-        }
-
-        return sb.ToString();
+        return HoverStatLineStripper.Strip(desc, TemplatesFor(layout));
     }
 
     static StatsLayout ResolveLayout(ItemSlot? slot)
@@ -202,7 +169,7 @@ public static class WeaponToolTooltipStatsBand
         return
         [
             new TooltipStatCell(
-                "Tier " + col.ToolTier.ToString(CultureInfo.InvariantCulture),
+                FormatTier(col.ToolTier),
                 Icon: null,
                 IconSide: TooltipStatIconSide.None,
                 Weight: 1),
@@ -235,7 +202,7 @@ public static class WeaponToolTooltipStatsBand
         return
         [
             new TooltipStatCell(
-                "Tier " + tier.ToString(CultureInfo.InvariantCulture),
+                FormatTier(tier),
                 Icon: null,
                 IconSide: TooltipStatIconSide.None,
                 Weight: 1),
@@ -271,6 +238,25 @@ public static class WeaponToolTooltipStatsBand
             IconSide: TooltipStatIconSide.None,
             Weight: weight);
 
+    static string FormatTier(int tier)
+    {
+        try
+        {
+            string localized = Lang.Get("prosequor:tooltip-tier", tier);
+            if (!string.IsNullOrWhiteSpace(localized)
+                && !string.Equals(localized, "prosequor:tooltip-tier", StringComparison.Ordinal))
+            {
+                return localized;
+            }
+        }
+        catch
+        {
+            // Pure fixtures / missing lang table.
+        }
+
+        return "Tier " + tier.ToString(CultureInfo.InvariantCulture);
+    }
+
     /// <summary>Compact signed percent for the band (e.g. +20%, -5%, 0%).</summary>
     static string FormatAccuracyPercent(float accFraction)
     {
@@ -283,82 +269,86 @@ public static class WeaponToolTooltipStatsBand
         return pct.ToString(CultureInfo.InvariantCulture) + "%";
     }
 
-    static HashSet<string> BuildStripLines(ItemStack stack, StatsLayout layout)
+    static string[] TemplatesFor(StatsLayout layout)
     {
-        CollectibleObject col = stack.Collectible;
-        var drop = new HashSet<string>(StringComparer.Ordinal);
-
-        int maxDura = col.GetMaxDurability(stack);
-        if (maxDura > 1)
+        string locale;
+        try
         {
-            AddLine(drop, Lang.Get(
-                "Durability: {0} / {1}",
-                col.GetRemainingDurability(stack),
-                maxDura));
+            locale = Lang.CurrentLocale ?? "en";
         }
+        catch
+        {
+            locale = "en";
+        }
+
+        if (!string.Equals(cachedLocale, locale, StringComparison.Ordinal)
+            || !CachedTemplates.TryGetValue(layout, out string[]? cached))
+        {
+            if (!string.Equals(cachedLocale, locale, StringComparison.Ordinal))
+            {
+                CachedTemplates.Clear();
+                cachedLocale = locale;
+            }
+
+            cached = BuildTemplates(layout);
+            CachedTemplates[layout] = cached;
+        }
+
+        return cached;
+    }
+
+    static string[] BuildTemplates(StatsLayout layout)
+    {
+        var list = new List<string>(8) { ResolveTemplate(DurabilityKey) };
 
         if (layout == StatsLayout.DurabilityOnly)
         {
-            return drop;
+            return list.ToArray();
         }
 
         if (layout == StatsLayout.Bow)
         {
-            JsonObject? attrs = col.Attributes;
-            if (attrs != null)
-            {
-                float damage = attrs["damage"].AsFloat(0f);
-                if (damage != 0f)
-                {
-                    AddLine(drop, Lang.Get("bow-piercingdamage", damage));
-                }
-
-                float acc = attrs["statModifier"]["rangedWeaponsAcc"].AsFloat(0f);
-                // Vanilla only appends when non-zero; still strip the formatted line if present.
-                if (acc != 0f)
-                {
-                    AddLine(drop, Lang.Get(
-                        "bow-accuracybonus",
-                        acc > 0f ? "+" : "",
-                        (int)(100f * acc)));
-                }
-            }
-
-            return drop;
+            list.Add(ResolveTemplate(BowPiercingKey));
+            list.Add(ResolveTemplate(BowAccuracyKey));
+            return list.ToArray();
         }
 
-        // Melee
-        if (col.MiningSpeed != null && col.MiningSpeed.Count > 0)
-        {
-            AddLine(drop, Lang.Get("Tool Tier: {0}", col.ToolTier));
-        }
-
-        float power = col.GetAttackPower(stack);
-        if (power > 0.5f)
-        {
-            string powerFmt = power.ToString("0.#", CultureInfo.InvariantCulture);
-            AddLine(drop, Lang.Get("Attack power: -{0} hp", powerFmt));
-            AddLine(drop, Lang.Get("Attack power: {0} damage", powerFmt));
-            AddLine(drop, Lang.Get("Attack tier: {0}", col.ToolTier));
-        }
-
-        float range = col.GetAttackRange(stack);
-        if (range > GlobalConstants.DefaultAttackRange)
-        {
-            string rangeFmt = range.ToString("0.#", CultureInfo.InvariantCulture);
-            AddLine(drop, Lang.Get("Attack range: {0} m", rangeFmt));
-        }
-
-        return drop;
+        // Melee — do not include mining speed; it sits between tier and attack in vanilla.
+        list.Add(ResolveTemplate(ToolTierKey));
+        list.Add(ResolveTemplate(AttackPowerDamageKey));
+        list.Add(ResolveTemplate(AttackPowerHpKey));
+        list.Add(ResolveTemplate(AttackTierKey));
+        list.Add(ResolveTemplate(AttackRangeKey));
+        return list.ToArray();
     }
 
-    static void AddLine(HashSet<string> drop, string? line)
+    /// <summary>
+    /// Localized unformatted template, falling back to the English key string when the
+    /// lang table is unavailable (pure tests).
+    /// </summary>
+    static string ResolveTemplate(string key)
     {
-        if (string.IsNullOrWhiteSpace(line))
+        try
         {
-            return;
+            string? unformatted = Lang.GetUnformatted(key);
+            if (!string.IsNullOrWhiteSpace(unformatted)
+                && !string.Equals(unformatted, key, StringComparison.Ordinal))
+            {
+                return unformatted.TrimEnd();
+            }
+
+            // Some locales keep the English key as the entry id; GetUnformatted may return
+            // the key itself when that is also the English source string with placeholders.
+            if (!string.IsNullOrWhiteSpace(unformatted) && unformatted.IndexOf('{') >= 0)
+            {
+                return unformatted.TrimEnd();
+            }
+        }
+        catch
+        {
+            // Pure fixtures may lack a loaded lang table.
         }
 
-        drop.Add(line.TrimEnd());
+        return key;
     }
 }

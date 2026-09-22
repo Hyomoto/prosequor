@@ -37,6 +37,8 @@ public class HookPipelineSmokeTests
         yield return new object[] { "anvil-split-bits-refund", HookIds.ItemInteraction, VerbIds.AnvilSplit, HookIds.BitsRefund };
         yield return new object[] { "anvil-strike-decay-shrink", HookIds.ItemInteraction, VerbIds.AnvilStrike, HookIds.DecayShrink };
         yield return new object[] { "mutate-process", HookIds.BlockInteraction, VerbIds.MutateProcess, HookIds.Quantity };
+        yield return new object[] { "heat-structure-damage", HookIds.BlockInteraction, VerbIds.HeatStructureDamage, HookIds.Skip };
+        yield return new object[] { "reinforce", HookIds.ItemInteraction, VerbIds.Reinforce, HookIds.Strength };
         yield return new object[] { "mounted", HookIds.EntityInteraction, VerbIds.Mounted, HookIds.MoveSpeed };
         yield return new object[] { "repair", HookIds.ItemInteraction, VerbIds.Repair, HookIds.AddDurability };
         yield return new object[] { "mutate-output", HookIds.CraftingInteraction, VerbIds.MutateOutput, HookIds.Quantity };
@@ -258,6 +260,12 @@ public class HookPipelineSmokeTests
             ("prosequor:block-interaction", "prosequor:mutate-process", "quantity") => Rule(
                 hook, verb, phase, ActionIds.Number, skillSource,
                 ParseNumber("{\"op\":\"scale\",\"base\":0.50,\"perSkillLevel\":0,\"cap\":0.50}")),
+            ("prosequor:block-interaction", "prosequor:heat-structure-damage", "skip") => Rule(
+                hook, verb, phase, ActionIds.Number, skillSource,
+                ParseNumber("{\"op\":\"add\",\"value\":0.25}")),
+            ("prosequor:item-interaction", "prosequor:reinforce", "strength") => Rule(
+                hook, verb, phase, ActionIds.Number, skillSource,
+                ParseNumber("{\"op\":\"scale\",\"base\":0.10,\"perSkillLevel\":0,\"cap\":0.10}")),
             ("prosequor:entity-interaction", "prosequor:mounted", "move-speed") => Rule(
                 hook, verb, phase, ActionIds.Number, skillSource,
                 ParseNumber("{\"op\":\"add\",\"base\":0.50,\"perSkillLevel\":0,\"cap\":0.50}")),
@@ -370,6 +378,14 @@ public class HookPipelineSmokeTests
             ("prosequor:block-interaction", "prosequor:fertilize") => pipeline.Run(
                 hook, verb, phase,
                 new FertilizerAbsorbContext { World = null!, Progress = progress, BaseValue = seed },
+                seed),
+            ("prosequor:block-interaction", "prosequor:heat-structure-damage") => pipeline.Run(
+                hook, verb, phase,
+                new HeatStructureDamageContext { Progress = progress },
+                seed),
+            ("prosequor:item-interaction", "prosequor:reinforce") => pipeline.Run(
+                hook, verb, phase,
+                new ReinforceContext { Progress = progress },
                 seed),
             ("prosequor:entity-interaction", "prosequor:mounted") => pipeline.Run(
                 hook, verb, phase,

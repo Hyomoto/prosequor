@@ -97,8 +97,14 @@ public class ProsequorModSystem : ModSystem
 
     public override bool ShouldLoad(EnumAppSide forSide) => true;
 
+    public override void StartPre(ICoreAPI api)
+    {
+        ProsequorPlusCompat.ThrowIfIncompatible(api);
+    }
+
     public override void Start(ICoreAPI api)
     {
+        ProsequorPlusCompat.ThrowIfIncompatible(api);
         ProgressEvents.SetLogger(api.Logger);
         api.RegisterEntityBehaviorClass(EntityBehaviorProgress.Code, typeof(EntityBehaviorProgress));
         api.RegisterBlockEntityClass(
@@ -478,6 +484,9 @@ public class ProsequorModSystem : ModSystem
         }
 
         skillWaitingHud = null;
+
+        ItemTooltipStatsBand.ClearProviders();
+        ItemstackInfoTooltipPatches.DisposeIcons();
 
         PlayerInteractionStation.ClientAfterBasicSlotsResized = null;
         capi = null;

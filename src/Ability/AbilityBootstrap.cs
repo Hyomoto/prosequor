@@ -72,6 +72,9 @@ public static class AbilityBootstrap
     public const string TokenBarrel = "barrel";
     public const string TokenFruitPress = "fruit-press";
 
+    /// <summary>Refund fact token when the craft output is a block.</summary>
+    public const string TokenBlock = "block";
+
     public const string StorageVesselTag = "storagevessel";
     public const string LeatherTag = "leather";
     public const string HideTag = "hide";
@@ -107,6 +110,7 @@ public static class AbilityBootstrap
         registry.Register(new HungerDelayAttributeMutator());
         registry.Register(new IntoxicationAttributeMutator());
         registry.Register(new PriceAttributeMutator());
+        registry.Register(new RegenAttributeMutator());
         return registry;
     }
 
@@ -153,6 +157,12 @@ public static class AbilityBootstrap
             HookIds.Stacks,
             typeof(MutateProcessContext),
             typeof(IReadOnlyList<ItemStack>));
+        hooks.RegisterPhase(
+            HookIds.BlockInteraction,
+            VerbIds.HeatStructureDamage,
+            HookIds.Skip,
+            typeof(HeatStructureDamageContext),
+            typeof(float));
         hooks.RegisterPhase(
             HookIds.BlockInteraction,
             VerbIds.InteractionSpeed,
@@ -361,6 +371,37 @@ public static class AbilityBootstrap
             typeof(VoxelWorkContext),
             typeof(int));
 
+        hooks.RegisterPhase(
+            HookIds.ItemInteraction,
+            VerbIds.Reinforce,
+            HookIds.Strength,
+            typeof(ReinforceContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.ItemInteraction,
+            VerbIds.Tend,
+            HookIds.Health,
+            typeof(TendContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.ItemInteraction,
+            VerbIds.Tend,
+            HookIds.ApplicationRate,
+            typeof(TendContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.ItemInteraction,
+            VerbIds.Revive,
+            HookIds.Health,
+            typeof(ReviveContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.ItemInteraction,
+            VerbIds.Revive,
+            HookIds.Duration,
+            typeof(ReviveContext),
+            typeof(float));
+
         hooks.RegisterHook(HookIds.CraftingInteraction);
         hooks.RegisterPhase(
             HookIds.CraftingInteraction,
@@ -409,6 +450,12 @@ public static class AbilityBootstrap
             HookIds.Attributes,
             typeof(CraftMutateOutputContext),
             typeof(ItemStack));
+        hooks.RegisterPhase(
+            HookIds.CraftingInteraction,
+            VerbIds.RecipeAvailable,
+            HookIds.Default,
+            typeof(RecipeAvailableContext),
+            typeof(int));
 
         hooks.RegisterHook(HookIds.EntityInteraction);
         foreach (PhaseId mountedPhase in new[]
@@ -558,6 +605,12 @@ public static class AbilityBootstrap
             HookIds.LastStand,
             typeof(TakeDamageContext),
             typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.BleedOut,
+            HookIds.Rate,
+            typeof(PlayerInteractionContext),
+            typeof(float));
 
         hooks.RegisterHook(HookIds.Progress);
         hooks.RegisterPhase(
@@ -581,6 +634,7 @@ public static class AbilityBootstrap
         actions.Register(new AddFriendlinessAction());
         actions.Register(new SetTrueHarvestSkepAllowAction());
         actions.Register(new SetTrueHarvestBloomeryAllowAction());
+        actions.Register(new SetTrueRecipeAvailableAction());
         actions.Register(new ModifyAttributeMutateOutputAction());
         actions.Register(new AddAffixMutateOutputAction(lists));
         actions.Register(new ApplyQualityAction(lists));
@@ -616,6 +670,13 @@ public static class AbilityBootstrap
         actions.Register(new NumberEntityMutateDropsQuantityAction());
         actions.Register(new NumberCraftQuantityAction());
         actions.Register(new NumberProcessQuantityAction());
+        actions.Register(new NumberReinforceStrengthAction());
+        actions.Register(new NumberHeatStructureSkipAction());
+        actions.Register(new NumberBleedOutRateAction());
+        actions.Register(new NumberTendAction(HookIds.Health));
+        actions.Register(new NumberTendAction(HookIds.ApplicationRate));
+        actions.Register(new NumberReviveAction(HookIds.Health));
+        actions.Register(new NumberReviveAction(HookIds.Duration));
         actions.Register(new NumberInteractionSpeedAction());
         actions.Register(new NumberItemInteractionSpeedAction());
         actions.Register(new NumberRepairAddDurabilityAction());
@@ -710,6 +771,7 @@ public static class AbilityBootstrap
         actions.Register(new ChanceDropsStacksAction(actions));
         actions.Register(new ChanceItemMutateDropsStacksAction(actions));
         actions.Register(new ChanceMutateProcessStacksAction(actions));
+        actions.Register(new ChanceCraftRefundAction(actions));
         foreach (VerbId mapped in new[]
                  {
                      VerbIds.Health,

@@ -116,6 +116,9 @@ public static class ChanceGate
             SuccessChanceContext success => success.World,
             MutateProcessContext processed => processed.World,
             ConsumeBaitContext bait => bait.World,
+            CraftMutateOutputContext craft => craft.World,
+            ReinforceContext reinforce => reinforce.World,
+            HeatStructureDamageContext heat => heat.World,
             _ => null
         };
 
@@ -262,6 +265,30 @@ public sealed class ChanceMutateProcessStacksAction
     protected override IReadOnlyList<ItemStack> Apply(
         MutateProcessContext context,
         IReadOnlyList<ItemStack> value,
+        ChanceGateParams parameters,
+        AbilityRuleSource source) =>
+        ChanceGate.Apply(context, value, parameters, source);
+}
+
+/// <summary>Chance gate on craft-grid ingredient refund.</summary>
+public sealed class ChanceCraftRefundAction
+    : AbilityActionHandler<CraftMutateOutputContext, int, ChanceGateParams>
+{
+    readonly IAbilityActionRegistry actions;
+
+    public ChanceCraftRefundAction(IAbilityActionRegistry actions) => this.actions = actions;
+
+    public override ActionId Id => ActionIds.Chance;
+    public override HookId Hook => HookIds.CraftingInteraction;
+    public override VerbId Verb => VerbIds.MutateOutput;
+    public override PhaseId Phase => HookIds.Refund;
+
+    protected override bool TryParse(JObject? raw, out ChanceGateParams? parameters, out string error) =>
+        ChanceGate.TryParseParams(raw, actions, Hook, Verb, Phase, out parameters, out error);
+
+    protected override int Apply(
+        CraftMutateOutputContext context,
+        int value,
         ChanceGateParams parameters,
         AbilityRuleSource source) =>
         ChanceGate.Apply(context, value, parameters, source);

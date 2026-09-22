@@ -3720,9 +3720,21 @@ public static class AbilityFixtures
             || CraftMutateOutputStation.ComputeRefund(2, 1, 2) != 1
             || CraftMutateOutputStation.ComputeRefund(2, 1, 5) != 2
             || CraftMutateOutputStation.ComputeRefund(0, 1, 5) != 0
-            || CraftMutateOutputStation.ComputeRefund(3, 0, 2) != 2)
+            || CraftMutateOutputStation.ComputeRefund(3, 0, 2) != 2
+            || CraftMutateOutputStation.ComputeRefund(1, 0, 1) != 1)
         {
             Assert.Fail("[prosequor] Craft-refund fixture failed (ComputeRefund math).");
+            return;
+        }
+
+        if (!actions.TryGet(
+                ActionIds.Chance,
+                HookIds.CraftingInteraction,
+                VerbIds.MutateOutput,
+                HookIds.Refund,
+                out _))
+        {
+            Assert.Fail("[prosequor] Craft-refund fixture failed (chance gate registration).");
             return;
         }
 
@@ -3830,6 +3842,48 @@ public static class AbilityFixtures
         if (pipeline.Run(HookIds.CraftingInteraction, VerbIds.MutateOutput, HookIds.Refund, hitContext, 0) != 0)
         {
             Assert.Fail("[prosequor] Craft-refund fixture failed (no-inventory refund should stay 0).");
+        }
+
+        order = 0;
+        errors.Clear();
+        collections.EnsureKey("construction-base");
+        collections.AddCode("construction-base", "game:plank-oak");
+        List<AbilityRule>? chanceRules = AbilityRuleCompiler.CompileEffects(
+            "construction",
+            null,
+            null,
+            [
+                new AbilityEffectJson
+                {
+                    hook = "prosequor:crafting-interaction",
+                    verb = "prosequor:mutate-output",
+                    phase = "refund",
+                    action = "prosequor:chance",
+                    when = new AbilityWhenJson { tags = ["block", "input:<construction-base>"] },
+                    @params = JObject.Parse(
+                        """
+                        {
+                          "chance": { "base": 0, "perSkillLevel": 0.002, "cap": 0 },
+                          "onSuccess": {
+                            "action": "prosequor:refund-ingredients",
+                            "params": { "match": "<construction-base>", "amount": 1, "retain": 0 }
+                          }
+                        }
+                        """)
+                }
+            ],
+            hooks,
+            actions,
+            collections,
+            errors,
+            ref order);
+        if (chanceRules == null || chanceRules.Count != 1 || errors.Count > 0
+            || chanceRules[0].Parameters is not ChanceGateParams chanceParsed
+            || chanceParsed.OnSuccess == null)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Craft-refund fixture failed (construction chance compile): {0}",
+                string.Join("; ", errors)));
         }
     }
 

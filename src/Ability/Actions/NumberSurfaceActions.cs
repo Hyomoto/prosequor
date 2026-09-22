@@ -608,3 +608,109 @@ public sealed class NumberPlayerInteractionFloatAction
         AbilityRuleSource source) =>
         parameters.Apply(value, context, source);
 }
+
+/// <summary>Float number fold for reinforce / strength (seed = material strength).</summary>
+public sealed class NumberReinforceStrengthAction
+    : AbilityActionHandler<ReinforceContext, float, NumberSpec>
+{
+    public override ActionId Id => ActionIds.Number;
+    public override HookId Hook => HookIds.ItemInteraction;
+    public override VerbId Verb => VerbIds.Reinforce;
+    public override PhaseId Phase => HookIds.Strength;
+
+    protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
+        NumberSpec.TryParse(raw, out parameters, out error);
+
+    protected override float Apply(
+        ReinforceContext context,
+        float value,
+        NumberSpec parameters,
+        AbilityRuleSource source) =>
+        parameters.Apply(value, context, source);
+}
+
+/// <summary>Float number fold for heat-structure-damage / skip (seed 0).</summary>
+public sealed class NumberHeatStructureSkipAction
+    : AbilityActionHandler<HeatStructureDamageContext, float, NumberSpec>
+{
+    public override ActionId Id => ActionIds.Number;
+    public override HookId Hook => HookIds.BlockInteraction;
+    public override VerbId Verb => VerbIds.HeatStructureDamage;
+    public override PhaseId Phase => HookIds.Skip;
+
+    protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
+        NumberSpec.TryParse(raw, out parameters, out error);
+
+    protected override float Apply(
+        HeatStructureDamageContext context,
+        float value,
+        NumberSpec parameters,
+        AbilityRuleSource source) =>
+        parameters.Apply(value, context, source);
+}
+
+/// <summary>Float number fold for bleed-out / rate (seed 1).</summary>
+public sealed class NumberBleedOutRateAction
+    : AbilityActionHandler<PlayerInteractionContext, float, NumberSpec>
+{
+    public override ActionId Id => ActionIds.Number;
+    public override HookId Hook => HookIds.PlayerInteraction;
+    public override VerbId Verb => VerbIds.BleedOut;
+    public override PhaseId Phase => HookIds.Rate;
+
+    protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
+        NumberSpec.TryParse(raw, out parameters, out error);
+
+    protected override float Apply(
+        PlayerInteractionContext context,
+        float value,
+        NumberSpec parameters,
+        AbilityRuleSource source) =>
+        parameters.Apply(value, context, source);
+}
+
+/// <summary>Float number fold for tend / health or application-rate.</summary>
+public sealed class NumberTendAction : AbilityActionHandler<TendContext, float, NumberSpec>
+{
+    readonly PhaseId phase;
+
+    public NumberTendAction(PhaseId phase) => this.phase = phase;
+
+    public override ActionId Id => ActionIds.Number;
+    public override HookId Hook => HookIds.ItemInteraction;
+    public override VerbId Verb => VerbIds.Tend;
+    public override PhaseId Phase => phase;
+
+    protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
+        NumberSpec.TryParse(raw, out parameters, out error);
+
+    protected override float Apply(
+        TendContext context,
+        float value,
+        NumberSpec parameters,
+        AbilityRuleSource source) =>
+        parameters.Apply(value, context, source);
+}
+
+/// <summary>Float number fold for revive / health or duration.</summary>
+public sealed class NumberReviveAction : AbilityActionHandler<ReviveContext, float, NumberSpec>
+{
+    readonly PhaseId phase;
+
+    public NumberReviveAction(PhaseId phase) => this.phase = phase;
+
+    public override ActionId Id => ActionIds.Number;
+    public override HookId Hook => HookIds.ItemInteraction;
+    public override VerbId Verb => VerbIds.Revive;
+    public override PhaseId Phase => phase;
+
+    protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
+        NumberSpec.TryParse(raw, out parameters, out error);
+
+    protected override float Apply(
+        ReviveContext context,
+        float value,
+        NumberSpec parameters,
+        AbilityRuleSource source) =>
+        parameters.Apply(value, context, source);
+}

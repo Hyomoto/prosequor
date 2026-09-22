@@ -845,11 +845,25 @@ public static class CraftMutateOutputStation
             return;
         }
 
+        ItemStack? output = null;
+        if (inventory.Count > 0)
+        {
+            output = inventory[inventory.Count - 1]?.Itemstack;
+        }
+
+        List<string>? tokens = null;
+        if (output?.Block != null)
+        {
+            tokens = [AbilityBootstrap.TokenBlock];
+        }
+
         AbilityAction fact = EventFactBuilder.ForPlayer(
             player,
             VerbIds.MutateOutput.Value,
+            target: EventFactBuilder.CodeOf(output),
             inputs: EventFactBuilder.CodesOf(before),
             held: CallerIdentities.Grid,
+            tokens: tokens,
             includeLastCraft: false);
 
         CraftMutateOutputContext context = new()
@@ -860,7 +874,8 @@ public static class CraftMutateOutputStation
             CraftInventory = inventory,
             IngredientSnapshot = before,
             Collections = mod.Collections.Index,
-            Pipeline = mod.Pipeline
+            Pipeline = mod.Pipeline,
+            World = player.Entity.World ?? player.Entity.Api?.World
         };
 
         mod.Pipeline.Run(HookIds.CraftingInteraction, VerbIds.MutateOutput, HookIds.Refund, context, 0);

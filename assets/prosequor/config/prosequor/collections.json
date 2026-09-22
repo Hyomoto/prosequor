@@ -226,5 +226,107 @@
       "game:spiritportion-*",
       "game:alcoholportion"
     ]
+  },
+  {
+    "id": "construction-base",
+    "includes": [
+      "game:plank-*",
+      "game:log-*",
+      "game:debarkedlog-*",
+      "game:stone-*",
+      "game:burnedbrick-*",
+      "game:rawbrick-*",
+      "game:stonebrick-*",
+      "game:refractorybrick-*"
+    ]
+  },
+  {
+    "id": "masonry-blocks",
+    "includes": [
+      "game:cobblestone-*",
+      "game:cobblestonefan-*",
+      "game:cobbleslab-*",
+      "game:cobblestonestairs-*",
+      "game:stonebricks-*",
+      "game:stonebrickslab-*",
+      "game:stonebrickstairs-*",
+      "game:claybricks-*",
+      "game:brickcourse-*",
+      "game:brickslab-*",
+      "game:brickstairs-*",
+      "game:refractorybricks-*",
+      "game:refractorybrickgrating-*",
+      "game:mudbrick-*",
+      "game:mudbrickslab-*"
+    ]
+  },
+  {
+    "id": "frame-blocks",
+    "includes": [
+      "game:planks-*",
+      "game:plankslab-*",
+      "game:plankstairs-*",
+      "game:plaster-*",
+      "game:overlay-plaster-*",
+      "game:woodenfence-*",
+      "game:woodenfencegate-*",
+      "game:wattlefence-*",
+      "game:roughhewnfence-*",
+      "game:woodenpath-*",
+      "game:woodbucket-*",
+      "game:ladder-*",
+      "game:trapdoor-*",
+      "game:door-*",
+      "game:chest-*",
+      "game:crate-*",
+      "game:bookshelf-*",
+      "game:table-*",
+      "game:shelf-*",
+      "game:bed-*",
+      "game:sign-*",
+      "game:signpost-*",
+      "game:debarkedlog-*",
+      "game:log-quad-*",
+      "game:log-section-*",
+      "game:log-narrow-*"
+    ]
+  },
+  {
+    "id": "mortar",
+    "includes": [
+      "game:mortar"
+    ]
+  },
+  {
+    "id": "daub",
+    "includes": [
+      "game:daubraw-*"
+    ]
+  },
+  {
+    "id": "heat-structure",
+    "includes": [
+      "game:claybricks-*",
+      "game:refractorybricks-*",
+      "game:refractorybrickgrating-*"
+    ]
+  },
+  {
+    "id": "poultice",
+    "includes": [
+      "game:poultice-*"
+    ]
+  },
+  {
+    "id": "bandage",
+    "includes": [
+      "game:bandage-*"
+    ]
+  },
+  {
+    "id": "spirit",
+    "includes": [
+      "game:spiritportion-*"
+    ]
   }
 ]

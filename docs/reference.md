@@ -382,6 +382,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `mold-cast` | Mold cast hardened |
 | `bloomery-harvest` | Finished bloom taken |
 | `cementation-fired` | Cementation complete |
+| `reinforced` | Block reinforced with the plumb and square |
 | `saddle-break` / `saddle-tame` | Riding progress |
 | `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
 | `milked` | Successful milking |
@@ -393,6 +394,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `pit-kiln` / `beehive-kiln` | Kiln caller identities |
 | `fire-pottery` / `barrel` / `fruit-press` | Process tokens |
 | `used-bait` | Bait consumed |
+| `block` | Craft-grid refund fact when the output is a block |
 
 Custom bare tokens are allowed. Tagless `prosequor:deed` / `prosequor:effort` rules warn at compile.
 
@@ -428,6 +430,7 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 | | `stacks` | stacks |
 | `mutate-process` | `quantity` | number |
 | | `stacks` | stacks |
+| `heat-structure-damage` | `skip` | number |
 | `interaction-speed` | `default` | number |
 | `plant-sapling` | `default` | number |
 | | `growth` | number |
@@ -449,6 +452,8 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 `mutate-drops`: block break drops. Fact `target` = block; `caller` = tool; during per-stack loop `drop` = current stack.
 
 `mutate-process`: kiln / barrel / similar process output. Tokens `fire-pottery` / `barrel`.
+
+`heat-structure-damage`: beehive kiln / stone coffin structure heat damage. Seed 0; fold is skip probability. Fact `target` = damaged block code.
 
 ### `prosequor:item-interaction`
 
@@ -473,10 +478,21 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 | `anvil-strike` | `decay-shrink` | number |
 | `voxel-copy` | `default` | number |
 | `voxel-refill` | `default` | number |
+| `reinforce` | `strength` | number |
+| `tend` | `health` | number |
+| | `application-rate` | number |
+| `revive` | `health` | number |
+| | `duration` | number |
 
 Durability: `caller` = damaged collectible; `target` = broken block when known. `block-damaged` = while breaking; `item-damage` = other loss; `craft-damaged` = craft-grid tool ingredient.
 
 `clay-form`: match with `op:place` / `op:remove` / `op:finish`.
+
+`reinforce`: seed = material `reinforcementStrength`. Match with plumb-and-square apply.
+
+`tend`: healing-item application. Match `other` when the patient is another player. `health` seed = 1 (heal total multiplier). `application-rate` seed = 1 (application seconds divisor).
+
+`revive`: after a successful player revive with a healing item. `health` seed = 0 (fraction of max health held back then restored). `duration` seed = 0 (seconds for that restore).
 
 ### `prosequor:crafting-interaction`
 
@@ -491,10 +507,13 @@ Durability: `caller` = damaged collectible; `target` = broken block when known. 
 | | `quality-rolls` | number |
 | | `quality-bonus` | number |
 | | `attributes` | stack |
+| `recipe-available` | `default` | bool |
 
-Fact `target` = output code. `refund` runs after ingredient consume; gate with `input:<collection>`.
+Fact `target` = output code. `refund` runs after ingredient consume; gate with `input:<collection>`. When the output is a block, the refund fact also carries token `block`.
 
 `mutate-output` / `output` is registered with no shipped actions.
+
+`recipe-available`: craft-grid recipe unlock gate (seed false). Match recipes that declare `attributes.prosequorUnlock`.
 
 ### `prosequor:entity-interaction`
 
@@ -539,8 +558,11 @@ Fact `target` = animal / mount / boat code.
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
+| `bleed-out` | `rate` | number |
 
 `on-damage`: match `damage:frost` / `damage:weather`.
+
+`bleed-out`: mortally-wounded revive-window multiplier (seed 1).
 
 ### `prosequor:progress`
 
@@ -579,7 +601,7 @@ Skill-scaled operand: `min(cap, base + perSkillLevel × skillLevel)`. Same units
 
 NumberSpec params.
 
-Surfaces include: mutate-drops/`quantity` (block, item, entity); mutate-process/`quantity`; mutate-output/`quantity`; interaction-speed/`default` (block + item); mounted number phases (not `can-ride`); repair/`add-durability`; clay-form phases; anvil phases; fertilize/`default`; plant/seek `default` and plant/`growth`; field-work/`size`; scythe-multibreak/`quantity`; trough-fill/`quantity`; spawn-bees/`default`; harvest-skep|bloomery/`right-click-harvest-break-chance`; animal `chance`/`multiplier`; trough-eaten/`chance`; apply-quality number phases; durability `amount`; voxel-copy|refill/`default`; progress skill-xp/`amount` and skill-bucket/`cap`; player sprint|swim|sneak and temporal rates.
+Surfaces include: mutate-drops/`quantity` (block, item, entity); mutate-process/`quantity`; mutate-output/`quantity`; reinforce/`strength`; heat-structure-damage/`skip`; tend/`health` and `application-rate`; revive/`health` and `duration`; bleed-out/`rate`; interaction-speed/`default` (block + item); mounted number phases (not `can-ride`); repair/`add-durability`; clay-form phases; anvil phases; fertilize/`default`; plant/seek `default` and plant/`growth`; field-work/`size`; scythe-multibreak/`quantity`; trough-fill/`quantity`; spawn-bees/`default`; harvest-skep|bloomery/`right-click-harvest-break-chance`; animal `chance`/`multiplier`; trough-eaten/`chance`; apply-quality number phases; durability `amount`; voxel-copy|refill/`default`; progress skill-xp/`amount` and skill-bucket/`cap`; player sprint|swim|sneak and temporal rates.
 
 #### `prosequor:adjust-plant-climate-value`
 
@@ -608,7 +630,7 @@ Optional `minFriendliness` (≥0; default 5). Sets animal-pet/`default` allow wh
 
 #### `prosequor:set-true`
 
-No params. Surfaces: harvest-skep|harvest-bloomery / `allow-right-click-harvest`.
+No params. Surfaces: harvest-skep|harvest-bloomery / `allow-right-click-harvest`; recipe-available / `default`.
 
 #### `prosequor:add-friendliness`
 
@@ -650,7 +672,7 @@ No params. Surface: mutate-drops/`stack` (block).
 
 `key` + NumberSpec. Surface: mutate-output/`attributes`.
 
-Known craft attribute keys: `durability`, `warmth`, `cooling`, `protection`, `freshness`, `satiety`, `hungerDelay`, `intoxication`, `price`.
+Known craft attribute keys: `durability`, `warmth`, `cooling`, `protection`, `freshness`, `satiety`, `hungerDelay`, `intoxication`, `price`, `regen`.
 
 #### `prosequor:add-affix`
 
@@ -710,7 +732,7 @@ Preserve the outer phase’s contract. Nested `onSuccess` / `onFailure` must bin
 | `chance` | NumberSpec add-only (unit probability), or `{ "percent": N }` / bare 0–100 |
 | `onSuccess` / `onFailure` | Nested `{ "action", "params" }` |
 
-Surfaces: mutate-drops quantity/stack/stacks (block + item); durability `amount`; consume-bait/`restock`; mutate-process/`stacks`; animal-pet/`default`.
+Surfaces: mutate-drops quantity/stack/stacks (block + item); durability `amount`; consume-bait/`restock`; mutate-process/`stacks`; mutate-output/`refund`; animal-pet/`default`.
 
 ```json
 {

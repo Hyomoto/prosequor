@@ -461,3 +461,52 @@ public sealed class TakeDamageContext : IHookContext
     public required float CurrentHealth { get; init; }
     public required DamageSource DamageSource { get; init; }
 }
+
+/// <summary>Plumb-and-square reinforcement strength fold.</summary>
+public sealed class ReinforceContext : IHookContext
+{
+    public HookId Hook => HookIds.ItemInteraction;
+    public IPlayer? Player { get; init; }
+    public IPlayerProgress? Progress { get; init; }
+    public AbilityAction? Fact { get; init; }
+    public IWorldAccessor? World { get; init; }
+}
+
+/// <summary>Beehive kiln / stone coffin heat-structure damage skip fold.</summary>
+public sealed class HeatStructureDamageContext : IHookContext
+{
+    public HookId Hook => HookIds.BlockInteraction;
+    public IPlayer? Player { get; init; }
+    public IPlayerProgress? Progress { get; init; }
+    public AbilityAction? Fact { get; init; }
+    public IWorldAccessor? World { get; init; }
+}
+
+/// <summary>Healing-item tend folds (First Aid health / application-rate).</summary>
+public sealed class TendContext : IHookContext
+{
+    public HookId Hook => HookIds.ItemInteraction;
+    public IPlayer? Player { get; init; }
+    public IPlayerProgress? Progress { get; init; }
+    public AbilityAction? Fact { get; init; }
+    public IWorldAccessor? World { get; init; }
+}
+
+/// <summary>Post-revive triage folds (health fraction / duration seconds).</summary>
+public sealed class ReviveContext : IHookContext
+{
+    public HookId Hook => HookIds.ItemInteraction;
+    public IPlayer? Player { get; init; }
+    public IPlayerProgress? Progress { get; init; }
+    public AbilityAction? Fact { get; init; }
+    public IWorldAccessor? World { get; init; }
+}
+
+/// <summary>Craft-grid recipe unlock gate (<c>recipe-available</c> / default).</summary>
+public sealed class RecipeAvailableContext : IHookContext
+{
+    public HookId Hook => HookIds.CraftingInteraction;
+    public IPlayer? Player { get; init; }
+    public IPlayerProgress? Progress { get; init; }
+    public AbilityAction? Fact { get; init; }
+}

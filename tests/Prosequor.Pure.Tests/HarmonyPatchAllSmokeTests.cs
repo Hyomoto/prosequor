@@ -969,6 +969,48 @@ public class HarmonyPatchAllSmokeTests
     [Fact]
     [Trait("Layer", "Harmony")]
     [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeReinforceAndHeatStructureDamage()
+    {
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.construction.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+
+            MethodInfo? strengthen = AccessTools.Method(
+                typeof(ModSystemBlockReinforcement),
+                nameof(ModSystemBlockReinforcement.StrengthenBlock),
+                [typeof(BlockPos), typeof(IPlayer), typeof(int), typeof(int)]);
+            MethodInfo? walk = AccessTools.Method(
+                typeof(MultiblockStructure),
+                nameof(MultiblockStructure.WalkMatchingBlocks));
+            Assert.NotNull(strengthen);
+            Assert.NotNull(walk);
+            Assert.Contains(strengthen, harmony.GetPatchedMethods());
+            Assert.Contains(walk, harmony.GetPatchedMethods());
+
+            Patches? strengthenInfo = Harmony.GetPatchInfo(strengthen);
+            Patches? walkInfo = Harmony.GetPatchInfo(walk);
+            Assert.NotNull(strengthenInfo);
+            Assert.NotNull(walkInfo);
+            Assert.True(
+                strengthenInfo!.Prefixes.Count > 0 && strengthenInfo.Postfixes.Count > 0,
+                $"Expected StrengthenBlock prefix+postfix; prefixes={strengthenInfo.Prefixes.Count}, postfixes={strengthenInfo.Postfixes.Count}");
+            Assert.True(
+                walkInfo!.Prefixes.Count > 0,
+                $"Expected WalkMatchingBlocks prefix; prefixes={walkInfo.Prefixes.Count}");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
     public void TryPatch_WhenKnapsterMissing_ShouldNotThrow()
     {
         string harmonyId = $"{ProsequorModSystem.ModId}.test.knapsteroptional.{Guid.NewGuid():N}";

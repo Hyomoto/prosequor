@@ -56,3 +56,30 @@ public sealed class SetTrueHarvestBloomeryAllowAction
         AbilityRuleSource source) =>
         1;
 }
+
+/// <summary>
+/// Sets <c>recipe-available</c> / <c>default</c> to true (1).
+/// No params. Compose memo is skipped (allow fold).
+/// </summary>
+public sealed class SetTrueRecipeAvailableAction
+    : AbilityActionHandler<RecipeAvailableContext, int, object>
+{
+    public override ActionId Id => ActionIds.SetTrue;
+    public override HookId Hook => HookIds.CraftingInteraction;
+    public override VerbId Verb => VerbIds.RecipeAvailable;
+    public override PhaseId Phase => HookIds.Default;
+
+    protected override bool TryParse(JObject? raw, out object? parameters, out string error)
+    {
+        parameters = new object();
+        error = "";
+        return true;
+    }
+
+    protected override int Apply(
+        RecipeAvailableContext context,
+        int value,
+        object parameters,
+        AbilityRuleSource source) =>
+        1;
+}

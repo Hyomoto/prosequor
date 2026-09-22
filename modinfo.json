@@ -2,7 +2,7 @@
   "type": "code",
   "modid": "prosequor",
   "name": "Prosequor",
-  "version": "1.0.0-rc.15",
+  "version": "1.0.0-rc.16",
   "description": "Player skill progress: levels, XP, unlock points, and a C-menu Skills tab. Licensed under CC BY-NC-ND 4.0. Skill and UI icons by Lorc, Delapouite, Skoll, and other game-icons.net authors (CC BY 3.0); see credits.txt.",
   "authors": ["Hyomoto"],
   "contributors": [],

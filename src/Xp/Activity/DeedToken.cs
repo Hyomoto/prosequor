@@ -32,7 +32,10 @@ public enum DeedToken
     /// <summary>Finished bloom taken from a bloomery (break or Bloom Brigand extract).</summary>
     BloomeryHarvest,
     /// <summary>Cementation furnace finished carburizing iron into blister steel.</summary>
-    CementationFired
+    CementationFired,
+
+    /// <summary>Block reinforced with the plumb and square.</summary>
+    Reinforced
 }
 
 /// <summary>String forms for <see cref="DeedToken"/> (JSON <c>when.tags</c> / fact tokens).</summary>
@@ -95,6 +98,9 @@ public static class DeedTokenTags
     /// <summary>Cementation furnace finished carburizing (iron → blister steel).</summary>
     public const string CementationFired = "cementation-fired";
 
+    /// <summary>Block reinforced with the plumb and square.</summary>
+    public const string Reinforced = "reinforced";
+
     /// <summary>Caller identity for pit kilns.</summary>
     public const string PitKiln = "pit-kiln";
 
@@ -120,6 +126,7 @@ public static class DeedTokenTags
         DeedToken.MoldCast => MoldCast,
         DeedToken.BloomeryHarvest => BloomeryHarvest,
         DeedToken.CementationFired => CementationFired,
+        DeedToken.Reinforced => Reinforced,
         _ => token.ToString().ToLowerInvariant()
     };
 
@@ -233,6 +240,12 @@ public static class DeedTokenTags
         if (t.Equals(CementationFired, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.CementationFired;
+            return true;
+        }
+
+        if (t.Equals(Reinforced, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Reinforced;
             return true;
         }
 

@@ -53,6 +53,13 @@ public static class ItemstackInfoTooltipPatches
     static StyledSvgIconCache TooltipIcons(ICoreClientAPI capi) =>
         sharedTooltipIcons ??= new StyledSvgIconCache(capi);
 
+    /// <summary>Dispose the shared SVG cache (call from ModSystem.Dispose).</summary>
+    public static void DisposeIcons()
+    {
+        sharedTooltipIcons?.Dispose();
+        sharedTooltipIcons = null;
+    }
+
     static double PreviewSize => GuiElementItemstackInfo.ItemStackSize * PreviewScale;
 
     static double PlateUnscaled => PreviewSize + PreviewPad;
@@ -97,22 +104,6 @@ public static class ItemstackInfoTooltipPatches
     }
 
     [HarmonyPostfix]
-    [HarmonyPatch(nameof(GuiElementItemstackInfo.RenderInteractiveElements))]
-    public static void RenderInteractiveElementsPostfix(GuiElementItemstackInfo __instance, float deltaTime)
-    {
-        if (__instance.curSlot?.Itemstack == null || __instance.Dirty || !__instance.Render)
-        {
-            return;
-        }
-
-        if (TryGetHost(__instance, out var host)
-            && host.Band.Bounds.fixedHeight > 0)
-        {
-            host.Band.RenderInteractiveElements(deltaTime);
-        }
-    }
-
-    [HarmonyPostfix]
     [HarmonyPatch(nameof(GuiElementItemstackInfo.Dispose))]
     public static void DisposePostfix(GuiElementItemstackInfo __instance)
     {
@@ -137,12 +128,7 @@ public static class ItemstackInfoTooltipPatches
         ItemSlot? curSlot = __instance.curSlot;
         if (curSlot?.Itemstack == null)
         {
-            if (host != null)
-            {
-                host.Band.SetCells(null);
-                host.Band.Compose();
-            }
-
+            host?.Band.SetCells(null);
             return false;
         }
 
@@ -205,7 +191,6 @@ public static class ItemstackInfoTooltipPatches
         RecalcZoneBounds(
             __instance,
             maxWidth,
-            hasStatsBand ? statsRequest : null,
             statsElement);
         __instance.Bounds.CalcWorldBounds();
 
@@ -288,8 +273,24 @@ public static class ItemstackInfoTooltipPatches
                     return;
                 }
 
+                // Paint the stats row onto the chrome surface after blur so it stays sharp,
+                // in the same generation that clears Dirty. No separate GPU overlay.
+                if (statsElement != null && statsElement.HasCells)
+                {
+                    double bandX = textBounds.drawX + GuiElement.scaled(statsElement.Bounds.fixedX);
+                    double bandY = textBounds.drawY + GuiElement.scaled(statsElement.Bounds.fixedY);
+                    double bandW = GuiElement.scaled(statsElement.Bounds.fixedWidth);
+                    double bandH = GuiElement.scaled(statsElement.Bounds.fixedHeight);
+                    if (!statsElement.Paint(ctx, bandX, bandY, bandW, bandH))
+                    {
+                        ctx.Dispose();
+                        surface.Dispose();
+                        // Keep Dirty: a hidden tooltip is better than a visible empty hole.
+                        return;
+                    }
+                }
+
                 __instance.titleElement.Compose(false);
-                statsElement?.Compose();
                 __instance.descriptionElement.Compose(false);
 
                 LoadedTexture texture = __instance.texture;
@@ -319,7 +320,6 @@ public static class ItemstackInfoTooltipPatches
     static void RecalcZoneBounds(
         GuiElementItemstackInfo el,
         double maxWidth,
-        ItemTooltipStatsBandRequest? statsRequest,
         GuiElementTooltipStatsBand? statsElement)
     {
         el.descriptionElement.BeforeCalcBounds();
@@ -336,7 +336,7 @@ public static class ItemstackInfoTooltipPatches
             naturalDesc + ContentInset * 2);
 
         // Short names (e.g. "Gold cleaver") must still fit the weighted stats columns.
-        if (statsRequest != null && statsElement != null)
+        if (statsElement != null && statsElement.HasCells)
         {
             double statsMinBody = statsElement.PreferredUnscaledMinWidth;
             if (statsMinBody > 0)
@@ -369,10 +369,11 @@ public static class ItemstackInfoTooltipPatches
 
         el.titleElement.Bounds.fixedHeight = headerHeight;
 
+        // Hole only when the band actually has cells — PreferredUnscaledHeight is 0 when empty.
         double statsHeight = 0;
-        if (statsRequest != null && statsElement != null)
+        if (statsElement != null && statsElement.HasCells)
         {
-            statsHeight = Math.Max(statsElement.PreferredUnscaledHeight, ItemTooltipStatsBand.DefaultRowHeight);
+            statsHeight = statsElement.PreferredUnscaledHeight;
             statsElement.Bounds.fixedX = ContentInset;
             statsElement.Bounds.fixedY = afterHeader;
             statsElement.Bounds.fixedWidth = bodyWidth;

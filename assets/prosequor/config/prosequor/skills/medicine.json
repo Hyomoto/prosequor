@@ -1,0 +1,288 @@
+{
+  "id": "medicine",
+  "nameLang": "skill-medicine",
+  "descriptionLang": "skilldesc-medicine",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/medicine-skill.svg",
+  "attributeScores": [
+    { "id": "constitution", "value": 1.0 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-poultice-medicine",
+      "amount": 0.5,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<poultice>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-bandage-medicine",
+      "amount": 0.5,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<bandage>" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:bleed-out",
+      "phase": "rate",
+      "action": "prosequor:number",
+      "params": { "op": "scale", "base": 0, "perSkillLevel": 0.005, "cap": 0 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "herbal-remedies",
+        "nameLang": "unlock-medicine-herbal-remedies",
+        "icon": "textures/icons/medicine/herbal-remedies.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-medicine-herbal-remedies",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<poultice>" ]
+                },
+                "params": {
+                  "key": "regen",
+                  "op": "scale",
+                  "table": [0, 0.1]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "descriptionLang": "unlockdesc-medicine-herbal-remedies-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.2] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-medicine-herbal-remedies-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.3] }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "chirurgeon",
+        "nameLang": "unlock-medicine-chirurgeon",
+        "icon": "textures/icons/medicine/chirurgeon.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-medicine-chirurgeon",
+        "requires": [ "first-aid" ],
+        "layout": { "layerOffset": 0 },
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<bandage>" ]
+                },
+                "params": {
+                  "key": "regen",
+                  "op": "scale",
+                  "table": [0, 0.1]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-medicine-chirurgeon-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.25] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-medicine-chirurgeon-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.25, 0.4] }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "first-aid",
+        "nameLang": "unlock-medicine-first-aid",
+        "icon": "textures/icons/medicine/first-aid.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "requires": [ "herbal-remedies" ],
+        "descriptionLang": "unlockdesc-medicine-first-aid",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" },
+          { "sum": [ "1.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:tend",
+                "phase": "health",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "other" ]
+                },
+                "params": { "op": "scale", "value": 0.1 }
+              },
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:tend",
+                "phase": "application-rate",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "other" ]
+                },
+                "params": { "op": "scale", "value": 0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.25 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 0.2 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.4 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 0.3 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "triage",
+        "nameLang": "unlock-medicine-triage",
+        "icon": "textures/icons/medicine/triage.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-medicine-triage",
+        "requires": [ "first-aid" ],
+        "layout": { "layerOffset": 0 },
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" },
+          { "sum": [ "1.value" ] }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:revive",
+                "phase": "health",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 0.1 }
+              },
+              {
+                "hook": "prosequor:item-interaction",
+                "verb": "prosequor:revive",
+                "phase": "duration",
+                "action": "prosequor:number",
+                "params": { "op": "set", "value": 10 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.15 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 8 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 35,
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.2 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 6 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "improvised-medicine",
+        "nameLang": "unlock-medicine-improvised-medicine",
+        "icon": "textures/icons/medicine/improvised-medicine.svg",
+        "cost": 1,
+        "minSkillLevel": 25,
+        "requires": [ "first-aid" ],
+        "descriptionLang": "unlockdesc-medicine-improvised-medicine",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:recipe-available",
+                "action": "prosequor:set-true"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
