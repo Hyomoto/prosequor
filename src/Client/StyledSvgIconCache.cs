@@ -17,6 +17,7 @@ public sealed class StyledSvgIconCache : IDisposable
     readonly ICoreClientAPI capi;
     readonly Dictionary<string, LoadedTexture> textures = new(StringComparer.OrdinalIgnoreCase);
     readonly Dictionary<string, ImageSurface> surfaces = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, ImageSurface> masks = new(StringComparer.OrdinalIgnoreCase);
 
     public StyledSvgIconCache(ICoreClientAPI capi)
     {
@@ -99,6 +100,54 @@ public sealed class StyledSvgIconCache : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Paint an SVG as a flat tinted mask (shadow + solid fill). Used for title-suffix icons
+    /// that should match surrounding text color rather than the grey band gradient.
+    /// </summary>
+    public bool TryPaintFlat(
+        Context ctx,
+        AssetLocation loc,
+        double x,
+        double y,
+        double size,
+        double r,
+        double g,
+        double b,
+        double a = 1.0,
+        AssetLocation? fallback = null)
+    {
+        int px = Math.Max(8, (int)Math.Ceiling(size));
+        ImageSurface? mask = GetOrBakeMask(loc, px, fallback);
+        if (mask == null)
+        {
+            return false;
+        }
+
+        ctx.Save();
+        try
+        {
+            double scale = size / px;
+            ctx.Translate(x, y);
+            if (Math.Abs(scale - 1.0) > 0.001)
+            {
+                ctx.Scale(scale, scale);
+            }
+
+            int shadowOffset = Math.Max(1, (int)Math.Round(px * ShadowOffsetFraction));
+            ctx.SetSourceRGBA(0, 0, 0, ShadowAlpha);
+            ctx.MaskSurface(mask, shadowOffset, shadowOffset);
+
+            ctx.SetSourceRGBA(r, g, b, a);
+            ctx.MaskSurface(mask, 0, 0);
+        }
+        finally
+        {
+            ctx.Restore();
+        }
+
+        return true;
+    }
+
     ImageSurface? GetOrBakeSurface(AssetLocation loc, int px, AssetLocation? fallback)
     {
         string cacheKey = loc.ToString() + "@" + px;
@@ -114,6 +163,42 @@ public sealed class StyledSvgIconCache : IDisposable
         }
 
         return baked;
+    }
+
+    ImageSurface? GetOrBakeMask(AssetLocation loc, int px, AssetLocation? fallback)
+    {
+        string cacheKey = "mask:" + loc + "@" + px;
+        if (masks.TryGetValue(cacheKey, out ImageSurface? existing))
+        {
+            return existing;
+        }
+
+        IAsset? asset = capi.Assets.TryGet(loc);
+        if (asset == null && fallback != null && fallback != loc)
+        {
+            capi.Logger.Warning("[prosequor] Missing styled SVG {0}; trying fallback.", loc);
+            asset = capi.Assets.TryGet(fallback);
+        }
+
+        if (asset == null)
+        {
+            return null;
+        }
+
+        ImageSurface mask = new(Format.Argb32, px, px);
+        try
+        {
+            int shadowOffset = Math.Max(1, (int)Math.Round(px * ShadowOffsetFraction));
+            int iconSize = px - shadowOffset;
+            capi.Gui.DrawSvg(asset, mask, 0, 0, iconSize, iconSize, ColorUtil.WhiteArgb);
+            masks[cacheKey] = mask;
+            return mask;
+        }
+        catch
+        {
+            mask.Dispose();
+            throw;
+        }
     }
 
     ImageSurface? BakeSurface(AssetLocation loc, int px, AssetLocation? fallback)
@@ -210,5 +295,12 @@ public sealed class StyledSvgIconCache : IDisposable
         }
 
         surfaces.Clear();
+
+        foreach (ImageSurface mask in masks.Values)
+        {
+            mask.Dispose();
+        }
+
+        masks.Clear();
     }
 }

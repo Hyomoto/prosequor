@@ -362,6 +362,8 @@ public class ProsequorModSystem : ModSystem
         skillWaitingHudElement = new HudElementSkillWaiting(api, skillWaitingHud);
         statsPanel = new CharacterStatsPanel(api);
 
+        ItemTooltipStatsBand.Register(ArmorTooltipStatsBand.TryProvide);
+        ItemTooltipStatsBand.Register(ClothingTooltipStatsBand.TryProvide);
         ItemTooltipStatsBand.Register(WeaponToolTooltipStatsBand.TryProvide);
 
         // Tick observe must not wait on BlockTexturesLoaded — that event is easy to miss

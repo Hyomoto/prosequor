@@ -32,6 +32,10 @@ public static class ItemstackInfoTooltipPatches
     const double BottomPad = 8;
     /// <summary>Extra space between the top (title/preview) band and GetDescription body (or stats band).</summary>
     const double DescBandGap = 8;
+    /// <summary>Unscaled size of an optional icon painted after the item name.</summary>
+    const double TitleIconUnscaled = 18;
+    /// <summary>Gap between the first title line and a trailing title icon.</summary>
+    const double TitleIconGap = 6;
     /// <summary>Muted subtitle color for trailing parenthetical name parts.</summary>
     const string ParentheticalColor = OwnerCredit.MutedColor;
     /// <summary>Wide enough that the first title measure never wraps.</summary>
@@ -148,9 +152,21 @@ public static class ItemstackInfoTooltipPatches
             curSlot.Itemstack,
             GuiStyle.StandardFontName,
             ((int)GuiStyle.DetailFontSize).ToString());
-        string title = FormatTooltipTitle(curSlot.GetStackName(), headerAffixes);
+        string stackName = curSlot.GetStackName()?.Trim() ?? "";
+        SplitTitleParts(stackName, out string mainName, out string? parenthetical);
+        string title = FormatTooltipTitle(mainName, parenthetical, headerAffixes);
         string desc = TrimDescription(onRequireInfoText(curSlot));
-        if (WeaponToolTooltipStatsBand.IsEligible(curSlot))
+        if (ArmorTooltipStatsBand.IsEligible(curSlot))
+        {
+            desc = ArmorTooltipStatsBand.StripHoverLines(desc, curSlot);
+            desc = TrimDescription(desc);
+        }
+        else if (ClothingTooltipStatsBand.IsEligible(curSlot))
+        {
+            desc = ClothingTooltipStatsBand.StripHoverLines(desc, curSlot);
+            desc = TrimDescription(desc);
+        }
+        else if (WeaponToolTooltipStatsBand.IsEligible(curSlot))
         {
             desc = WeaponToolTooltipStatsBand.StripHoverLines(desc, curSlot);
             desc = TrimDescription(desc);
@@ -160,6 +176,7 @@ public static class ItemstackInfoTooltipPatches
         desc = OwnerCredit.AppendForStack(desc, api.World, curSlot.Itemstack);
 
         bool hasStatsBand = ItemTooltipStatsBand.TryResolve(curSlot, out ItemTooltipStatsBandRequest statsRequest);
+        TooltipTitleIcon titleIcon = hasStatsBand ? statsRequest.TitleIcon : default;
         GuiElementTooltipStatsBand? statsElement = host?.Band;
 
         ClearCopiedPadding(__instance.titleElement.Bounds);
@@ -191,7 +208,10 @@ public static class ItemstackInfoTooltipPatches
         RecalcZoneBounds(
             __instance,
             maxWidth,
-            statsElement);
+            statsElement,
+            titleFont,
+            mainName,
+            titleIcon);
         __instance.Bounds.CalcWorldBounds();
 
         ElementBounds textBounds = __instance.Bounds.CopyOnlySize();
@@ -199,6 +219,7 @@ public static class ItemstackInfoTooltipPatches
 
         double previewSize = PreviewSize;
         double plateUnscaled = PlateUnscaled;
+        double[] titleColor = titleFont.Color ?? [1, 1, 1, 1];
 
         TyronThreadPool.QueueTask(() =>
         {
@@ -290,6 +311,11 @@ public static class ItemstackInfoTooltipPatches
                     }
                 }
 
+                if (!titleIcon.IsEmpty)
+                {
+                    PaintTitleIcon(api, ctx, textBounds, titleFont, mainName, titleIcon, titleColor);
+                }
+
                 __instance.titleElement.Compose(false);
                 __instance.descriptionElement.Compose(false);
 
@@ -320,7 +346,10 @@ public static class ItemstackInfoTooltipPatches
     static void RecalcZoneBounds(
         GuiElementItemstackInfo el,
         double maxWidth,
-        GuiElementTooltipStatsBand? statsElement)
+        GuiElementTooltipStatsBand? statsElement,
+        CairoFont titleFont,
+        string mainName,
+        TooltipTitleIcon titleIcon)
     {
         el.descriptionElement.BeforeCalcBounds();
         el.titleElement.BeforeCalcBounds();
@@ -329,8 +358,15 @@ public static class ItemstackInfoTooltipPatches
         double naturalTitle = el.titleElement.MaxLineWidth / RuntimeEnv.GUIScale;
         double naturalDesc = el.descriptionElement.MaxLineWidth / RuntimeEnv.GUIScale;
 
-        // Slack so the final InnerWidth is strictly wider than the measured line (richtext wraps on equality).
+        // Include a trailing title icon in the name-line budget when present.
         double titleBudget = naturalTitle + TitleWrapSlack;
+        if (!titleIcon.IsEmpty && !string.IsNullOrEmpty(mainName))
+        {
+            double nameUnscaled = titleFont.GetTextExtents(mainName).Width / RuntimeEnv.GUIScale;
+            double withIcon = nameUnscaled + TitleIconUnscaled + TitleIconGap;
+            titleBudget = Math.Max(titleBudget, withIcon + TitleWrapSlack);
+        }
+
         double currentWidth = Math.Max(
             titleBudget + TopGutter + ContentInset,
             naturalDesc + ContentInset * 2);
@@ -405,6 +441,52 @@ public static class ItemstackInfoTooltipPatches
     }
 
     /// <summary>
+    /// Paint a title-colored icon immediately after the first name line.
+    /// SVG assets use <see cref="StyledSvgIconCache"/>; clothing uses IconUtil built-ins.
+    /// A missing asset is a soft miss — does not keep Dirty.
+    /// </summary>
+    static void PaintTitleIcon(
+        ICoreClientAPI api,
+        Context ctx,
+        ElementBounds textBounds,
+        CairoFont titleFont,
+        string mainName,
+        TooltipTitleIcon titleIcon,
+        double[] titleColor)
+    {
+        if (string.IsNullOrEmpty(mainName) || titleIcon.IsEmpty)
+        {
+            return;
+        }
+
+        double nameW = titleFont.GetTextExtents(mainName).Width;
+        FontExtents fontExtents = titleFont.GetFontExtents();
+        double iconPx = GuiElement.scaled(TitleIconUnscaled);
+        double gapPx = GuiElement.scaled(TitleIconGap);
+        double originX = textBounds.drawX + GuiElement.scaled(ContentInset);
+        double originY = textBounds.drawY + GuiElement.scaled(ContentInset);
+        double iconX = originX + nameW + gapPx;
+        double iconY = originY + (fontExtents.Height - iconPx) / 2;
+
+        double r = titleColor.Length > 0 ? titleColor[0] : 1;
+        double g = titleColor.Length > 1 ? titleColor[1] : 1;
+        double b = titleColor.Length > 2 ? titleColor[2] : 1;
+        double a = titleColor.Length > 3 ? titleColor[3] : 1;
+        double[] rgba = [r, g, b, a];
+
+        if (titleIcon.Svg != null)
+        {
+            sharedTooltipIcons?.TryPaintFlat(ctx, titleIcon.Svg, iconX, iconY, iconPx, r, g, b, a);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(titleIcon.BuiltIn))
+        {
+            api.Gui.Icons.DrawIcon(ctx, titleIcon.BuiltIn, iconX, iconY, iconPx, iconPx, rgba);
+        }
+    }
+
+    /// <summary>
     /// Drop trailing whitespace / blank lines so they do not inflate tooltip height.
     /// </summary>
     static string TrimDescription(string? desc)
@@ -428,18 +510,8 @@ public static class ItemstackInfoTooltipPatches
     /// <summary>
     /// Main name in title font; trailing <c>(…)</c> as a smaller subtitle; then affixes.
     /// </summary>
-    static string FormatTooltipTitle(string? stackName, string? headerAffixes)
+    static string FormatTooltipTitle(string main, string? parenthetical, string? headerAffixes)
     {
-        string raw = stackName?.Trim() ?? "";
-        string main = raw;
-        string? parenthetical = null;
-
-        if (TrySplitTrailingParenthetical(raw, out string head, out string paren))
-        {
-            main = head;
-            parenthetical = paren;
-        }
-
         var sb = new System.Text.StringBuilder();
         sb.Append(EscapeTitleVtml(main));
 
@@ -469,6 +541,20 @@ public static class ItemstackInfoTooltipPatches
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Splits a trailing <c>Name (variant)</c> into main + parenthetical (parens kept).
+    /// </summary>
+    static void SplitTitleParts(string name, out string main, out string? parenthetical)
+    {
+        main = name;
+        parenthetical = null;
+        if (TrySplitTrailingParenthetical(name, out string head, out string paren))
+        {
+            main = head;
+            parenthetical = paren;
+        }
     }
 
     /// <summary>

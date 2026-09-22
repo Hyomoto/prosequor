@@ -21,10 +21,26 @@ public readonly record struct TooltipStatCell(
     string? TextColorHex = null);
 
 /// <summary>
+/// Optional icon painted after the item name in title color.
+/// Armor uses SVG assets; clothing uses character-menu <c>IconUtil</c> built-in names.
+/// </summary>
+public readonly record struct TooltipTitleIcon(AssetLocation? Svg = null, string? BuiltIn = null)
+{
+    public bool IsEmpty => Svg == null && string.IsNullOrEmpty(BuiltIn);
+
+    public static TooltipTitleIcon FromSvg(AssetLocation loc) => new(Svg: loc);
+
+    public static TooltipTitleIcon FromBuiltIn(string name) => new(BuiltIn: name);
+}
+
+/// <summary>
 /// Opt-in middle band between the title/preview header and <c>GetDescription</c> body.
 /// Providers supply weighted cells; layout owns column widths and centering.
+/// Optional <see cref="TitleIcon"/> is painted after the item name in title color.
 /// </summary>
-public readonly record struct ItemTooltipStatsBandRequest(IReadOnlyList<TooltipStatCell> Cells);
+public readonly record struct ItemTooltipStatsBandRequest(
+    IReadOnlyList<TooltipStatCell> Cells,
+    TooltipTitleIcon TitleIcon = default);
 
 /// <summary>
 /// Registry for tooltip stats-band providers. First non-null request with at least one cell wins.
