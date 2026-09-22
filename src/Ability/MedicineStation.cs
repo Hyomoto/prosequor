@@ -1,6 +1,7 @@
 using System;
 using Prosequor.Ability.Hooks;
 using Prosequor.Player;
+using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.GameContent;
@@ -63,6 +64,53 @@ public static class MedicineStation
         startHealth = maxHealth * (1f - fraction);
         regenTotal = maxHealth * fraction;
         duration = Math.Max(0f, durationSec);
+    }
+
+    /// <summary>
+    /// Fraction of heal capacity that can land: missing HP / heal total, clamped to [0, 1].
+    /// Full health or zero capacity → 0.
+    /// </summary>
+    public static float UsableHealFraction(float missingHealth, float healTotal)
+    {
+        if (healTotal <= 0f || missingHealth <= 0f)
+        {
+            return 0f;
+        }
+
+        return Math.Clamp(missingHealth / healTotal, 0f, 1f);
+    }
+
+    /// <summary>
+    /// Pay medicine XP for a healing-item apply. <paramref name="usableFraction"/> is the
+    /// effort metric on [0, 1] (how much of the heal capacity can land).
+    /// </summary>
+    public static void EmitHealed(
+        IPlayer caregiver,
+        ItemStack? stack,
+        Entity? patient,
+        float usableFraction)
+    {
+        if (caregiver?.PlayerUID == null || caregiver.Entity?.Api == null)
+        {
+            return;
+        }
+
+        if (usableFraction <= 0f)
+        {
+            return;
+        }
+
+        string? caller = stack?.Collectible?.Code?.ToString();
+        string? target = patient?.Code?.ToString();
+        Deed.Emit(
+            caregiver.Entity.Api,
+            caregiver.PlayerUID,
+            DeedToken.Healed,
+            caller: caller,
+            target: target,
+            metric: Math.Clamp(usableFraction, 0f, 1f),
+            metricMin: 0f,
+            metricMax: 1f);
     }
 
     /// <summary>Bleed-out rate fold for the wounded player (seed 1).</summary>

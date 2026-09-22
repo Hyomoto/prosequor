@@ -16,16 +16,25 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "caller:@grid", "target:<poultice>" ]
+        "tags": [ "crafted", "caller:@grid", "target:<poultice, bandage>" ]
       }
     },
     {
-      "id": "prosequor:craft-bandage-medicine",
-      "amount": 0.5,
+      "id": "prosequor:heal-bandage-medicine",
+      "amount": [0, 1],
+      "pay": "effort",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "healed", "caller:<poultice, bandage>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-aqua-vitae-medicine",
+      "amount": 0.05,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "caller:@grid", "target:<bandage>" ]
+        "tags": [ "crafted", "target:game:alcoholportion" ]
       }
     }
   ],

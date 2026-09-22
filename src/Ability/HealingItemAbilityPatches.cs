@@ -8,7 +8,7 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Healing-item apply: quality regen + First Aid tend folds, Triage after revive,
-/// and tooltip heal text that includes the stack regen factor.
+/// medicine XP scaled by usable heal capacity, and tooltip heal text with stack regen.
 /// </summary>
 [HarmonyPatch]
 public static class HealingItemAbilityPatches
@@ -35,6 +35,21 @@ public static class HealingItemAbilityPatches
     [ThreadStatic]
     static IPlayer? reviveCaregiver;
 
+    [ThreadStatic]
+    static IPlayer? healCaregiver;
+
+    [ThreadStatic]
+    static Entity? healPatient;
+
+    [ThreadStatic]
+    static ItemStack? healStack;
+
+    [ThreadStatic]
+    static float healTotal;
+
+    [ThreadStatic]
+    static float missingHealth;
+
     [HarmonyPrefix]
     [HarmonyPatch(typeof(CollectibleBehaviorHealingItem), nameof(CollectibleBehaviorHealingItem.OnHeldInteractStop))]
     public static void OnHeldInteractStopPrefix(
@@ -47,6 +62,11 @@ public static class HealingItemAbilityPatches
         healthStashed = false;
         revivePatient = null;
         reviveCaregiver = null;
+        healCaregiver = null;
+        healPatient = null;
+        healStack = null;
+        healTotal = 0f;
+        missingHealth = 0f;
 
         if (byEntity?.World?.Side != EnumAppSide.Server
             || byEntity is not EntityPlayer entityPlayer
@@ -75,6 +95,7 @@ public static class HealingItemAbilityPatches
         {
             revivePatient = target;
             reviveCaregiver = caregiver;
+            return;
         }
 
         float typeHealth = __instance.Health;
@@ -83,6 +104,18 @@ public static class HealingItemAbilityPatches
             slot.Itemstack,
             typeHealth,
             target);
+
+        EntityBehaviorHealth? health = target.GetBehavior<EntityBehaviorHealth>();
+        if (health != null)
+        {
+            missingHealth = Math.Max(0f, health.MaxHealth - health.Health);
+        }
+
+        healCaregiver = caregiver;
+        healPatient = target;
+        healStack = slot.Itemstack;
+        healTotal = folded;
+
         if (Math.Abs(folded - typeHealth) < 0.0001f)
         {
             return;
@@ -105,6 +138,11 @@ public static class HealingItemAbilityPatches
             {
                 MedicineStation.ApplyTriageAfterRevive(reviveCaregiver, revivePatient);
             }
+            else if (healCaregiver != null && healTotal > 0f)
+            {
+                float fraction = MedicineStation.UsableHealFraction(missingHealth, healTotal);
+                MedicineStation.EmitHealed(healCaregiver, healStack, healPatient, fraction);
+            }
         }
         finally
         {
@@ -116,6 +154,11 @@ public static class HealingItemAbilityPatches
 
             revivePatient = null;
             reviveCaregiver = null;
+            healCaregiver = null;
+            healPatient = null;
+            healStack = null;
+            healTotal = 0f;
+            missingHealth = 0f;
         }
     }
 

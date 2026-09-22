@@ -210,7 +210,7 @@ public static class XpRuleCompiler
                 && !XpPayChannels.UsesMeasure(rule.Pay))
             {
                 warn(
-                    $"[prosequor] XP amount rule '{rule.Id}' on skill '{skillId}' has an amount table without a measure pay channel (resistance / voxels / ingredients / lifetime) — missing metric always uses amount[0].");
+                    $"[prosequor] XP amount rule '{rule.Id}' on skill '{skillId}' has an amount table without a measure pay channel (resistance / effort / voxels / ingredients / lifetime) — missing metric always uses amount[0].");
             }
         }
 

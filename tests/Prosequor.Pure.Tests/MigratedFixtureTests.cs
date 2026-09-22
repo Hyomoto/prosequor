@@ -119,10 +119,13 @@ public class MigratedFixtureTests
     public void ContributionDependsOnFixtures_Should_Pass() => ContributionDependsOnFixtures.VerifyAll();
 
     [Fact]
-    public void ProsequorPlusCompatFixtures_Should_Pass() => ProsequorPlusCompatFixtures.VerifyAll();
+    public void CompanionSupportFixtures_Should_Pass() => CompanionSupportFixtures.VerifyAll();
 
     [Fact]
     public void LevelUpHudFixtures_Should_Pass() => LevelUpHudFixtures.VerifyAll();
+
+    [Fact]
+    public void LevelUpAudioFixtures_Should_Pass() => LevelUpAudioFixtures.VerifyAll();
 
     [Fact]
     public void SkillWaitingHintFixtures_Should_Pass() => SkillWaitingHintFixtures.VerifyAll();

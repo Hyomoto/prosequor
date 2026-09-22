@@ -1,0 +1,22 @@
+{
+  "Configuration": [
+    {
+      "ConfigFile": "prosequor/client.json",
+      "ConfigLabel": "prosequor:imm-audio-label",
+      "Description": "prosequor:imm-audio-desc",
+      "ConfigSource": "ModConfig",
+      "ConfigSide": "Client",
+      "Settings": [
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-levelup-volume",
+          "Description": "prosequor:imm-levelup-volume-desc",
+          "Map": "LevelUpVolume",
+          "Min": 0,
+          "Max": 100,
+          "Step": 1
+        }
+      ]
+    }
+  ]
+}

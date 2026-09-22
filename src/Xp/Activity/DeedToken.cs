@@ -35,7 +35,10 @@ public enum DeedToken
     CementationFired,
 
     /// <summary>Block reinforced with the plumb and square.</summary>
-    Reinforced
+    Reinforced,
+
+    /// <summary>Healing item successfully applied (bandage / poultice).</summary>
+    Healed
 }
 
 /// <summary>String forms for <see cref="DeedToken"/> (JSON <c>when.tags</c> / fact tokens).</summary>
@@ -101,6 +104,9 @@ public static class DeedTokenTags
     /// <summary>Block reinforced with the plumb and square.</summary>
     public const string Reinforced = "reinforced";
 
+    /// <summary>Healing item successfully applied (bandage / poultice).</summary>
+    public const string Healed = "healed";
+
     /// <summary>Caller identity for pit kilns.</summary>
     public const string PitKiln = "pit-kiln";
 
@@ -127,6 +133,7 @@ public static class DeedTokenTags
         DeedToken.BloomeryHarvest => BloomeryHarvest,
         DeedToken.CementationFired => CementationFired,
         DeedToken.Reinforced => Reinforced,
+        DeedToken.Healed => Healed,
         _ => token.ToString().ToLowerInvariant()
     };
 
@@ -246,6 +253,12 @@ public static class DeedTokenTags
         if (t.Equals(Reinforced, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Reinforced;
+            return true;
+        }
+
+        if (t.Equals(Healed, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Healed;
             return true;
         }
 

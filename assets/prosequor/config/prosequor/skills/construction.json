@@ -44,14 +44,6 @@
         "activity": "prosequor:deed",
         "tags": [ "crafted", "target:<daub>" ]
       }
-    },
-    {
-      "id": "prosequor:reinforce-construction",
-      "amount": 0.25,
-      "when": {
-        "activity": "prosequor:deed",
-        "tags": [ "reinforced" ]
-      }
     }
   ],
   "effects": [

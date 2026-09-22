@@ -97,14 +97,20 @@ public class ProsequorModSystem : ModSystem
 
     public override bool ShouldLoad(EnumAppSide forSide) => true;
 
+    /// <summary>
+    /// Whether a companion mod may run with this Prosequor. Unknown ids are allowed.
+    /// Companions call this from their own <c>StartPre</c>; Prosequor's watchdog only logs.
+    /// </summary>
+    public SupportAnswer QuerySupport(string? modId, string? version) =>
+        CompanionSupport.QuerySupport(modId, version);
+
     public override void StartPre(ICoreAPI api)
     {
-        ProsequorPlusCompat.ThrowIfIncompatible(api);
+        CompanionSupport.WatchdogLog(api);
     }
 
     public override void Start(ICoreAPI api)
     {
-        ProsequorPlusCompat.ThrowIfIncompatible(api);
         ProgressEvents.SetLogger(api.Logger);
         api.RegisterEntityBehaviorClass(EntityBehaviorProgress.Code, typeof(EntityBehaviorProgress));
         api.RegisterBlockEntityClass(
@@ -118,6 +124,11 @@ public class ProsequorModSystem : ModSystem
         AbilityBootstrap.RegisterBuiltIns(Hooks, Actions, AffixLists);
         PhaseRefreshRegistry.RegisterBuiltIns(PhaseRefresh);
         AcquirePatches();
+
+        if (api.Side == EnumAppSide.Client)
+        {
+            LevelUpAudio.ReadGain(api);
+        }
 
         api.Logger.Notification("[{0}] Loaded.", ModId);
     }

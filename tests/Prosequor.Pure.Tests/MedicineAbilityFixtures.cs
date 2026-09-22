@@ -1,4 +1,5 @@
 using Prosequor.Ability;
+using Prosequor.Xp;
 using Xunit;
 
 namespace Prosequor.Pure.Tests;
@@ -13,6 +14,8 @@ public static class MedicineAbilityFixtures
         VerifyApplicationDivisor();
         VerifyTriageHoldback();
         VerifyRecipeGate();
+        VerifyUsableHealFraction();
+        VerifyEffortPayAlias();
     }
 
     static void VerifyBleedOutWindow()
@@ -102,6 +105,50 @@ public static class MedicineAbilityFixtures
         if (!MedicineStation.IsRecipeAvailable(null, null))
         {
             Assert.Fail("[prosequor] Null recipe should pass the unlock gate.");
+        }
+    }
+
+    static void VerifyUsableHealFraction()
+    {
+        // 8 HP bandage at 9.9/10 → missing 0.1 → 0.1/8 = 0.0125.
+        float nearFull = MedicineStation.UsableHealFraction(0.1f, 8f);
+        if (Math.Abs(nearFull - 0.0125f) > 0.0001f)
+        {
+            Assert.Fail($"[prosequor] Expected usable fraction 0.0125, got {nearFull}.");
+        }
+
+        float fullNeed = MedicineStation.UsableHealFraction(10f, 8f);
+        if (Math.Abs(fullNeed - 1f) > 0.0001f)
+        {
+            Assert.Fail($"[prosequor] Expected usable fraction 1 when missing >= heal, got {fullNeed}.");
+        }
+
+        if (MedicineStation.UsableHealFraction(0f, 8f) != 0f
+            || MedicineStation.UsableHealFraction(5f, 0f) != 0f)
+        {
+            Assert.Fail("[prosequor] Usable fraction should be 0 when missing or capacity is 0.");
+        }
+    }
+
+    static void VerifyEffortPayAlias()
+    {
+        if (!XpPayChannels.TryParseName("effort", out XpPayChannel effort, out _)
+            || effort != XpPayChannel.Resistance)
+        {
+            Assert.Fail("[prosequor] pay 'effort' should alias to Resistance.");
+        }
+
+        if (!XpPayChannels.TryParseName("resistance", out XpPayChannel resistance, out _)
+            || resistance != XpPayChannel.Resistance)
+        {
+            Assert.Fail("[prosequor] pay 'resistance' should still parse to Resistance.");
+        }
+
+        // [0, 1] table at metric 0.01 → 0.01 XP.
+        float grant = AmountTableMath.LerpAmount([0f, 1f], 0.01f, 0f, 1f);
+        if (Math.Abs(grant - 0.01f) > 0.0001f)
+        {
+            Assert.Fail($"[prosequor] Expected effort lerp 0.01, got {grant}.");
         }
     }
 }

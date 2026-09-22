@@ -10,6 +10,7 @@ public enum XpPayChannel
     Flat = 0,
 
     /// <summary>Lerped amount table against block Resistance (dig / mine / chop catalog).</summary>
+    /// <remarks>JSON also accepts <c>effort</c> as an alias for this channel.</remarks>
     Resistance,
 
     /// <summary>Lerped amount table against clay voxels-per-unit (<c>clay-voxels</c> catalog).</summary>
@@ -33,6 +34,8 @@ public static class XpPayChannels
 {
     public const string Flat = "flat";
     public const string Resistance = "resistance";
+    /// <summary>Alias for <see cref="Resistance"/> — same float measure channel.</summary>
+    public const string Effort = "effort";
     public const string Voxels = "voxels";
     public const string Quantity = "quantity";
     public const string Ingredients = "ingredients";
@@ -55,7 +58,8 @@ public static class XpPayChannels
             return true;
         }
 
-        if (key.Equals(Resistance, StringComparison.OrdinalIgnoreCase))
+        if (key.Equals(Resistance, StringComparison.OrdinalIgnoreCase)
+            || key.Equals(Effort, StringComparison.OrdinalIgnoreCase))
         {
             channel = XpPayChannel.Resistance;
             return true;

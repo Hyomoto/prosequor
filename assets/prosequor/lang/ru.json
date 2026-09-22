@@ -248,6 +248,10 @@
   "levelup-hud-player-only": "НОВЫЙ УРОВЕНЬ",
   "levelup-hud-attribute": "{0} возрос",
   "levelup-hud-attribute-multi": "{0} возрос",
+  "imm-audio-label": "Звук",
+  "imm-audio-desc": "Громкость звуков повышения уровня.",
+  "imm-levelup-volume": "Громкость повышения уровня",
+  "imm-levelup-volume-desc": "Громкость звуков повышения уровня навыка и игрока, от 0 до 100. 0 отключает их.",
 
   // --- Skills UI — skill tree ---
   "skilltree-back": "Назад",

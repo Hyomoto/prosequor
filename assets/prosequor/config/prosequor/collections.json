@@ -223,8 +223,7 @@
   {
     "id": "distilled",
     "includes": [
-      "game:spiritportion-*",
-      "game:alcoholportion"
+      "game:spiritportion-*"
     ]
   },
   {

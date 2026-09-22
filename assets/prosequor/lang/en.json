@@ -261,6 +261,10 @@
   "levelup-hud-player-only": "LEVEL UP",
   "levelup-hud-attribute": "{0} rose",
   "levelup-hud-attribute-multi": "{0} rose",
+  "imm-audio-label": "Audio",
+  "imm-audio-desc": "Volume for level-up sounds.",
+  "imm-levelup-volume": "Level-up volume",
+  "imm-levelup-volume-desc": "How loud skill and player level-up sounds are, from 0 to 100. 0 turns them off.",
 
   // --- Skills UI — skill tree ---
   "skilltree-back": "Back",

@@ -383,6 +383,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `bloomery-harvest` | Finished bloom taken |
 | `cementation-fired` | Cementation complete |
 | `reinforced` | Block reinforced with the plumb and square |
+| `healed` | Healing item successfully applied (bandage / poultice) |
 | `saddle-break` / `saddle-tame` | Riding progress |
 | `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
 | `milked` | Successful milking |
@@ -784,7 +785,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`.
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`.
 
 ### XP `when`
 
@@ -809,7 +810,8 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `pay` | Effect |
 | --- | --- |
 | `flat` | Pay `amount` once (default) |
-| `resistance` | Lerp `amount` table against block resistance |
+| `resistance` | Lerp `amount` table against a float measure (block resistance, or an explicit 0–1 emit range) |
+| `effort` | Alias for `resistance` (same channel) |
 | `voxels` | Lerp `amount` table against clay voxels-per-unit |
 | `quantity` | Multiply by emit quantity (crafts, voxels, drops, …) |
 | `ingredients` | Lerp `amount` table against recipe ingredient units (1–40) |
