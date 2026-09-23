@@ -14,6 +14,8 @@ namespace Prosequor.Ability;
 /// survive harvest. Watering XP uses a crop-scoped moisture budget that harvest
 /// clears. Berry bushes, saplings, and fruit-tree cuttings store planter only.
 /// Persistence lives on <see cref="ProsequorChunkPedigree"/> (chunk moddata).
+/// <see cref="BlockEntityBehaviorProsequorPedigree"/> is the client copy
+/// <see cref="BlockEntity.MarkDirty"/> already sends.
 /// </summary>
 public static class ProsequorBlockPedigreeStation
 {
@@ -207,13 +209,7 @@ public static class ProsequorBlockPedigreeStation
     public static bool TryGetBlob(BlockEntity? be, out ProsequorBlob blob)
     {
         blob = ProsequorBlob.Empty;
-        if (be == null || !TryWorld(be, out IWorldAccessor world))
-        {
-            return false;
-        }
-
-        if (!ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box)
-            || !box.Blob.HasPersistable)
+        if (!TryGetBox(be, out ProsequorChunkPedigree.Box box) || !box.Blob.HasPersistable)
         {
             return false;
         }
@@ -238,12 +234,37 @@ public static class ProsequorBlockPedigreeStation
     public static bool TryGetBox(BlockEntity? be, out ProsequorChunkPedigree.Box box)
     {
         box = new ProsequorChunkPedigree.Box();
-        if (be == null || !TryWorld(be, out IWorldAccessor world))
+        if (be == null)
+        {
+            return false;
+        }
+
+        if (be.Api?.Side == EnumAppSide.Client
+            && be.GetBehavior<BlockEntityBehaviorProsequorPedigree>() is { HasMirror: true } mirror)
+        {
+            box = mirror.Box;
+            return box.HasPersistable;
+        }
+
+        if (!TryWorld(be, out IWorldAccessor world))
         {
             return false;
         }
 
         return ProsequorChunkPedigree.TryGet(world, be.Pos, out box);
+    }
+
+    /// <summary>
+    /// Attach the client mirror before <see cref="BlockEntity.FromTreeAttributes"/>.
+    /// </summary>
+    public static void EnsureAttached(BlockEntity? be)
+    {
+        if (be == null)
+        {
+            return;
+        }
+
+        RequireMirror(be);
     }
 
     /// <summary>Increments contributor weight on the BE Live blob (default +1).</summary>
@@ -580,7 +601,24 @@ public static class ProsequorBlockPedigreeStation
     static void Commit(IWorldAccessor world, BlockEntity be, ProsequorChunkPedigree.Box box)
     {
         ProsequorChunkPedigree.Set(world, be.Pos, box);
+        BlockEntityBehaviorProsequorPedigree mirror = RequireMirror(be);
+        mirror.Box = box;
+        mirror.HasMirror = true;
         be.MarkDirty(redrawOnClient: false);
+    }
+
+    static BlockEntityBehaviorProsequorPedigree RequireMirror(BlockEntity be)
+    {
+        BlockEntityBehaviorProsequorPedigree? existing =
+            be.GetBehavior<BlockEntityBehaviorProsequorPedigree>();
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        BlockEntityBehaviorProsequorPedigree created = new(be);
+        be.Behaviors.Add(created);
+        return created;
     }
 
     static void ApplyToStack(Block? block, ItemStack stack, ProsequorBlob blob)
