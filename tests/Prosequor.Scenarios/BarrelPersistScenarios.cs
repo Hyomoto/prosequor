@@ -12,12 +12,12 @@ namespace Prosequor.Scenarios;
 /// <summary>
 /// Sealed barrels must survive the dedicated-server chunk pack/unpack path.
 /// <c>ServerChunk.AfterDeserialization</c> calls <c>FromTreeAttributes</c> before
-/// <c>Initialize</c>, so <c>Api</c> is still null. Vanilla guards recipe lookup; a sealer
-/// postfix that dirties the liquid slot does not, and the chunk then discards the BE.
+/// <c>Initialize</c>, so <c>Api</c> is still null. A sealer postfix that dirties the
+/// liquid slot must not NRE — the chunk discards the BE on exception. Sealer uid
+/// rides chunk pedigree Live (maker), not a BE-tree side attr.
 /// </summary>
 public class BarrelPersistScenarios : AtlasScenarioBase
 {
-    const string SealerAttr = "prosequorBarrelSealer";
     const int JuiceUnits = 10;
 
     static int nextOffset = 8;
@@ -35,10 +35,13 @@ public class BarrelPersistScenarios : AtlasScenarioBase
         (BlockEntityBarrel barrel, ItemStack juice) = SealJuiceBarrel(joined.Player);
         string juiceCode = juice.Collectible.Code.ToString();
         int juiceSize = juice.StackSize;
+        string uid = joined.Player.PlayerUID;
+
+        Assert.True(ProsequorBlockPedigreeStation.TryGetPlanter(barrel, out string? sealer));
+        Assert.Equal(uid, sealer);
 
         TreeAttribute tree = new();
         barrel.ToTreeAttributes(tree);
-        Assert.Equal(joined.Player.PlayerUID, tree.GetString(SealerAttr));
         Assert.True(tree.GetBool("sealed"));
 
         ICoreAPI api = World.Api;
@@ -46,6 +49,7 @@ public class BarrelPersistScenarios : AtlasScenarioBase
         Assert.False(string.IsNullOrEmpty(className), "Expected BlockEntityBarrel to be registered.");
         BlockEntity created = api.ClassRegistry.CreateBlockEntity(className);
         Assert.NotNull(created);
+        created.Pos = barrel.Pos.Copy();
         created.CreateBehaviors(barrel.Block, api.World);
         Assert.Null(created.Api);
 
@@ -59,13 +63,13 @@ public class BarrelPersistScenarios : AtlasScenarioBase
         Assert.NotNull(liquid);
         Assert.Equal(juiceCode, liquid!.Collectible.Code.ToString());
         Assert.Equal(juiceSize, liquid.StackSize);
-        Assert.Equal(joined.Player.PlayerUID, CraftAttribution.TryGetMakerUid(liquid));
+        Assert.Equal(uid, CraftAttribution.TryGetMakerUid(liquid));
 
-        TreeAttribute roundTrip = new();
-        restored.ToTreeAttributes(roundTrip);
-        Assert.Equal(joined.Player.PlayerUID, roundTrip.GetString(SealerAttr));
-        Assert.True(ProsequorBlockPedigreeStation.TryGetSoleContributor(restored, out string? sealer));
-        Assert.Equal(joined.Player.PlayerUID, sealer);
+        // Chunk pedigree entry survives the BE-only round-trip (same pos). Api is still null.
+        Assert.True(
+            ProsequorChunkPedigree.TryGet(api.World, restored.Pos, out ProsequorChunkPedigree.Box box)
+            && !string.IsNullOrWhiteSpace(box.Blob.MakerUid));
+        Assert.Equal(uid, box.Blob.MakerUid);
     }
 
     (BlockEntityBarrel barrel, ItemStack juice) SealJuiceBarrel(IPlayer player)

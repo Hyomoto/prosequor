@@ -881,18 +881,10 @@ public class HarmonyPatchAllSmokeTests
         MethodInfo? addIngot = AccessTools.Method(typeof(BlockEntityStoneCoffin), "AddIngot");
         MethodInfo? addCoal = AccessTools.Method(typeof(BlockEntityStoneCoffin), "AddCoal");
         MethodInfo? tick3s = AccessTools.Method(typeof(BlockEntityStoneCoffin), "onServerTick3s");
-        MethodInfo? toTree = AccessTools.Method(
-            typeof(BlockEntityStoneCoffin),
-            nameof(BlockEntityStoneCoffin.ToTreeAttributes));
-        MethodInfo? fromTree = AccessTools.Method(
-            typeof(BlockEntityStoneCoffin),
-            nameof(BlockEntityStoneCoffin.FromTreeAttributes));
         Assert.NotNull(interact);
         Assert.NotNull(addIngot);
         Assert.NotNull(addCoal);
         Assert.NotNull(tick3s);
-        Assert.NotNull(toTree);
-        Assert.NotNull(fromTree);
 
         Assembly mod = typeof(ProsequorModSystem).Assembly;
         string harmonyId = $"{ProsequorModSystem.ModId}.test.cementation.{Guid.NewGuid():N}";
@@ -906,8 +898,6 @@ public class HarmonyPatchAllSmokeTests
             Assert.Contains(addIngot, harmony.GetPatchedMethods());
             Assert.Contains(addCoal, harmony.GetPatchedMethods());
             Assert.Contains(tick3s, harmony.GetPatchedMethods());
-            Assert.Contains(toTree, harmony.GetPatchedMethods());
-            Assert.Contains(fromTree, harmony.GetPatchedMethods());
         }
         finally
         {

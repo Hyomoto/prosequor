@@ -1,25 +1,20 @@
-using System.Runtime.CompilerServices;
+using Prosequor.Ability;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 
 namespace Prosequor.Xp;
 
 /// <summary>
-/// Collect-XP bool on block entities (ground-laid eggs). Persists via BE tree attrs;
-/// copied onto item drops / pick stacks before the pickup gate runs.
+/// Collect-XP bool on block entities (ground-laid eggs). Persists on
+/// <see cref="ProsequorChunkPedigree"/>; copied onto item drops / pick stacks
+/// before the pickup gate runs.
 /// </summary>
 public static class CollectXpBlockStampStation
 {
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public bool Stamped;
-    }
-
     public static bool Has(BlockEntity? be) =>
-        be != null && boxes.TryGetValue(be, out Box? box) && box is { Stamped: true };
+        be != null
+        && ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+        && box.CollectXp;
 
     public static void Set(BlockEntity? be)
     {
@@ -28,19 +23,19 @@ public static class CollectXpBlockStampStation
             return;
         }
 
-        boxes.GetOrCreateValue(be).Stamped = true;
-        be.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(be, box => box.CollectXp = true);
     }
 
     public static void Clear(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || box == null)
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || !box.CollectXp)
         {
             return;
         }
 
-        box.Stamped = false;
-        be.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(be, b => b.CollectXp = false);
     }
 
     public static void SetAtPos(IWorldAccessor? world, BlockPos? pos)
@@ -55,26 +50,6 @@ public static class CollectXpBlockStampStation
         {
             Set(be);
         }
-    }
-
-    public static void WriteToTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null || !Has(be))
-        {
-            return;
-        }
-
-        CollectXpStamp.Set(tree);
-    }
-
-    public static void ReadFromTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null || !CollectXpStamp.Has(tree))
-        {
-            return;
-        }
-
-        boxes.GetOrCreateValue(be).Stamped = true;
     }
 
     public static void ApplyToStacks(BlockEntity? be, ItemStack[]? stacks) =>

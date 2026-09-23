@@ -38,27 +38,7 @@ public static class BlockDoPlaceBlockSaplingGrowthPatch
     }
 }
 
-[HarmonyPatch(typeof(BlockEntitySapling), nameof(BlockEntitySapling.ToTreeAttributes))]
-public static class BlockEntitySaplingToTreeAttributesGrowthPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntitySapling __instance, ITreeAttribute tree)
-    {
-        SaplingGrowthDuration.WriteToTree(__instance, tree);
-        ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
-    }
-}
 
-[HarmonyPatch(typeof(BlockEntitySapling), nameof(BlockEntitySapling.FromTreeAttributes))]
-public static class BlockEntitySaplingFromTreeAttributesGrowthPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntitySapling __instance, ITreeAttribute tree)
-    {
-        SaplingGrowthDuration.ReadFromTree(__instance, tree);
-        ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
-    }
-}
 
 [HarmonyPatch(typeof(BlockEntitySapling), "CheckGrow")]
 public static class BlockEntitySaplingCheckGrowGrowthPatch

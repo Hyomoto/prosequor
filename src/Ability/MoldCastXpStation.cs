@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
@@ -20,8 +19,8 @@ public static class MoldPourScope
 }
 
 /// <summary>
-/// Per-cavity pourer + paid flags for tool and ingot molds. Ingot molds have two cavities;
-/// do not share a single BE pedigree blob.
+/// Per-cavity pourer + paid flags for tool and ingot molds on
+/// <see cref="ProsequorChunkPedigree"/>. Rising-edge hardened baselines are ephemeral.
 /// </summary>
 public static class MoldCastXpStation
 {
@@ -65,24 +64,16 @@ public static class MoldCastXpStation
         return true;
     }
 
-    static readonly ConditionalWeakTable<BlockEntity, ToolBox> toolBoxes = new();
-    static readonly ConditionalWeakTable<BlockEntity, IngotBox> ingotBoxes = new();
+    static readonly ConditionalWeakTable<BlockEntity, EdgeBox> edges = new();
 
-    sealed class ToolBox
+    sealed class EdgeBox
     {
-        public string? PourerUid;
-        public bool Paid;
         public bool WasHardened;
-    }
-
-    sealed class IngotBox
-    {
-        public string? LeftPourerUid;
-        public string? RightPourerUid;
-        public bool LeftPaid;
-        public bool RightPaid;
         public bool WasHardenedLeft;
         public bool WasHardenedRight;
+        public bool HavePrev;
+        public bool HavePrevLeft;
+        public bool HavePrevRight;
     }
 
     public static void StampToolPourer(BlockEntityToolMold mold, string? uid)
@@ -92,9 +83,7 @@ public static class MoldCastXpStation
             return;
         }
 
-        ToolBox box = toolBoxes.GetOrCreateValue(mold);
-        box.PourerUid = uid.Trim();
-        mold.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(mold, box => box.MoldToolPourerUid = uid.Trim());
     }
 
     public static void StampIngotPourer(BlockEntityIngotMold mold, bool right, string? uid)
@@ -104,17 +93,18 @@ public static class MoldCastXpStation
             return;
         }
 
-        IngotBox box = ingotBoxes.GetOrCreateValue(mold);
-        if (right)
+        string trimmed = uid.Trim();
+        ProsequorBlockPedigreeStation.Mutate(mold, box =>
         {
-            box.RightPourerUid = uid.Trim();
-        }
-        else
-        {
-            box.LeftPourerUid = uid.Trim();
-        }
-
-        mold.MarkDirty(redrawOnClient: false);
+            if (right)
+            {
+                box.MoldRightPourerUid = trimmed;
+            }
+            else
+            {
+                box.MoldLeftPourerUid = trimmed;
+            }
+        });
     }
 
     /// <summary>
@@ -127,27 +117,50 @@ public static class MoldCastXpStation
             return;
         }
 
-        ToolBox box = toolBoxes.GetOrCreateValue(mold);
+        if (!ProsequorBlockPedigreeStation.TryGetBox(mold, out ProsequorChunkPedigree.Box host))
+        {
+            host = new ProsequorChunkPedigree.Box();
+        }
+
+        EdgeBox edge = edges.GetOrCreateValue(mold);
         int fill = Math.Max(0, mold.FillLevel);
         bool full = mold.IsFull && fill > 0;
         bool hardened = mold.IsHardened;
+        bool paid = host.MoldToolPaid;
+
+        if (!edge.HavePrev)
+        {
+            edge.WasHardened = hardened;
+            edge.HavePrev = true;
+            if (hardened && !paid && !string.IsNullOrWhiteSpace(host.MoldToolPourerUid))
+            {
+                ProsequorBlockPedigreeStation.Mutate(mold, b => b.MoldToolPaid = true);
+            }
+
+            return;
+        }
 
         if (!TrySettleRisingEdge(
                 full,
                 hardened,
-                hasPourer: !string.IsNullOrWhiteSpace(box.PourerUid),
-                ref box.WasHardened,
-                ref box.Paid))
+                hasPourer: !string.IsNullOrWhiteSpace(host.MoldToolPourerUid),
+                ref edge.WasHardened,
+                ref paid))
         {
+            if (!full && host.MoldToolPaid)
+            {
+                ProsequorBlockPedigreeStation.Mutate(mold, b => b.MoldToolPaid = false);
+            }
+
             return;
         }
 
+        ProsequorBlockPedigreeStation.Mutate(mold, b => b.MoldToolPaid = true);
         EmitCast(
             mold.Api,
-            box.PourerUid,
+            host.MoldToolPourerUid,
             TargetFromTool(mold),
             IngredientsFromFill(fill));
-        mold.MarkDirty(redrawOnClient: false);
     }
 
     /// <summary>Rising-edge harden settle for each ingot cavity independently.</summary>
@@ -158,47 +171,82 @@ public static class MoldCastXpStation
             return;
         }
 
-        IngotBox box = ingotBoxes.GetOrCreateValue(mold);
+        if (!ProsequorBlockPedigreeStation.TryGetBox(mold, out ProsequorChunkPedigree.Box host))
+        {
+            host = new ProsequorChunkPedigree.Box();
+        }
+
+        EdgeBox edge = edges.GetOrCreateValue(mold);
         int required = Math.Max(1, mold.RequiredUnits);
 
         SettleIngotSide(
             mold,
-            box,
+            edge,
+            host,
             right: false,
             fill: Math.Max(0, mold.FillLevelLeft),
             required,
             hardened: mold.IsHardenedLeft,
-            wasHardened: ref box.WasHardenedLeft,
-            paid: ref box.LeftPaid,
-            pourer: box.LeftPourerUid,
+            pourer: host.MoldLeftPourerUid,
+            paid: host.MoldLeftPaid,
             target: EventFactBuilder.CodeOf(mold.GetStateAwareContentsLeft()));
+
+        if (!ProsequorBlockPedigreeStation.TryGetBox(mold, out host))
+        {
+            host = new ProsequorChunkPedigree.Box();
+        }
 
         SettleIngotSide(
             mold,
-            box,
+            edge,
+            host,
             right: true,
             fill: Math.Max(0, mold.FillLevelRight),
             required,
             hardened: mold.IsHardenedRight,
-            wasHardened: ref box.WasHardenedRight,
-            paid: ref box.RightPaid,
-            pourer: box.RightPourerUid,
+            pourer: host.MoldRightPourerUid,
+            paid: host.MoldRightPaid,
             target: EventFactBuilder.CodeOf(mold.GetStateAwareContentsRight()));
     }
 
     static void SettleIngotSide(
         BlockEntityIngotMold mold,
-        IngotBox box,
+        EdgeBox edge,
+        ProsequorChunkPedigree.Box host,
         bool right,
         int fill,
         int required,
         bool hardened,
-        ref bool wasHardened,
-        ref bool paid,
         string? pourer,
+        bool paid,
         string? target)
     {
         bool full = fill >= required && fill > 0;
+        ref bool wasHardened = ref right ? ref edge.WasHardenedRight : ref edge.WasHardenedLeft;
+        ref bool havePrev = ref right ? ref edge.HavePrevRight : ref edge.HavePrevLeft;
+
+        if (!havePrev)
+        {
+            wasHardened = hardened;
+            havePrev = true;
+            if (hardened && !paid && !string.IsNullOrWhiteSpace(pourer))
+            {
+                ProsequorBlockPedigreeStation.Mutate(mold, b =>
+                {
+                    if (right)
+                    {
+                        b.MoldRightPaid = true;
+                    }
+                    else
+                    {
+                        b.MoldLeftPaid = true;
+                    }
+                });
+            }
+
+            return;
+        }
+
         if (!TrySettleRisingEdge(
                 full,
                 hardened,
@@ -206,17 +254,36 @@ public static class MoldCastXpStation
                 ref wasHardened,
                 ref paid))
         {
+            if (!full && (right ? host.MoldRightPaid : host.MoldLeftPaid))
+            {
+                ProsequorBlockPedigreeStation.Mutate(mold, b =>
+                {
+                    if (right)
+                    {
+                        b.MoldRightPaid = false;
+                    }
+                    else
+                    {
+                        b.MoldLeftPaid = false;
+                    }
+                });
+            }
+
             return;
         }
 
-        EmitCast(
-            mold.Api,
-            pourer,
-            target,
-            IngredientsFromFill(fill));
-        mold.MarkDirty(redrawOnClient: false);
-        _ = box;
-        _ = right;
+        ProsequorBlockPedigreeStation.Mutate(mold, b =>
+        {
+            if (right)
+            {
+                b.MoldRightPaid = true;
+            }
+            else
+            {
+                b.MoldLeftPaid = true;
+            }
+        });
+        EmitCast(mold.Api, pourer, target, IngredientsFromFill(fill));
     }
 
     static string? TargetFromTool(BlockEntityToolMold mold)
@@ -255,118 +322,4 @@ public static class MoldCastXpStation
             totalUnits: ingredients,
             contributors: [new Deed.ContributorShare(pourerUid.Trim(), 1f)]);
     }
-
-    public static void WriteToolToTree(BlockEntityToolMold mold, ITreeAttribute tree)
-    {
-        if (!toolBoxes.TryGetValue(mold, out ToolBox? box) || box == null)
-        {
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(box.PourerUid))
-        {
-            tree.SetString(ToolPourerAttr, box.PourerUid);
-        }
-
-        if (box.Paid)
-        {
-            tree.SetBool(ToolPaidAttr, true);
-        }
-
-        // Persist hardened snapshot so a load of an already-hard mold does not repay.
-        if (box.WasHardened || mold.IsHardened)
-        {
-            tree.SetBool(ToolPaidAttr + "Was", true);
-        }
-    }
-
-    public static void ReadToolFromTree(BlockEntityToolMold mold, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        ToolBox box = toolBoxes.GetOrCreateValue(mold);
-        box.PourerUid = tree.GetString(ToolPourerAttr);
-        if (string.IsNullOrWhiteSpace(box.PourerUid))
-        {
-            box.PourerUid = null;
-        }
-
-        box.Paid = tree.GetBool(ToolPaidAttr);
-        // After load, treat already-hardened molds as past the rising edge.
-        box.WasHardened = tree.GetBool(ToolPaidAttr + "Was") || mold.IsHardened;
-        if (box.WasHardened && !box.Paid && !string.IsNullOrEmpty(box.PourerUid))
-        {
-            // Legacy / mid-pour save: mark paid so we do not grant on first tick after load.
-            box.Paid = true;
-        }
-    }
-
-    public static void WriteIngotToTree(BlockEntityIngotMold mold, ITreeAttribute tree)
-    {
-        if (!ingotBoxes.TryGetValue(mold, out IngotBox? box) || box == null)
-        {
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(box.LeftPourerUid))
-        {
-            tree.SetString(LeftPourerAttr, box.LeftPourerUid);
-        }
-
-        if (!string.IsNullOrEmpty(box.RightPourerUid))
-        {
-            tree.SetString(RightPourerAttr, box.RightPourerUid);
-        }
-
-        if (box.LeftPaid)
-        {
-            tree.SetBool(LeftPaidAttr, true);
-        }
-
-        if (box.RightPaid)
-        {
-            tree.SetBool(RightPaidAttr, true);
-        }
-
-        if (box.WasHardenedLeft || mold.IsHardenedLeft)
-        {
-            tree.SetBool(LeftPaidAttr + "Was", true);
-        }
-
-        if (box.WasHardenedRight || mold.IsHardenedRight)
-        {
-            tree.SetBool(RightPaidAttr + "Was", true);
-        }
-    }
-
-    public static void ReadIngotFromTree(BlockEntityIngotMold mold, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        IngotBox box = ingotBoxes.GetOrCreateValue(mold);
-        box.LeftPourerUid = NullIfBlank(tree.GetString(LeftPourerAttr));
-        box.RightPourerUid = NullIfBlank(tree.GetString(RightPourerAttr));
-        box.LeftPaid = tree.GetBool(LeftPaidAttr);
-        box.RightPaid = tree.GetBool(RightPaidAttr);
-        box.WasHardenedLeft = tree.GetBool(LeftPaidAttr + "Was") || mold.IsHardenedLeft;
-        box.WasHardenedRight = tree.GetBool(RightPaidAttr + "Was") || mold.IsHardenedRight;
-        if (box.WasHardenedLeft && !box.LeftPaid && box.LeftPourerUid != null)
-        {
-            box.LeftPaid = true;
-        }
-
-        if (box.WasHardenedRight && !box.RightPaid && box.RightPourerUid != null)
-        {
-            box.RightPaid = true;
-        }
-    }
-
-    static string? NullIfBlank(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

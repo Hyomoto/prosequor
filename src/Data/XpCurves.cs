@@ -179,7 +179,7 @@ public static class XpCurves
     /// <summary>
     /// Player XP granted when a skill rises from <paramref name="before"/> to <paramref name="after"/>.
     /// Each completed skill tier contributes <see cref="XpToNextSkillLevel"/> for that tier
-    /// (e.g. 0→3 awards 15+15+16).
+    /// (e.g. 0→3 awards the skill XP for levels 0, 1, and 2).
     /// </summary>
     public static int PlayerXpForSkillLevelGain(int before, int after)
     {

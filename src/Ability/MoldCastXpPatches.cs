@@ -117,35 +117,7 @@ public static class MoldCastXpPatches
             MoldCastXpStation.OnIngotTick(__instance);
     }
 
-    [HarmonyPatch(typeof(BlockEntityToolMold), nameof(BlockEntityToolMold.ToTreeAttributes))]
-    public static class ToolMoldXpToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityToolMold __instance, ITreeAttribute tree) =>
-            MoldCastXpStation.WriteToolToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityToolMold), nameof(BlockEntityToolMold.FromTreeAttributes))]
-    public static class ToolMoldXpFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityToolMold __instance, ITreeAttribute tree) =>
-            MoldCastXpStation.ReadToolFromTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityIngotMold), nameof(BlockEntityIngotMold.ToTreeAttributes))]
-    public static class IngotMoldXpToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityIngotMold __instance, ITreeAttribute tree) =>
-            MoldCastXpStation.WriteIngotToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityIngotMold), nameof(BlockEntityIngotMold.FromTreeAttributes))]
-    public static class IngotMoldXpFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityIngotMold __instance, ITreeAttribute tree) =>
-            MoldCastXpStation.ReadIngotFromTree(__instance, tree);
-    }
 }

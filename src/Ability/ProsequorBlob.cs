@@ -5,12 +5,23 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Immutable pedigree payload for one unit: maker plus weighted contributor shares
-/// (<c>uid → weight</c>). Craft affixes, attribute mods, and quality rank are identity —
-/// they join <see cref="ContentHash"/> so mixed quality cannot coalesce. Optional recipe,
-/// friendliness-ready timestamp, and anvil split count are payload only (first wins).
+/// (<c>uid → weight</c>). <see cref="ContentHash"/> uses only the identity keys listed in
+/// <see cref="HashKeys"/> so mixed identity cannot coalesce. Payload keys
+/// (<see cref="RecipeKey"/>, <see cref="FriendlinessReadyAtKey"/>, <see cref="AnvilSplitsKey"/>)
+/// persist on the tree but are ignored for coalesce (first wins on merge).
 /// </summary>
 public sealed class ProsequorBlob : IEquatable<ProsequorBlob>
 {
+    /// <summary>Tree keys that contribute to <see cref="ContentHash"/> (coalesce identity).</summary>
+    public static readonly string[] HashKeys =
+    {
+        MakerKey,
+        ContributorsKey,
+        AffixesKey,
+        ModsKey,
+        QualityRankKey,
+    };
+
     public const string MakerKey = "maker";
     public const string ContributorsKey = "contributors";
     public const string ContributorCountKey = "n";
@@ -181,9 +192,14 @@ public sealed class ProsequorBlob : IEquatable<ProsequorBlob>
     public ProsequorBlob WithContributor(string? uid, int amount = 1)
     {
         string? normalized = NormalizeUid(uid);
-        if (normalized == null || amount <= 0)
+        if (normalized == null || amount == 0)
         {
             return this;
+        }
+
+        if (amount < 0)
+        {
+            return WithContributorDecrement(normalized, -amount);
         }
 
         List<Share> next = new(Contributors.Count + 1);
@@ -205,6 +221,45 @@ public sealed class ProsequorBlob : IEquatable<ProsequorBlob>
         if (!found)
         {
             next.Add(new Share(normalized, amount));
+        }
+
+        return new(
+            MakerUid,
+            next,
+            Recipe,
+            FriendlinessReadyAtTotalHours,
+            AnvilSplits,
+            Affixes,
+            Mods,
+            QualityRank);
+    }
+
+    /// <summary>
+    /// Decrements <paramref name="uid"/>'s weight by <paramref name="amount"/>; removes at ≤0.
+    /// </summary>
+    public ProsequorBlob WithContributorDecrement(string? uid, int amount = 1)
+    {
+        string? normalized = NormalizeUid(uid);
+        if (normalized == null || amount <= 0 || Contributors.Count == 0)
+        {
+            return this;
+        }
+
+        List<Share> next = new(Contributors.Count);
+        for (int i = 0; i < Contributors.Count; i++)
+        {
+            Share share = Contributors[i];
+            if (!string.Equals(share.PlayerUid, normalized, StringComparison.Ordinal))
+            {
+                next.Add(share);
+                continue;
+            }
+
+            int weight = share.Weight - amount;
+            if (weight > 0)
+            {
+                next.Add(new Share(share.PlayerUid, weight));
+            }
         }
 
         return new(
@@ -662,6 +717,9 @@ public sealed class ProsequorBlob : IEquatable<ProsequorBlob>
         return list;
     }
 
+    /// <summary>
+    /// FNV-1a-64 over the <see cref="HashKeys"/> fields only. Payload keys are omitted.
+    /// </summary>
     static string ComputeHash(
         string? makerUid,
         IReadOnlyList<Share> contributors,
@@ -669,6 +727,7 @@ public sealed class ProsequorBlob : IEquatable<ProsequorBlob>
         IReadOnlyList<ModFactor> mods,
         int qualityRank)
     {
+        // Inputs must stay aligned with HashKeys.
         StringBuilder sb = new(64);
         sb.Append(makerUid ?? "");
         sb.Append('\u001f');

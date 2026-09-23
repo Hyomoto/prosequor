@@ -93,19 +93,5 @@ public static class CookQualityPatches
         }
     }
 
-    [HarmonyPatch(typeof(BlockEntityOven), nameof(BlockEntityOven.ToTreeAttributes))]
-    public static class OvenCookStarterToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityOven __instance, ITreeAttribute tree) =>
-            OvenCookStarterStation.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityOven), nameof(BlockEntityOven.FromTreeAttributes))]
-    public static class OvenCookStarterFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityOven __instance, ITreeAttribute tree) =>
-            OvenCookStarterStation.ReadFromTree(__instance, tree);
-    }
 }

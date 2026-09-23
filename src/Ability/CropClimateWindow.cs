@@ -1,8 +1,6 @@
-using System.Runtime.CompilerServices;
 using Prosequor.Ability.Hooks;
 using Prosequor.Player;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
@@ -11,17 +9,11 @@ namespace Prosequor.Ability;
 /// Plant-time climate-window half-delta (°C) on farmland. Farming ability
 /// <c>adjust-plant-climate-value</c> widens crop cold/heat damage bands
 /// symmetrically; applied when <c>updateCropDamage</c> reads thresholds (transpiler).
+/// Persists on <see cref="ProsequorChunkPedigree"/>.
 /// </summary>
 public static class CropClimateWindow
 {
     public const string HalfDeltaAttr = "prosequorClimateHalfDelta";
-
-    static readonly ConditionalWeakTable<BlockEntity, DeltaBox> runtimeDeltas = new();
-
-    sealed class DeltaBox
-    {
-        public float HalfDelta;
-    }
 
     /// <summary>
     /// <c>δ = span × expandFraction / 2</c>. Zero when fraction or span invalid.
@@ -47,9 +39,10 @@ public static class CropClimateWindow
 
     public static float GetHalfDelta(BlockEntity? be)
     {
-        if (be != null && runtimeDeltas.TryGetValue(be, out DeltaBox? box))
+        if (be != null
+            && ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box))
         {
-            return Math.Max(0f, box.HalfDelta);
+            return Math.Max(0f, box.ClimateHalfDelta);
         }
 
         return 0f;
@@ -57,46 +50,24 @@ public static class CropClimateWindow
 
     public static void StampHalfDelta(BlockEntity be, float halfDelta)
     {
-        DeltaBox box = runtimeDeltas.GetOrCreateValue(be);
-        box.HalfDelta = Math.Max(0f, halfDelta);
-        be.MarkDirty(redrawOnClient: false);
+        if (be == null)
+        {
+            return;
+        }
+
+        ProsequorBlockPedigreeStation.Mutate(be, box => box.ClimateHalfDelta = Math.Max(0f, halfDelta));
     }
 
     public static void Clear(BlockEntity? be)
     {
-        if (be == null || !runtimeDeltas.TryGetValue(be, out DeltaBox? box))
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || box.ClimateHalfDelta <= 0.0001f)
         {
             return;
         }
 
-        box.HalfDelta = 0f;
-        be.MarkDirty(redrawOnClient: false);
-    }
-
-    public static void WriteToTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null)
-        {
-            return;
-        }
-
-        float delta = GetHalfDelta(be);
-        if (delta <= 0.0001f)
-        {
-            return;
-        }
-
-        tree.SetFloat(HalfDeltaAttr, delta);
-    }
-
-    public static void ReadFromTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null || !tree.HasAttribute(HalfDeltaAttr))
-        {
-            return;
-        }
-
-        StampHalfDelta(be, tree.GetFloat(HalfDeltaAttr));
+        ProsequorBlockPedigreeStation.Mutate(be, b => b.ClimateHalfDelta = 0f);
     }
 
     /// <summary>

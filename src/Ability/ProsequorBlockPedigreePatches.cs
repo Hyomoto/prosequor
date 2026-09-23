@@ -1,6 +1,5 @@
 using HarmonyLib;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -37,52 +36,27 @@ public static class ProsequorBlockPedigreePatches
             ProsequorBlockPedigreeStation.CaptureFromPlacedStack(__instance, byItemStack);
     }
 
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.ToTreeAttributes))]
-    public static class BlockEntityToTreePedigreePatch
+    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.CreateBehaviors))]
+    public static class BlockEntityCreateBehaviorsPedigreePatch
     {
         [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
+        public static void Postfix(BlockEntity __instance) =>
+            ProsequorBlockPedigreeStation.EnsureAttached(__instance);
     }
 
-    [HarmonyPatch(typeof(BlockEntityContainer), nameof(BlockEntityContainer.ToTreeAttributes))]
-    public static class BlockEntityContainerToTreePedigreePatch
+    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.OnBlockRemoved))]
+    public static class BlockEntityOnBlockRemovedPedigreePatch
     {
         [HarmonyPostfix]
-        public static void Postfix(BlockEntityContainer __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
-    }
+        public static void Postfix(BlockEntity __instance)
+        {
+            if (__instance?.Api?.Side != EnumAppSide.Server || __instance.Api.World == null)
+            {
+                return;
+            }
 
-    [HarmonyPatch(typeof(BlockEntityCrock), nameof(BlockEntityCrock.ToTreeAttributes))]
-    public static class BlockEntityCrockToTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityCrock __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.FromTreeAttributes))]
-    public static class BlockEntityFromTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BlockEntityContainer), nameof(BlockEntityContainer.FromTreeAttributes))]
-    public static class BlockEntityContainerFromTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityContainer __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BlockEntityCrock), nameof(BlockEntityCrock.FromTreeAttributes))]
-    public static class BlockEntityCrockFromTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityCrock __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
+            ProsequorBlockPedigreeStation.ClearAtPos(__instance.Api.World, __instance.Pos);
+        }
     }
 
     [HarmonyPatch(typeof(Block), nameof(Block.GetDrops))]

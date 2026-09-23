@@ -1,27 +1,17 @@
-using System.Runtime.CompilerServices;
 using Prosequor.Xp;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
 /// High-water good-voxel count on an anvil work piece, keyed by selected smithing recipe.
-/// Survives chunk save/load so undo-redo cannot re-farm XP after a reload.
+/// Survives chunk save/load on <see cref="ProsequorChunkPedigree"/> so undo-redo cannot re-farm XP.
 /// </summary>
 public static class AnvilXpStation
 {
     public const string HighWaterAttr = "prosequorAnvilXpHighWater";
     public const string RecipeKeyAttr = "prosequorAnvilXpRecipe";
-
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public int HighWater;
-        public string? RecipeKey;
-    }
 
     public static string? RecipeKeyOf(SmithingRecipe? recipe)
     {
@@ -68,20 +58,27 @@ public static class AnvilXpStation
         int layers = Math.Min(AnvilVoxelGrid.SizeY, anvil.SelectedRecipe.QuantityLayers);
         int good = ClayFormXpMath.CountGood(anvil.Voxels, want, layers, AnvilVoxelGrid.Metal);
 
-        Box box = boxes.GetOrCreateValue(anvil);
+        if (!ProsequorBlockPedigreeStation.TryGetBox(anvil, out ProsequorChunkPedigree.Box box))
+        {
+            box = new ProsequorChunkPedigree.Box();
+        }
+
         int paid = ClayFormXpMath.TakeDelta(
             good,
-            box.HighWater,
-            box.RecipeKey,
+            box.AnvilHighWater,
+            box.AnvilRecipeKey,
             currentKey,
             out int newHighWater,
             out string? newKey);
 
-        if (box.HighWater != newHighWater || !string.Equals(box.RecipeKey, newKey, StringComparison.Ordinal))
+        if (box.AnvilHighWater != newHighWater
+            || !string.Equals(box.AnvilRecipeKey, newKey, StringComparison.Ordinal))
         {
-            box.HighWater = newHighWater;
-            box.RecipeKey = newKey;
-            anvil.MarkDirty(redrawOnClient: false);
+            ProsequorBlockPedigreeStation.Mutate(anvil, b =>
+            {
+                b.AnvilHighWater = newHighWater;
+                b.AnvilRecipeKey = newKey;
+            });
         }
 
         return paid;
@@ -106,44 +103,18 @@ public static class AnvilXpStation
         ProsequorModSystem.For(anvil.Api)?.ClayFormXp?.NotifyProgress(player, paid, target);
     }
 
-    public static void WriteToTree(BlockEntityAnvil anvil, ITreeAttribute tree)
+    /// <summary>Scenario / test stamp of high-water state onto the pedigree host.</summary>
+    public static void Stamp(BlockEntityAnvil? anvil, int highWater, string? recipeKey)
     {
-        if (!boxes.TryGetValue(anvil, out Box? box) || box == null)
+        if (anvil == null)
         {
             return;
         }
 
-        if (box.HighWater > 0)
+        ProsequorBlockPedigreeStation.Mutate(anvil, box =>
         {
-            tree.SetInt(HighWaterAttr, box.HighWater);
-        }
-
-        if (!string.IsNullOrEmpty(box.RecipeKey))
-        {
-            tree.SetString(RecipeKeyAttr, box.RecipeKey);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntityAnvil anvil, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        bool hasWater = tree.HasAttribute(HighWaterAttr);
-        bool hasKey = tree.HasAttribute(RecipeKeyAttr);
-        if (!hasWater && !hasKey)
-        {
-            return;
-        }
-
-        Box box = boxes.GetOrCreateValue(anvil);
-        box.HighWater = hasWater ? Math.Max(0, tree.GetInt(HighWaterAttr)) : 0;
-        box.RecipeKey = hasKey ? tree.GetString(RecipeKeyAttr) : null;
-        if (string.IsNullOrWhiteSpace(box.RecipeKey))
-        {
-            box.RecipeKey = null;
-        }
+            box.AnvilHighWater = Math.Max(0, highWater);
+            box.AnvilRecipeKey = string.IsNullOrWhiteSpace(recipeKey) ? null : recipeKey.Trim();
+        });
     }
 }

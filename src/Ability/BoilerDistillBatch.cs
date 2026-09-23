@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 
@@ -6,25 +5,19 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// One quality roll per still load. The first distill after a pour locks the spirit
-/// blob on the boiler; later ticks copy it. Adding liquid clears the lock.
+/// blob on the boiler Live pedigree; later ticks copy it. Adding liquid clears the lock.
 /// </summary>
 public static class BoilerDistillBatch
 {
     public const string Attr = "prosequorDistillBatch";
     public const string LockedKey = "locked";
 
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public bool Locked;
-        public ProsequorBlob Blob = ProsequorBlob.Empty;
-    }
-
     public static bool TryGet(BlockEntity? be, out ProsequorBlob blob)
     {
         blob = ProsequorBlob.Empty;
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || !box.Locked)
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || !box.DistillLocked)
         {
             return false;
         }
@@ -40,67 +33,38 @@ public static class BoilerDistillBatch
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
-        box.Locked = true;
-        box.Blob = blob;
-        be.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(be, box =>
+        {
+            ProsequorBlob next = blob ?? ProsequorBlob.Empty;
+            // Keep the pourer's sole contributor when the quality roll only stamps maker.
+            if (box.Blob.TryGetSoleContributor(out string? sole)
+                && !next.TryGetSoleContributor(out _))
+            {
+                next = next.WithSoleContributor(sole);
+            }
+
+            box.DistillLocked = true;
+            box.Blob = next;
+        });
     }
 
     public static void Clear(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || !box.Locked)
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || !box.DistillLocked)
         {
             return;
         }
 
-        box.Locked = false;
-        box.Blob = ProsequorBlob.Empty;
-        be.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(be, b =>
+        {
+            b.DistillLocked = false;
+            b.Blob = ProsequorBlob.Empty;
+        });
     }
 
-    public static void WriteToTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        if (!TryGet(be, out ProsequorBlob blob))
-        {
-            if (tree.HasAttribute(Attr))
-            {
-                tree.RemoveAttribute(Attr);
-            }
-
-            return;
-        }
-
-        WriteLocked(tree, blob);
-    }
-
-    public static void ReadFromTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null)
-        {
-            return;
-        }
-
-        if (!TryReadLocked(tree, out ProsequorBlob blob))
-        {
-            if (boxes.TryGetValue(be, out Box? box))
-            {
-                box.Locked = false;
-                box.Blob = ProsequorBlob.Empty;
-            }
-
-            return;
-        }
-
-        Box stored = boxes.GetOrCreateValue(be);
-        stored.Locked = true;
-        stored.Blob = blob;
-    }
-
+    /// <summary>Tree helpers for pure tests / legacy distill side-table shape.</summary>
     public static void WriteLocked(ITreeAttribute tree, ProsequorBlob blob)
     {
         if (tree == null)
@@ -115,7 +79,6 @@ public static class BoilerDistillBatch
 
     /// <summary>
     /// True when a batch is locked, including a roll that stamped nothing.
-    /// Callers must not roll again just because the blob is empty.
     /// </summary>
     public static bool TryReadLocked(ITreeAttribute? tree, out ProsequorBlob blob)
     {
@@ -149,7 +112,6 @@ public static class BoilerDistillBatch
             return stored;
         }
 
-        // No still to remember a roll. Don't invent a new affix onto an occupied batch.
         if (boiler == null && sinkOccupied && occupiedSinkBlob.HasPersistable)
         {
             return occupiedSinkBlob;
@@ -177,7 +139,6 @@ public static class BoilerDistillBatch
 
         if (sinkQtyBefore <= 0 || !SinkHasPrestige(content))
         {
-            // Empty vessel, or leftover with no maker/affix: this batch is the quality.
             ProsequorLiquidPedigree.WriteFullBlob(content, batch);
             return;
         }

@@ -116,22 +116,4 @@ public static class TroughContributionConsumePatch
     }
 }
 
-[HarmonyPatch(typeof(BlockEntityTrough), nameof(BlockEntityTrough.ToTreeAttributes))]
-public static class TroughContributionToTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityTrough __instance, ITreeAttribute tree)
-    {
-        TroughContributionStation.WriteToTree(__instance, tree);
-    }
-}
 
-[HarmonyPatch(typeof(BlockEntityTrough), nameof(BlockEntityTrough.FromTreeAttributes))]
-public static class TroughContributionFromTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityTrough __instance, ITreeAttribute tree)
-    {
-        TroughContributionStation.ReadFromTree(__instance, tree);
-    }
-}

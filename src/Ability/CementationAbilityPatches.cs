@@ -57,21 +57,7 @@ public static class CementationAbilityPatches
             CementationXpStation.OnAfterServerTick(__instance);
     }
 
-    [HarmonyPatch(typeof(BlockEntityStoneCoffin), nameof(BlockEntityStoneCoffin.ToTreeAttributes))]
-    public static class StoneCoffinPaidToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityStoneCoffin __instance, ITreeAttribute tree) =>
-            CementationXpStation.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityStoneCoffin), nameof(BlockEntityStoneCoffin.FromTreeAttributes))]
-    public static class StoneCoffinPaidFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityStoneCoffin __instance, ITreeAttribute tree) =>
-            CementationXpStation.ReadFromTree(__instance, tree);
-    }
 
     /// <summary>Player-lit coal piles under a cementation furnace contribute.</summary>
     [HarmonyPatch(typeof(BlockCoalPile), nameof(BlockCoalPile.OnTryIgniteBlockOver))]

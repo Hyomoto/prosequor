@@ -114,25 +114,7 @@ public static class ClayFormCheckIfFinishedPatch
     }
 }
 
-[HarmonyPatch(typeof(BlockEntityClayForm), nameof(BlockEntityClayForm.ToTreeAttributes))]
-public static class ClayFormXpToTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityClayForm __instance, ITreeAttribute tree)
-    {
-        ClayFormXpStation.WriteToTree(__instance, tree);
-    }
-}
 
-[HarmonyPatch(typeof(BlockEntityClayForm), nameof(BlockEntityClayForm.FromTreeAttributes))]
-public static class ClayFormXpFromTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityClayForm __instance, ITreeAttribute tree)
-    {
-        ClayFormXpStation.ReadFromTree(__instance, tree);
-    }
-}
 
 [HarmonyPatch(typeof(ItemClay), nameof(ItemClay.OnHeldInteractStop))]
 public static class ItemClayRefillPatch

@@ -58,21 +58,7 @@ public static class CropClimateWindowPatches
         }
     }
 
-    [HarmonyPatch(typeof(BlockEntityFarmland), nameof(BlockEntityFarmland.ToTreeAttributes))]
-    public static class FarmlandToTreeClimateWindowPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFarmland __instance, ITreeAttribute tree) =>
-            CropClimateWindow.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityFarmland), nameof(BlockEntityFarmland.FromTreeAttributes))]
-    public static class FarmlandFromTreeClimateWindowPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFarmland __instance, ITreeAttribute tree) =>
-            CropClimateWindow.ReadFromTree(__instance, tree);
-    }
 
     [HarmonyPatch(typeof(BlockEntityFarmland), "updateCropDamage")]
     public static class FarmlandUpdateCropDamageClimateWindowPatch

@@ -37,28 +37,4 @@ public static class BlockDoPlaceBlockBushCuttingGrowthPatch
     }
 }
 
-[HarmonyPatch(typeof(BEBehaviorFruitingBushCutting), nameof(BEBehaviorFruitingBushCutting.ToTreeAttributes))]
-public static class FruitingBushCuttingToTreeAttributesGrowthPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BEBehaviorFruitingBushCutting __instance, ITreeAttribute tree)
-    {
-        if (__instance.Blockentity != null)
-        {
-            BushCuttingGrowthDuration.WriteToTree(__instance.Blockentity, tree);
-        }
-    }
-}
 
-[HarmonyPatch(typeof(BEBehaviorFruitingBushCutting), nameof(BEBehaviorFruitingBushCutting.FromTreeAttributes))]
-public static class FruitingBushCuttingFromTreeAttributesGrowthPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BEBehaviorFruitingBushCutting __instance, ITreeAttribute tree)
-    {
-        if (__instance.Blockentity != null)
-        {
-            BushCuttingGrowthDuration.ReadFromTree(__instance.Blockentity, tree);
-        }
-    }
-}

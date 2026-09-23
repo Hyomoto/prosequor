@@ -49,7 +49,7 @@ public class TraitAttributeScenarios : AtlasScenarioBase
     [Trait("Kind", "Traits")]
     public async Task ClassProfile_Should_Wait_Until_CharacterCreationConfirmed()
     {
-        ITestPlayer joined = await World.JoinPlayer("UnconfirmedCommoner");
+        ITestPlayer joined = await World.JoinPlayer("UnconfCommoner");
         IServerPlayer player = RequireServerPlayer(joined.Player);
         IPlayerProgress progress = RequireProgress(player);
 

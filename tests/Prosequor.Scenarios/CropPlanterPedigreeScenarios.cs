@@ -33,7 +33,8 @@ public class CropPlanterPedigreeScenarios : AtlasScenarioBase
         Assert.Equal(1, planterWeight);
 
         TreeAttribute tree = new();
-        farmland.ToTreeAttributes(tree);
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, farmland.Pos, out ProsequorChunkPedigree.Box stored));
+        stored.WriteTo(tree);
         ITreeAttribute? live = tree.GetTreeAttribute(ProsequorStackPedigree.LiveAttr);
         Assert.NotNull(live);
         Assert.Equal(player.PlayerUID, ProsequorBlob.ReadFrom(live!).MakerUid);

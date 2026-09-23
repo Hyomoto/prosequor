@@ -82,19 +82,5 @@ public static class FirepitProcessStarterPatches
             FirepitProcessStarterStation.OnAfterTick(__instance);
     }
 
-    [HarmonyPatch(typeof(BlockEntityFirepit), nameof(BlockEntityFirepit.ToTreeAttributes))]
-    public static class FirepitProcessStarterToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFirepit __instance, ITreeAttribute tree) =>
-            FirepitProcessStarterStation.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityFirepit), nameof(BlockEntityFirepit.FromTreeAttributes))]
-    public static class FirepitProcessStarterFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFirepit __instance, ITreeAttribute tree) =>
-            FirepitProcessStarterStation.ReadFromTree(__instance, tree);
-    }
 }
