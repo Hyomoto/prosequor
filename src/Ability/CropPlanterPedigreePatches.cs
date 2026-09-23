@@ -2,7 +2,6 @@ using System.Text;
 using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -62,22 +61,6 @@ public static class CropPlanterPedigreePatches
     /// <summary>
     /// Farmland overrides tree attrs without always hitting <see cref="BlockEntity"/> base patches.
     /// </summary>
-    [HarmonyPatch(typeof(BlockEntityFarmland), nameof(BlockEntityFarmland.ToTreeAttributes))]
-    public static class FarmlandToTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFarmland __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BlockEntityFarmland), nameof(BlockEntityFarmland.FromTreeAttributes))]
-    public static class FarmlandFromTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityFarmland __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
-    }
-
     [HarmonyPatch(typeof(BlockEntityFarmland), nameof(BlockEntityFarmland.GetBlockInfo))]
     public static class FarmlandGetBlockInfoPlanterPatch
     {

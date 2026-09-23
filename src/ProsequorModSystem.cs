@@ -104,6 +104,9 @@ public class ProsequorModSystem : ModSystem
         api.RegisterBlockEntityClass(
             BlockEntityProsequorPedigree.ClassName,
             typeof(BlockEntityProsequorPedigree));
+        api.RegisterBlockEntityBehaviorClass(
+            BlockEntityBehaviorProsequorPedigree.ClassName,
+            typeof(BlockEntityBehaviorProsequorPedigree));
         api.RegisterCollectibleBehaviorClass(
             MetalBitAnvilWorkableBehavior.ClassName,
             typeof(MetalBitAnvilWorkableBehavior));

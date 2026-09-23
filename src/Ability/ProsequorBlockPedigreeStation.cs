@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
@@ -14,15 +13,11 @@ namespace Prosequor.Ability;
 /// absorb multiplier and the unpaid absorb remainder live on the same box and
 /// survive harvest. Watering XP uses a crop-scoped moisture budget that harvest
 /// clears. Berry bushes, saplings, and fruit-tree cuttings store planter only.
+/// Persistence lives on <see cref="BlockEntityBehaviorProsequorPedigree"/>.
 /// </summary>
 public static class ProsequorBlockPedigreeStation
 {
     public const string CareCreditsAttr = "prosequorCareCredits";
-
-    const string AbsorbAttr = "prosequorFarmlandAbsorb";
-    const string AbsorbMulKey = "mul";
-    const string AbsorbRemainderKey = "remainder";
-    const string WaterCreditAttr = "prosequorWaterCredit";
 
     public const float DefaultAbsorbMultiplier = 1f;
 
@@ -32,21 +27,6 @@ public static class ProsequorBlockPedigreeStation
     public const float WaterCreditMinGain = 0.01f;
 
     const float AbsorbEpsilon = 0.0001f;
-
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public ProsequorBlob Blob = ProsequorBlob.Empty;
-
-        public Dictionary<string, int>? CareFlags;
-
-        public float AbsorbMultiplier = DefaultAbsorbMultiplier;
-
-        public float AbsorbRemainder;
-
-        public float WaterCredit;
-    }
 
     /// <summary>
     /// After place: stash the primary persistable unit blob from the placing stack onto the BE.
@@ -70,8 +50,7 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
-        box.Blob = blob;
+        Require(be).Blob = blob;
         be.MarkDirty(redrawOnClient: false);
     }
 
@@ -102,7 +81,7 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.Blob = box.Blob.WithMaker(uid);
         be.MarkDirty(redrawOnClient: false);
     }
@@ -223,7 +202,8 @@ public static class ProsequorBlockPedigreeStation
     public static bool TryGetBlob(BlockEntity? be, out ProsequorBlob blob)
     {
         blob = ProsequorBlob.Empty;
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || box.Blob.IsAnonymous)
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box == null || box.Blob.IsAnonymous)
         {
             return false;
         }
@@ -240,7 +220,7 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.Blob = box.Blob.WithContributor(contributorUid.Trim(), amount);
         be.MarkDirty(redrawOnClient: false);
     }
@@ -261,7 +241,7 @@ public static class ProsequorBlockPedigreeStation
 
         string uid = contributorUid.Trim();
         int bit = (int)kind;
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.CareFlags ??= new Dictionary<string, int>(StringComparer.Ordinal);
         box.CareFlags.TryGetValue(uid, out int flags);
         if ((flags & bit) != 0)
@@ -278,7 +258,8 @@ public static class ProsequorBlockPedigreeStation
     /// <summary>Soil Enrichment slow-release multiplier (1 = vanilla). Missing stamp → 1.</summary>
     public static float GetAbsorbMultiplier(BlockEntity? be)
     {
-        if (be != null && boxes.TryGetValue(be, out Box? box))
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box != null)
         {
             return Math.Max(box.AbsorbMultiplier, DefaultAbsorbMultiplier);
         }
@@ -294,14 +275,15 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.AbsorbMultiplier = GameMath.Clamp(multiplier, DefaultAbsorbMultiplier, float.MaxValue);
         be.MarkDirty(redrawOnClient: false);
     }
 
     public static float GetAbsorbRemainder(BlockEntity? be)
     {
-        if (be != null && boxes.TryGetValue(be, out Box? box))
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box != null)
         {
             return Math.Max(0f, box.AbsorbRemainder);
         }
@@ -317,7 +299,7 @@ public static class ProsequorBlockPedigreeStation
             return GetAbsorbRemainder(be);
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.AbsorbRemainder = Math.Max(0f, box.AbsorbRemainder) + transferred;
         return box.AbsorbRemainder;
     }
@@ -328,7 +310,8 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static int TakeAbsorbPercents(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box))
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box == null)
         {
             return 0;
         }
@@ -350,7 +333,8 @@ public static class ProsequorBlockPedigreeStation
 
     public static float GetWaterCredit(BlockEntity? be)
     {
-        if (be != null && boxes.TryGetValue(be, out Box? box))
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box != null)
         {
             return Math.Clamp(box.WaterCredit, 0f, WaterCreditCap);
         }
@@ -369,7 +353,7 @@ public static class ProsequorBlockPedigreeStation
             return 0f;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         float room = WaterCreditCap - Math.Clamp(box.WaterCredit, 0f, WaterCreditCap);
         if (room <= AbsorbEpsilon)
         {
@@ -385,13 +369,14 @@ public static class ProsequorBlockPedigreeStation
     /// <summary>Growth spend: the next stage can earn another full pour.</summary>
     public static void ResetWaterCredit(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || box.WaterCredit <= AbsorbEpsilon)
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box == null || box.WaterCredit <= AbsorbEpsilon)
         {
             return;
         }
 
         box.WaterCredit = 0f;
-        be.MarkDirty(redrawOnClient: false);
+        be!.MarkDirty(redrawOnClient: false);
     }
 
     /// <summary>
@@ -411,7 +396,7 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(be);
+        BlockEntityBehaviorProsequorPedigree box = Require(be);
         box.Blob = box.Blob.WithSoleContributor(uid);
         be.MarkDirty(redrawOnClient: false);
     }
@@ -429,14 +414,15 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static void ClearContributors(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box) || box.Blob.IsAnonymous)
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        if (box == null || box.Blob.IsAnonymous)
         {
             return;
         }
 
         ProsequorBlob cleared = box.Blob.WithClearedContributors();
         box.Blob = cleared.IsAnonymous ? ProsequorBlob.Empty : cleared;
-        be.MarkDirty(redrawOnClient: false);
+        be!.MarkDirty(redrawOnClient: false);
     }
 
     /// <summary>
@@ -457,133 +443,28 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        boxes.GetOrCreateValue(be).Blob = blob;
+        Require(be).Blob = blob;
         be.MarkDirty(redrawOnClient: false);
     }
 
     public static void Clear(BlockEntity? be)
     {
-        if (be == null || !boxes.TryGetValue(be, out Box? box))
-        {
-            return;
-        }
-
-        box.Blob = ProsequorBlob.Empty;
-        box.CareFlags = null;
-        box.WaterCredit = 0f;
+        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
+        box?.ClearPedigree();
     }
 
-    public static void WriteToTree(BlockEntity? be, ITreeAttribute? tree)
+    /// <summary>
+    /// Ensure the pedigree behavior is on the block entity before
+    /// <see cref="BlockEntity.FromTreeAttributes"/> runs.
+    /// </summary>
+    public static void EnsureAttached(BlockEntity? be)
     {
-        if (be == null || tree == null || !boxes.TryGetValue(be, out Box? box))
+        if (be == null)
         {
             return;
         }
 
-        if (!box.Blob.IsAnonymous)
-        {
-            box.Blob.WriteTo(tree.GetOrAddTreeAttribute(ProsequorStackPedigree.LiveAttr));
-        }
-
-        if (box.CareFlags != null && box.CareFlags.Count > 0)
-        {
-            ITreeAttribute care = tree.GetOrAddTreeAttribute(CareCreditsAttr);
-            foreach (KeyValuePair<string, int> kv in box.CareFlags)
-            {
-                care.SetInt(kv.Key, kv.Value);
-            }
-        }
-
-        if (box.WaterCredit > WaterCreditMinGain)
-        {
-            tree.SetFloat(WaterCreditAttr, box.WaterCredit);
-        }
-        else
-        {
-            tree.RemoveAttribute(WaterCreditAttr);
-        }
-
-        if (box.AbsorbMultiplier <= DefaultAbsorbMultiplier + AbsorbEpsilon
-            && box.AbsorbRemainder <= AbsorbEpsilon)
-        {
-            return;
-        }
-
-        ITreeAttribute absorb = tree.GetOrAddTreeAttribute(AbsorbAttr);
-        if (box.AbsorbMultiplier > DefaultAbsorbMultiplier + AbsorbEpsilon)
-        {
-            absorb.SetFloat(AbsorbMulKey, box.AbsorbMultiplier);
-        }
-
-        if (box.AbsorbRemainder > AbsorbEpsilon)
-        {
-            absorb.SetFloat(AbsorbRemainderKey, box.AbsorbRemainder);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntity? be, ITreeAttribute? tree)
-    {
-        if (be == null || tree == null)
-        {
-            return;
-        }
-
-        ITreeAttribute? live = tree.GetTreeAttribute(ProsequorStackPedigree.LiveAttr);
-        if (live != null)
-        {
-            ProsequorBlob blob = ProsequorBlob.ReadFrom(live);
-            if (!blob.IsAnonymous)
-            {
-                boxes.GetOrCreateValue(be).Blob = blob;
-            }
-        }
-
-        ITreeAttribute? care = tree.GetTreeAttribute(CareCreditsAttr);
-        if (care != null)
-        {
-            Dictionary<string, int> flags = new(StringComparer.Ordinal);
-            foreach (KeyValuePair<string, IAttribute> kv in care)
-            {
-                if (string.IsNullOrWhiteSpace(kv.Key))
-                {
-                    continue;
-                }
-
-                int value = care.GetInt(kv.Key);
-                if (value != 0)
-                {
-                    flags[kv.Key] = value;
-                }
-            }
-
-            if (flags.Count > 0)
-            {
-                boxes.GetOrCreateValue(be).CareFlags = flags;
-            }
-        }
-
-        float waterCredit = tree.GetFloat(WaterCreditAttr, 0f);
-        if (waterCredit > AbsorbEpsilon)
-        {
-            boxes.GetOrCreateValue(be).WaterCredit = Math.Clamp(waterCredit, 0f, WaterCreditCap);
-        }
-
-        ITreeAttribute? absorb = tree.GetTreeAttribute(AbsorbAttr);
-        float multiplier = absorb?.GetFloat(AbsorbMulKey, DefaultAbsorbMultiplier) ?? DefaultAbsorbMultiplier;
-        float remainder = absorb?.GetFloat(AbsorbRemainderKey, 0f) ?? 0f;
-        if (multiplier > DefaultAbsorbMultiplier + AbsorbEpsilon || remainder > AbsorbEpsilon)
-        {
-            Box box = boxes.GetOrCreateValue(be);
-            if (multiplier > DefaultAbsorbMultiplier + AbsorbEpsilon)
-            {
-                box.AbsorbMultiplier = GameMath.Clamp(multiplier, DefaultAbsorbMultiplier, float.MaxValue);
-            }
-
-            if (remainder > AbsorbEpsilon)
-            {
-                box.AbsorbRemainder = remainder;
-            }
-        }
+        Require(be);
     }
 
     /// <summary>
@@ -631,6 +512,22 @@ public static class ProsequorBlockPedigreeStation
         }
 
         ApplyToStack(world.BlockAccessor?.GetBlockEntity(pos), block, stack);
+    }
+
+    static BlockEntityBehaviorProsequorPedigree? TryGet(BlockEntity? be) =>
+        be?.GetBehavior<BlockEntityBehaviorProsequorPedigree>();
+
+    static BlockEntityBehaviorProsequorPedigree Require(BlockEntity be)
+    {
+        BlockEntityBehaviorProsequorPedigree? existing = be.GetBehavior<BlockEntityBehaviorProsequorPedigree>();
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        BlockEntityBehaviorProsequorPedigree created = new(be);
+        be.Behaviors.Add(created);
+        return created;
     }
 
     static void ApplyToStack(Block? block, ItemStack stack, ProsequorBlob blob)

@@ -1,7 +1,6 @@
 using System.Text;
 using HarmonyLib;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -120,54 +119,6 @@ public static class BushPlanterPedigreePatches
 
             ProsequorBlockPedigreeStation.ClearPlanter(__instance);
         }
-    }
-
-    [HarmonyPatch(typeof(BlockEntityBerryBush), nameof(BlockEntityBerryBush.ToTreeAttributes))]
-    public static class BerryBushToTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBerryBush __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BlockEntityBerryBush), nameof(BlockEntityBerryBush.FromTreeAttributes))]
-    public static class BerryBushFromTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBerryBush __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance, tree);
-    }
-
-    [HarmonyPatch(typeof(BEBehaviorFruitingBush), nameof(BEBehaviorFruitingBush.ToTreeAttributes))]
-    public static class FruitingBushToTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BEBehaviorFruitingBush __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance?.Blockentity, tree);
-    }
-
-    [HarmonyPatch(typeof(BEBehaviorFruitingBush), nameof(BEBehaviorFruitingBush.FromTreeAttributes))]
-    public static class FruitingBushFromTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BEBehaviorFruitingBush __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance?.Blockentity, tree);
-    }
-
-    [HarmonyPatch(typeof(BEBehaviorFruitingBushCutting), nameof(BEBehaviorFruitingBushCutting.ToTreeAttributes))]
-    public static class FruitingBushCuttingToTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BEBehaviorFruitingBushCutting __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.WriteToTree(__instance?.Blockentity, tree);
-    }
-
-    [HarmonyPatch(typeof(BEBehaviorFruitingBushCutting), nameof(BEBehaviorFruitingBushCutting.FromTreeAttributes))]
-    public static class FruitingBushCuttingFromTreePlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BEBehaviorFruitingBushCutting __instance, ITreeAttribute tree) =>
-            ProsequorBlockPedigreeStation.ReadFromTree(__instance?.Blockentity, tree);
     }
 
     [HarmonyPatch(typeof(BlockEntityBerryBush), nameof(BlockEntityBerryBush.GetBlockInfo))]
