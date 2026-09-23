@@ -78,6 +78,7 @@ public class ProsequorModSystem : ModSystem
     HudElementLevelUp? levelUpHudElement;
     SkillWaitingHudController? skillWaitingHud;
     HudElementSkillWaiting? skillWaitingHudElement;
+    AnimalAlertOverlayRenderer? animalAlertOverlay;
     Action<LevelUpHudPacket>? levelUpHudHandler;
     Action? skillWaitingDumpHandler;
     Action<ContentFingerprintMismatchPacket>? contentMismatchHandler;
@@ -87,6 +88,7 @@ public class ProsequorModSystem : ModSystem
     ClayFormXpAdapter? clayFormXpAdapter;
     long activityWatchListenerId;
     long progressFlushListenerId;
+    long animalAlertListenerId;
     bool holdsPatches;
 
     public ProsequorModSystem()
@@ -340,6 +342,9 @@ public class ProsequorModSystem : ModSystem
         progressFlushListenerId = api.Event.RegisterGameTickListener(
             OnProgressFlushTick,
             150);
+        animalAlertListenerId = api.Event.RegisterGameTickListener(
+            _ => AnimalAlertService.Tick(AnimalAlertService.TickMs / 1000f),
+            AnimalAlertService.TickMs);
     }
 
     public override void StartClientSide(ICoreClientAPI api)
@@ -349,6 +354,23 @@ public class ProsequorModSystem : ModSystem
             CarryInventoryDialogPatch.RequestRecomposeIfOpen;
         Network.StartClient(api);
         catEyes = new CatEyesController(api);
+        animalAlertOverlay = new AnimalAlertOverlayRenderer(api);
+        api.ChatCommands
+            .Create("alertviz")
+            .WithDescription("Toggle Prosequor animal alert/threat overlay bars")
+            .HandleWith(_ =>
+            {
+                if (animalAlertOverlay == null)
+                {
+                    return TextCommandResult.Error("Alert overlay not ready.");
+                }
+
+                animalAlertOverlay.Enabled = !animalAlertOverlay.Enabled;
+                return TextCommandResult.Success(
+                    animalAlertOverlay.Enabled
+                        ? "Animal alert overlay on (thick=alert, thin=threat; cyan/amber/red)."
+                        : "Animal alert overlay off.");
+            });
         levelUpHud = new LevelUpHudController(api);
         levelUpHudElement = new HudElementLevelUp(api, levelUpHud);
         levelUpHudHandler = packet => levelUpHud?.Enqueue(packet);
@@ -434,6 +456,12 @@ public class ProsequorModSystem : ModSystem
                 progressFlushListenerId = 0;
             }
 
+            if (animalAlertListenerId != 0)
+            {
+                sapi.Event.UnregisterGameTickListener(animalAlertListenerId);
+                animalAlertListenerId = 0;
+            }
+
             Effort.UnregisterPoll(Effort.PollIdMount);
             Effort.UnregisterPoll(Effort.PollIdFishing);
             Effort.UnregisterPoll(Effort.PollIdFoot);
@@ -497,6 +525,8 @@ public class ProsequorModSystem : ModSystem
         }
 
         skillWaitingHud = null;
+        animalAlertOverlay?.Dispose();
+        animalAlertOverlay = null;
 
         ItemTooltipStatsBand.ClearProviders();
         ItemstackInfoTooltipPatches.DisposeIcons();

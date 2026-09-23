@@ -127,8 +127,8 @@ public static class PlayerInteractionStation
         }
     }
 
-    public static int ResolveAnimalSeekingRangePercent(IPlayer player) =>
-        RunInt(player, VerbIds.AnimalSeekingRange);
+    public static int ResolveAnimalThreatPercent(IPlayer player) =>
+        RunInt(player, VerbIds.AnimalThreat);
 
     public static int ResolveCritChancePercent(IPlayer player) =>
         RunInt(player, VerbIds.CritChance);
@@ -193,42 +193,17 @@ public static class PlayerInteractionStation
         AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntityFirstLetters");
 
     /// <summary>
-    /// Harmony target: scale flee <c>ExecutionChance</c> by nearest in-range player's response rate,
-    /// then rule-driven flee-friendliness reduction capped by animal friendliness.
-    /// Returns <see cref="double"/> to match <c>AiTaskBase.ExecutionChance</c> / <c>NextDouble</c>.
+    /// Harmony target: raw flee <c>ExecutionChance</c> for non-player search.
+    /// Player awareness is owned by the alert meter.
     /// </summary>
-    public static double GetScaledFleeExecutionChance(AiTaskFleeEntity self)
-    {
-        double chance = ReadExecutionChance(self);
-        float range = FleeSeekingRangeField.GetValue(self) is float r ? r : 25f;
-        float scaled = GetScaledExecutionChance(self, (float)chance, range);
-
-        if (self?.entity == null || !TaskCanTargetPlayer(self))
-        {
-            return scaled;
-        }
-
-        IPlayer? nearest = FindNearestSurvivalPlayer(self.entity, range);
-        if (nearest == null)
-        {
-            return scaled;
-        }
-
-        return HusbandryFriendliness.ScalePassiveFleeChance(
-            scaled,
-            AnimalBehaviorStation.ResolveFleeChanceReduction(nearest, self.entity),
-            HusbandryFriendliness.Get(self.entity));
-    }
+    public static double GetScaledFleeExecutionChance(AiTaskFleeEntity self) =>
+        ReadExecutionChance(self);
 
     /// <summary>
-    /// Harmony target: scale seek <c>ExecutionChance</c> by nearest in-range player's response rate.
+    /// Harmony target: raw seek <c>ExecutionChance</c> for non-player search.
     /// </summary>
-    public static double GetScaledSeekExecutionChance(AiTaskSeekEntity self)
-    {
-        double chance = ReadExecutionChance(self);
-        float range = SeekSeekingRangeField.GetValue(self) is float r ? r : 25f;
-        return GetScaledExecutionChance(self, (float)chance, range);
-    }
+    public static double GetScaledSeekExecutionChance(AiTaskSeekEntity self) =>
+        ReadExecutionChance(self);
 
     static double ReadExecutionChance(AiTaskBase task)
     {
@@ -242,72 +217,26 @@ public static class PlayerInteractionStation
     }
 
     /// <summary>
-    /// Scales vanilla flee fear-reduction by animal friendliness × Gentle Spirit mult.
+    /// Non-player flee radius keeps vanilla generation fear. Friendliness / skill calm
+    /// now scale ordinary alert threat instead of shrinking this radius.
     /// </summary>
-    public static float AdjustFleeFearReductionFactor(AiTaskFleeEntity self, float vanillaFactor)
-    {
-        if (self?.entity == null)
-        {
-            return vanillaFactor;
-        }
-
-        float range = FleeSeekingRangeField.GetValue(self) is float r ? r : 25f;
-        IPlayer? nearest = FindNearestSurvivalPlayer(self.entity, range);
-        float mult = nearest == null
-            ? 1f
-            : HusbandryFriendliness.MultFromPercent(
-                AnimalBehaviorStation.ResolveFleeFearMultiplierPercent(nearest, self.entity));
-        return HusbandryFriendliness.ScaleFearReductionFactor(
-            vanillaFactor,
-            HusbandryFriendliness.Get(self.entity),
-            mult);
-    }
+    public static float AdjustFleeFearReductionFactor(AiTaskFleeEntity self, float vanillaFactor) =>
+        vanillaFactor;
 
     /// <summary>
-    /// Scales vanilla melee fear-reduction by animal friendliness × Calming Presence mult.
+    /// Non-player melee reach keeps vanilla generation fear.
     /// </summary>
-    public static float AdjustMeleeFearReductionFactor(AiTaskMeleeAttack self, float vanillaFactor)
-    {
-        if (self?.entity == null)
-        {
-            return vanillaFactor;
-        }
-
-        float range = MeleeAttackRangeField.GetValue(self) is float r ? r : 15f;
-        IPlayer? nearest = FindNearestSurvivalPlayer(self.entity, Math.Max(range, 15f));
-        float mult = nearest == null
-            ? 1f
-            : HusbandryFriendliness.MultFromPercent(
-                AnimalBehaviorStation.ResolveMeleeFearMultiplierPercent(nearest, self.entity));
-        return HusbandryFriendliness.ScaleFearReductionFactor(
-            vanillaFactor,
-            HusbandryFriendliness.Get(self.entity),
-            mult);
-    }
+    public static float AdjustMeleeFearReductionFactor(AiTaskMeleeAttack self, float vanillaFactor) =>
+        vanillaFactor;
 
     static readonly FieldInfo MeleeAttackRangeField =
         AccessTools.Field(typeof(AiTaskMeleeAttack), "attackRange");
 
     /// <summary>
-    /// Scales AI task throttle by Inconspicuity response-rate on animal-flee / animal-seek
-    /// phase <c>response</c>. Prey-only tasks and missing players leave chance unchanged.
+    /// Non-player task chance helper. Player awareness is owned by the alert meter.
     /// </summary>
-    public static float GetScaledExecutionChance(AiTaskBaseTargetable task, float chance, float range)
-    {
-        if (task?.entity == null || !TaskCanTargetPlayer(task))
-        {
-            return chance;
-        }
-
-        IPlayer? nearest = FindNearestSurvivalPlayer(task.entity, range);
-        if (nearest == null)
-        {
-            return chance;
-        }
-
-        VerbId verb = task is AiTaskSeekEntity ? VerbIds.AnimalSeek : VerbIds.AnimalFlee;
-        return AnimalBehaviorStation.ResolveResponseChance(nearest, task.entity, verb, chance);
-    }
+    public static float GetScaledExecutionChance(AiTaskBaseTargetable task, float chance, float range) =>
+        chance;
 
     static bool TaskCanTargetPlayer(AiTaskBaseTargetable task)
     {
@@ -609,32 +538,22 @@ public static class PlayerInteractionStation
     }
 
     /// <summary>
-    /// Writes absolute pipeline percent onto <c>animalSeekingRange</c>
-    /// as an additive offset (<c>pct/100 - 1</c>). AI sense distance uses
-    /// <c>range * GetBlended("animalSeekingRange")</c> (sneak stacks ×0.6).
+    /// Clears any legacy Prosequor write to vanilla <c>animalSeekingRange</c>.
+    /// Inconspicuity now scales alert-meter threat via <see cref="ResolveAnimalThreatPercent"/>.
     /// </summary>
-    public static void ApplyAnimalSeekingRange(Entity entity)
+    public static void ClearLegacyAnimalSeekingRange(Entity entity)
     {
         if (entity.World.Side != EnumAppSide.Server)
         {
             return;
         }
 
-        if (entity is not EntityPlayer entityPlayer || entityPlayer.Player == null || entity.Stats == null)
+        if (entity is not EntityPlayer || entity.Stats == null)
         {
             return;
         }
 
-        int pct = ResolveAnimalSeekingRangePercent(entityPlayer.Player);
-        float offset = pct / 100f - 1f;
-        if (Math.Abs(offset) < 0.0001f)
-        {
-            entity.Stats.Remove("animalSeekingRange", StatAnimalSeekingRangeKey);
-        }
-        else
-        {
-            entity.Stats.Set("animalSeekingRange", StatAnimalSeekingRangeKey, offset, false);
-        }
+        entity.Stats.Remove("animalSeekingRange", StatAnimalSeekingRangeKey);
     }
 
     /// <summary>

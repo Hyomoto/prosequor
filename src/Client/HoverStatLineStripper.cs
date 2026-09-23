@@ -32,7 +32,7 @@ public static class HoverStatLineStripper
                 continue;
             }
 
-            matchers.Add(Compile(template.TrimEnd()));
+            matchers.Add(Compile(template.TrimEnd(), capturing: false));
         }
 
         if (matchers.Count == 0)
@@ -64,7 +64,33 @@ public static class HoverStatLineStripper
             return false;
         }
 
-        return Compile(template.TrimEnd()).IsMatch(StripVtml(line.TrimEnd()));
+        return Compile(template.TrimEnd(), capturing: false).IsMatch(StripVtml(line.TrimEnd()));
+    }
+
+    /// <summary>
+    /// Match <paramref name="line"/> against a template and return placeholder captures in appearance order.
+    /// </summary>
+    public static bool TryExtract(string? line, string? template, out string[] values)
+    {
+        values = Array.Empty<string>();
+        if (string.IsNullOrEmpty(line) || string.IsNullOrWhiteSpace(template))
+        {
+            return false;
+        }
+
+        Match match = Compile(template.TrimEnd(), capturing: true).Match(StripVtml(line.TrimEnd()));
+        if (!match.Success || match.Groups.Count <= 1)
+        {
+            return false;
+        }
+
+        values = new string[match.Groups.Count - 1];
+        for (int i = 1; i < match.Groups.Count; i++)
+        {
+            values[i - 1] = match.Groups[i].Value;
+        }
+
+        return true;
     }
 
     public static string StripVtml(string text)
@@ -77,39 +103,8 @@ public static class HoverStatLineStripper
         return VtmlTagRegex.Replace(text, "");
     }
 
-    static bool MatchesAny(string plain, List<Regex> matchers)
-    {
-        for (int i = 0; i < matchers.Count; i++)
-        {
-            if (matchers[i].IsMatch(plain))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Turn a lang template into an anchored regex: static text is literal, <c>{n}</c> is <c>.*?</c>.
-    /// </summary>
-    internal static Regex Compile(string template)
-    {
-        var sb = new StringBuilder("^");
-        int cursor = 0;
-        foreach (Match match in PlaceholderRegex.Matches(template))
-        {
-            sb.Append(Regex.Escape(template[cursor..match.Index]));
-            sb.Append(".*?");
-            cursor = match.Index + match.Length;
-        }
-
-        sb.Append(Regex.Escape(template[cursor..]));
-        sb.Append('$');
-        return new Regex(sb.ToString(), RegexOptions.CultureInvariant | RegexOptions.Singleline);
-    }
-
-    static string JoinCollapsingBlanks(List<string> kept)
+    /// <summary>Join kept lines, collapsing runs of blank lines to a single blank.</summary>
+    internal static string JoinCollapsingBlanks(List<string> kept)
     {
         var sb = new StringBuilder();
         bool pendingBlank = false;
@@ -138,5 +133,39 @@ public static class HoverStatLineStripper
         }
 
         return sb.ToString();
+    }
+
+    static bool MatchesAny(string plain, List<Regex> matchers)
+    {
+        for (int i = 0; i < matchers.Count; i++)
+        {
+            if (matchers[i].IsMatch(plain))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Turn a lang template into an anchored regex: static text is literal, <c>{n}</c> is a wildcard.
+    /// When <paramref name="capturing"/> is true, each placeholder becomes a capture group.
+    /// </summary>
+    internal static Regex Compile(string template, bool capturing = false)
+    {
+        string wildcard = capturing ? "(.*?)" : ".*?";
+        var sb = new StringBuilder("^");
+        int cursor = 0;
+        foreach (Match match in PlaceholderRegex.Matches(template))
+        {
+            sb.Append(Regex.Escape(template[cursor..match.Index]));
+            sb.Append(wildcard);
+            cursor = match.Index + match.Length;
+        }
+
+        sb.Append(Regex.Escape(template[cursor..]));
+        sb.Append('$');
+        return new Regex(sb.ToString(), RegexOptions.CultureInvariant | RegexOptions.Singleline);
     }
 }

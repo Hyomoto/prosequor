@@ -20,6 +20,10 @@ Authors
 
 Game-icons.net (CC BY 3.0)
 ----------------------------------------------------------
+  textures/icons/damage-protection.svg               Shield impact — Delapouite
+    https://game-icons.net/1x1/delapouite/shield-impact.html
+  textures/icons/damage-reduction.svg                Armor downgrade — Delapouite
+    https://game-icons.net/1x1/delapouite/armor-downgrade.html
   textures/icons/construction.svg                    Brick Wall — Delapouite
     https://game-icons.net/1x1/delapouite/brick-wall.html
   textures/icons/construction/bricklayer.svg         Brick Pile — Delapouite

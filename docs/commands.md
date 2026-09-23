@@ -20,3 +20,9 @@ Server console / in-game chat. Requires `controlserver`. Online players only (na
 | `/prosequor pedigree` | held item, else looked-at entity/block | Dump maker / contributors (player names). Occupied hand inspects that stack; empty hand interrogates the target. `none` if no pedigree, `invalid` if nothing to inspect |
 
 Skill arguments accept the skill id or the caller’s localized display name. Attribute ids are the five stable ids above (case-insensitive).
+
+## Client
+
+| Command | Effect |
+|---|---|
+| `/alertviz` | Toggle animal alert overlay. Thick bar = alert 0–100; thin bar = current threat. Cyan = calm, amber = awake (≥40), red = committed (≥100). On by default. |

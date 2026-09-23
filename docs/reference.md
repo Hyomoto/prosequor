@@ -532,10 +532,8 @@ Fact `target` = animal / mount / boat code.
 | | `can-ride` | bool |
 | `animal-flee` | `chance` | number |
 | | `multiplier` | number |
-| | `response` | number |
 | `animal-seek` | `chance` | number |
 | | `multiplier` | number |
-| | `response` | number |
 | `animal-melee` | `chance` | number |
 | | `multiplier` | number |
 | `animal-brood` | `chance` | number |
@@ -550,16 +548,20 @@ Fact `target` = animal / mount / boat code.
 
 `mounted`: filter with `mount:<raft>` / `sailboat`; boats also use `ground` water and tokens `moving` / `helmsman`. Entity `mutate-drops` `stack` / `stacks` are registered with no shipped actions.
 
+`animal-flee` `chance`: ordinary alert threat reduction fraction (seed 0, base 1). `animal-flee` / `animal-brood` `multiplier`: friendliness calm percent (seed 100 = ×1) on ordinary alert threat. `animal-melee` / `animal-milk` `multiplier` still scale melee fear-reduction and milking aggro.
+
 ### `prosequor:player-interaction`
 
 | Verb | Phase | Contract |
 | --- | --- | --- |
-| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `animal-seeking-range` / `crit-chance` / `whole-vessel-loot-chance` | `default` | number |
+| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` | `default` | number |
 | `sprint-speed` / `swim-speed` / `sneak-speed` | `default` | number |
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
 | `bleed-out` | `rate` | number |
+
+`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat.
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 
@@ -617,7 +619,7 @@ NumberSpec. Surface: block / plant-crop / `default`.
 | `op` | `add` (default) or `scale` (`value * mapped`) |
 | `round` | Optional `ceil` \| `floor` \| `round`; omit for fractional |
 
-Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`; animal-flee|seek/`response`.
+Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`.
 
 ### Contract: bool / none / refund
 

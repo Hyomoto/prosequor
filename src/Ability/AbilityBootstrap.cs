@@ -501,18 +501,6 @@ public static class AbilityBootstrap
                 typeof(int));
         }
 
-        // Inconspicuity response-rate: scales vanilla ExecutionChance (seed = chance).
-        // Kept off chance so husbandry flee-reduction (seed 0) does not share the fold.
-        foreach (VerbId responseVerb in new[] { VerbIds.AnimalFlee, VerbIds.AnimalSeek })
-        {
-            hooks.RegisterPhase(
-                HookIds.EntityInteraction,
-                responseVerb,
-                new PhaseId("response"),
-                typeof(AnimalBehaviorContext),
-                typeof(float));
-        }
-
         hooks.RegisterPhase(
             HookIds.EntityInteraction,
             VerbIds.AnimalPet,
@@ -559,7 +547,7 @@ public static class AbilityBootstrap
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
-                     VerbIds.AnimalSeekingRange,
+                     VerbIds.AnimalThreat,
                      VerbIds.CritChance,
                      VerbIds.WholeVesselLootChance
                  })
@@ -786,7 +774,7 @@ public static class AbilityBootstrap
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
-                     VerbIds.AnimalSeekingRange,
+                     VerbIds.AnimalThreat,
                      VerbIds.CritChance,
                      VerbIds.WholeVesselLootChance
                  })
@@ -809,8 +797,6 @@ public static class AbilityBootstrap
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.Amount));
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.LastStand));
-        actions.Register(new AddMappedNumberAnimalResponseAction(VerbIds.AnimalFlee));
-        actions.Register(new AddMappedNumberAnimalResponseAction(VerbIds.AnimalSeek));
     }
 
     /// <summary>

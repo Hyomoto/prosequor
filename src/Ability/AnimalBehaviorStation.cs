@@ -106,13 +106,13 @@ public static class AnimalBehaviorStation
             0);
         return (allowed >= 1, context.FriendlinessGain);
     }
-    /// <summary>Inconspicuity response-rate: scale vanilla ExecutionChance (seed = chance).</summary>
+    /// <summary>Unused: player flee/seek dice no longer fold response. Returns <paramref name="chance"/>.</summary>
     public static float ResolveResponseChance(
         IPlayer player,
         Entity? animal,
         VerbId verb,
         float chance) =>
-        RunFloat(player, animal, verb, HookIds.Response, seed: chance, baseValue: chance);
+        chance;
 
     static int RunInt(IPlayer player, Entity? animal, VerbId verb, PhaseId phase, int seed) =>
         Run(player, animal, verb, phase, seed, baseValue: 0f);

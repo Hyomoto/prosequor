@@ -172,6 +172,9 @@ public static class ItemstackInfoTooltipPatches
             desc = TrimDescription(desc);
         }
 
+        desc = BurnHoverLineCompressor.Compress(desc);
+        desc = TrimDescription(desc);
+
         desc = ItemAffixes.AppendQualityFooter(desc, curSlot.Itemstack);
         desc = OwnerCredit.AppendForStack(desc, api.World, curSlot.Itemstack);
 

@@ -191,7 +191,7 @@ public static class VerbIds
     public static readonly VerbId SwimSpeed = new("prosequor:swim-speed");
     /// <summary>On-foot sneak speed bonus fraction (seed 0).</summary>
     public static readonly VerbId SneakSpeed = new("prosequor:sneak-speed");
-    public static readonly VerbId AnimalSeekingRange = new("prosequor:animal-seeking-range");
+    public static readonly VerbId AnimalThreat = new("prosequor:animal-threat");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");

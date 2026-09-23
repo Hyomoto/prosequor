@@ -11,14 +11,13 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Injects Husbandry friendliness into flee / melee fear-reduction and idle brood stop-range.
+/// Captures idle stopRange before vanilla bakes generation into the field.
+/// Player wake is owned by the alert meter; non-player stops use the authored base.
 /// </summary>
 public static class HusbandryFearAmplifierPatch
 {
     static readonly FieldInfo IdleStopRangeField =
         AccessTools.Field(typeof(AiTaskIdle), "stopRange");
-    static readonly FieldInfo IdleTamingGenerationsField =
-        AccessTools.Field(typeof(AiTaskIdle), "tamingGenerations");
 
     static readonly ConditionalWeakTable<AiTaskIdle, StrongBox<float>> IdleBaseStopRanges = new();
 
@@ -119,41 +118,17 @@ public static class HusbandryFearAmplifierPatch
 
     public static float GetEffectiveIdleStopRange(AiTaskIdle self)
     {
-        if (self?.entity == null)
-        {
-            return IdleStopRangeField.GetValue(self) is float baked ? baked : 0f;
-        }
-
-        float configBase = 0f;
-        if (IdleBaseStopRanges.TryGetValue(self, out StrongBox<float>? box))
-        {
-            configBase = box.Value;
-        }
-        else if (IdleStopRangeField.GetValue(self) is float baked)
-        {
-            return baked;
-        }
-
-        if (configBase <= 0f)
+        if (self == null)
         {
             return 0f;
         }
 
-        int generation = self.entity.WatchedAttributes.GetInt("generation", 0);
-        float taming = IdleTamingGenerationsField.GetValue(self) is float t ? t : 10f;
-        float vanilla = Math.Max(0f, (taming - generation) / taming);
+        if (IdleBaseStopRanges.TryGetValue(self, out StrongBox<float>? box))
+        {
+            return box.Value;
+        }
 
-        float searchRange = Math.Max(configBase, 8f);
-        IPlayer? nearest = PlayerInteractionStation.FindNearestSurvivalPlayer(self.entity, searchRange);
-        float mult = nearest == null
-            ? 1f
-            : HusbandryFriendliness.MultFromPercent(
-                AnimalBehaviorStation.ResolveBroodMultiplierPercent(nearest, self.entity));
-        float factor = HusbandryFriendliness.ScaleFearReductionFactor(
-            vanilla,
-            HusbandryFriendliness.Get(self.entity),
-            mult);
-        return configBase * factor;
+        return IdleStopRangeField.GetValue(self) is float baked ? baked : 0f;
     }
 
     public static IEnumerable<CodeInstruction> TranspileIdleStopRangeLoad(

@@ -92,6 +92,12 @@ public class MigratedFixtureTests
     public void HoverStatLineStripperFixtures_Should_Pass() => HoverStatLineStripperFixtures.VerifyAll();
 
     [Fact]
+    public void BurnHoverLineCompressorFixtures_Should_Pass() => BurnHoverLineCompressorFixtures.VerifyAll();
+
+    [Fact]
+    public void AnimalAlertMathFixtures_Should_Pass() => AnimalAlertMathFixtures.VerifyAll();
+
+    [Fact]
     public void LiquorQualityStampFixtures_Should_Pass() => LiquorQualityStampFixtures.VerifyAll();
 
     [Fact]

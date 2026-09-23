@@ -418,7 +418,7 @@ public static class AttributeStatFixtures
             VerbIds.FallDamageThreshold,
             VerbIds.TemporalRecoverRate,
             VerbIds.TemporalDrainRate,
-            VerbIds.AnimalSeekingRange,
+            VerbIds.AnimalThreat,
             VerbIds.CritChance,
             VerbIds.WholeVesselLootChance
         ];
@@ -428,21 +428,6 @@ public static class AttributeStatFixtures
             {
                 Assert.Fail(string.Format("[prosequor] Mapped-number not registered for player-interaction/{0}.",
                     verb));
-            }
-        }
-
-        foreach (VerbId responseVerb in new[] { VerbIds.AnimalFlee, VerbIds.AnimalSeek })
-        {
-            if (!actions.TryGet(
-                    ActionIds.AddMappedNumber,
-                    HookIds.EntityInteraction,
-                    responseVerb,
-                    HookIds.Response,
-                    out _))
-            {
-                Assert.Fail(string.Format(
-                    "[prosequor] Mapped-number not registered for entity-interaction/{0}/response.",
-                    responseVerb));
             }
         }
     }

@@ -125,7 +125,7 @@ public sealed class PhaseRefreshRegistry
             });
 
         PlayerVerb(
-            VerbIds.AnimalSeekingRange,
+            VerbIds.AnimalThreat,
             entity =>
             {
                 if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
@@ -133,7 +133,7 @@ public sealed class PhaseRefreshRegistry
                     return;
                 }
 
-                PlayerInteractionStation.ApplyAnimalSeekingRange(entity);
+                PlayerInteractionStation.ClearLegacyAnimalSeekingRange(entity);
             });
 
         PlayerVerb(
