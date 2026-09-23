@@ -477,6 +477,7 @@ public class PassiveSkillFixtures
         CollectionIndex collections = new();
         collections.EnsureKey("berry-bush");
         collections.EnsureKey("crop");
+        collections.EnsureKey("fruit-tree");
         collections.EnsureKey("mushroom");
         collections.EnsureKey("reed");
         collections.EnsureKey("sap");
@@ -485,6 +486,7 @@ public class PassiveSkillFixtures
         collections.AddCode("berry-bush", "game:fruitingbush-blueberry-wild");
         collections.AddCode("berry-bush", "game:fruitingbush-wild-blueberry-free");
         collections.AddCode("crop", "game:crop-carrot-9");
+        collections.AddCode("fruit-tree", "game:fruittree-apple");
         collections.AddCode("mushroom", "game:mushroom-fieldmushroom-normal");
         collections.AddCode("reed", "game:tallplant-tule-land-normal-free");
         collections.AddCode("reed", "game:tallplant-coopersreed-land-normal-free");

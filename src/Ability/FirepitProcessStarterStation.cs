@@ -1,23 +1,22 @@
 using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Firepit process-starter: notes the last interactor, then stamps a sole contributor
-/// when cooking/smelting actually begins (<c>canSmeltInput &amp;&amp; IsBurning</c> rising edge).
+/// Firepit process-starter: notes the last interactor on the pedigree host, then stamps a
+/// sole contributor when cooking/smelting actually begins (rising edge). Edge baseline is
+/// ephemeral (re-established after load).
 /// </summary>
 public static class FirepitProcessStarterStation
 {
     public const string LastInteractorAttr = "prosequorFirepitLastInteractor";
 
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
+    static readonly ConditionalWeakTable<BlockEntity, EdgeBox> edges = new();
 
-    sealed class Box
+    sealed class EdgeBox
     {
-        public string? LastInteractorUid;
         public bool PrevProcessing;
         public bool HavePrev;
     }
@@ -39,9 +38,9 @@ public static class FirepitProcessStarterStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(firepit);
-        box.LastInteractorUid = playerUid.Trim();
-        firepit.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.Mutate(
+            firepit,
+            box => box.LastInteractorUid = playerUid.Trim());
     }
 
     /// <summary>
@@ -68,53 +67,28 @@ public static class FirepitProcessStarterStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(firepit);
-        if (!box.HavePrev)
+        EdgeBox edge = edges.GetOrCreateValue(firepit);
+        if (!edge.HavePrev)
         {
-            box.PrevProcessing = processing;
-            box.HavePrev = true;
+            edge.PrevProcessing = processing;
+            edge.HavePrev = true;
             return;
         }
 
-        if (!box.PrevProcessing && processing)
+        if (!edge.PrevProcessing && processing)
         {
-            ProsequorBlockPedigreeStation.StampSoleContributor(firepit, box.LastInteractorUid);
+            string? uid = null;
+            if (ProsequorBlockPedigreeStation.TryGetBox(firepit, out ProsequorChunkPedigree.Box box))
+            {
+                uid = box.LastInteractorUid;
+            }
+
+            ProsequorBlockPedigreeStation.StampSoleContributor(firepit, uid);
         }
 
-        box.PrevProcessing = processing;
+        edge.PrevProcessing = processing;
     }
 
     public static bool IsProcessing(BlockEntityFirepit firepit) =>
         firepit.IsBurning && firepit.canSmeltInput();
-
-    public static void WriteToTree(BlockEntityFirepit firepit, ITreeAttribute tree)
-    {
-        if (!boxes.TryGetValue(firepit, out Box? box)
-            || box == null
-            || string.IsNullOrEmpty(box.LastInteractorUid))
-        {
-            return;
-        }
-
-        tree.SetString(LastInteractorAttr, box.LastInteractorUid);
-    }
-
-    public static void ReadFromTree(BlockEntityFirepit firepit, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        string? last = tree.GetString(LastInteractorAttr);
-        if (string.IsNullOrWhiteSpace(last))
-        {
-            return;
-        }
-
-        Box box = boxes.GetOrCreateValue(firepit);
-        box.LastInteractorUid = last.Trim();
-        // Leave HavePrev false: first OnAfterTick / ObserveProcessing after load
-        // establishes the baseline without treating mid-process as a rising edge.
-    }
 }

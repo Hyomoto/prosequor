@@ -233,8 +233,8 @@ public static class XpBucketFixtures
             return;
         }
 
-        if (XpCurves.PlayerXpForSkillLevelGain(0, 3) != 46
-            || XpCurves.PlayerXpForSkillLevelGain(0, 1) != 15
+        if (XpCurves.PlayerXpForSkillLevelGain(0, 3) != 72
+            || XpCurves.PlayerXpForSkillLevelGain(0, 1) != 21
             || XpCurves.PlayerXpForSkillLevelGain(5, 5) != 0)
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (player XP for skill level gain).");

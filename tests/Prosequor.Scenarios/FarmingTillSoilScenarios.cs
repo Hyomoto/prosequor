@@ -137,11 +137,14 @@ public class FarmingTillSoilScenarios : AtlasScenarioBase
         Assert.True(blob.TryGetContributorWeight(player.PlayerUID, out int weight));
         Assert.Equal(4, weight);
 
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, farmland.Pos, out ProsequorChunkPedigree.Box stored));
         TreeAttribute tree = new();
-        farmland.ToTreeAttributes(tree);
+        stored.WriteTo(tree);
         ProsequorBlockPedigreeStation.Clear(farmland);
         Assert.False(ProsequorBlockPedigreeStation.TryGetBlob(farmland, out _));
-        farmland.FromTreeAttributes(tree, World.Api.World);
+        ProsequorChunkPedigree.Box restoredBox = new();
+        restoredBox.ReadFrom(tree);
+        ProsequorChunkPedigree.Set(World.Api.World, farmland.Pos, restoredBox);
         Assert.True(ProsequorBlockPedigreeStation.TryGetBlob(farmland, out ProsequorBlob restored));
         Assert.True(restored.TryGetContributorWeight(player.PlayerUID, out int restoredW));
         Assert.Equal(4, restoredW);
@@ -227,10 +230,13 @@ public class FarmingTillSoilScenarios : AtlasScenarioBase
         ProsequorBlockPedigreeStation.TryAddCareCredit(
             farmland, player.PlayerUID, FarmlandCareKind.Fertilize);
 
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, farmland.Pos, out ProsequorChunkPedigree.Box stored));
         TreeAttribute tree = new();
-        farmland.ToTreeAttributes(tree);
+        stored.WriteTo(tree);
         ProsequorBlockPedigreeStation.Clear(farmland);
-        farmland.FromTreeAttributes(tree, World.Api.World);
+        ProsequorChunkPedigree.Box restoredBox = new();
+        restoredBox.ReadFrom(tree);
+        ProsequorChunkPedigree.Set(World.Api.World, farmland.Pos, restoredBox);
         Assert.Equal(1.25f, ProsequorBlockPedigreeStation.GetAbsorbMultiplier(farmland));
 
         PlantOnFarmland(farmland, farmlandPos, player);
@@ -334,10 +340,13 @@ public class FarmingTillSoilScenarios : AtlasScenarioBase
         ProsequorBlockPedigreeStation.StampAbsorbMultiplier(farmland, 1.25f);
         Assert.Equal(0.5f, ProsequorBlockPedigreeStation.TryAddWaterCredit(farmland, 0.5f));
 
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, farmland.Pos, out ProsequorChunkPedigree.Box stored));
         TreeAttribute tree = new();
-        farmland.ToTreeAttributes(tree);
+        stored.WriteTo(tree);
         ProsequorBlockPedigreeStation.Clear(farmland);
-        farmland.FromTreeAttributes(tree, World.Api.World);
+        ProsequorChunkPedigree.Box restoredBox = new();
+        restoredBox.ReadFrom(tree);
+        ProsequorChunkPedigree.Set(World.Api.World, farmland.Pos, restoredBox);
         Assert.Equal(0.5f, ProsequorBlockPedigreeStation.GetWaterCredit(farmland));
         Assert.Equal(1.25f, ProsequorBlockPedigreeStation.GetAbsorbMultiplier(farmland));
 

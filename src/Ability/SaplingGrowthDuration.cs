@@ -1,10 +1,8 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Prosequor.Ability.Hooks;
 using Prosequor.Player;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -12,7 +10,7 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Place-time growth-duration pipeline for saplings, plus remaining-hour scaling
-/// when a multiplier was stamped on the block entity.
+/// when a multiplier was stamped on the pedigree host.
 /// </summary>
 public static class SaplingGrowthDuration
 {
@@ -20,60 +18,33 @@ public static class SaplingGrowthDuration
 
     const float MinMultiplier = 0.01f;
 
-    static readonly ConditionalWeakTable<BlockEntity, MultiplierBox> runtimeMultipliers = new();
-
     static readonly FieldInfo? TotalHoursTillGrowthField =
         AccessTools.Field(typeof(BlockEntitySapling), "totalHoursTillGrowth");
-
-    sealed class MultiplierBox
-    {
-        public float Multiplier;
-    }
 
     public static bool TryGetMultiplier(BlockEntity? be, out float multiplier)
     {
         multiplier = 1f;
-        if (be == null)
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || box.GrowthTimeMultiplier < MinMultiplier)
         {
             return false;
         }
 
-        if (runtimeMultipliers.TryGetValue(be, out MultiplierBox? box))
-        {
-            multiplier = box.Multiplier;
-            return true;
-        }
-
-        return false;
+        multiplier = box.GrowthTimeMultiplier;
+        return true;
     }
 
     public static void StampMultiplier(BlockEntity be, float multiplier)
     {
-        MultiplierBox box = runtimeMultipliers.GetOrCreateValue(be);
-        box.Multiplier = GameMath.Clamp(multiplier, MinMultiplier, float.MaxValue);
-        be.MarkDirty(redrawOnClient: false);
-    }
-
-    public static void WriteToTree(BlockEntity be, ITreeAttribute tree)
-    {
-        if (runtimeMultipliers.TryGetValue(be, out MultiplierBox? box))
-        {
-            tree.SetFloat(GrowthTimeMultiplierAttr, box.Multiplier);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntity be, ITreeAttribute tree)
-    {
-        if (!tree.HasAttribute(GrowthTimeMultiplierAttr))
+        if (be == null)
         {
             return;
         }
 
-        MultiplierBox box = runtimeMultipliers.GetOrCreateValue(be);
-        box.Multiplier = GameMath.Clamp(
-            tree.GetFloat(GrowthTimeMultiplierAttr),
-            MinMultiplier,
-            float.MaxValue);
+        ProsequorBlockPedigreeStation.Mutate(
+            be,
+            box => box.GrowthTimeMultiplier = GameMath.Clamp(multiplier, MinMultiplier, float.MaxValue));
     }
 
     /// <summary>

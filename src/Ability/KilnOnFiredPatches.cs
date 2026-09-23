@@ -79,21 +79,7 @@ public static class KilnFireXpPatches
             BeeHiveKilnFirerStation.OnAfterServerTick(__instance);
     }
 
-    [HarmonyPatch(typeof(BlockEntityBeeHiveKiln), nameof(BlockEntityBeeHiveKiln.ToTreeAttributes))]
-    public static class BeeHiveKilnFirerToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBeeHiveKiln __instance, ITreeAttribute tree) =>
-            BeeHiveKilnFirerStation.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityBeeHiveKiln), nameof(BlockEntityBeeHiveKiln.FromTreeAttributes))]
-    public static class BeeHiveKilnFirerFromTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBeeHiveKiln __instance, ITreeAttribute tree) =>
-            BeeHiveKilnFirerStation.ReadFromTree(__instance, tree);
-    }
 
     /// <summary>Player-lit coal piles under a beehive kiln note the igniter.</summary>
     [HarmonyPatch(typeof(BlockCoalPile), nameof(BlockCoalPile.OnTryIgniteBlockOver))]

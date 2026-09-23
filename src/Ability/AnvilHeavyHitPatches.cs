@@ -212,18 +212,4 @@ public static class AnvilCheckIfFinishedXpPatch
         AnvilXpStation.TryAwardProgress(__instance, byPlayer);
 }
 
-[HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.ToTreeAttributes))]
-public static class AnvilXpToTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityAnvil __instance, ITreeAttribute tree) =>
-        AnvilXpStation.WriteToTree(__instance, tree);
-}
 
-[HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.FromTreeAttributes))]
-public static class AnvilXpFromTreePatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityAnvil __instance, ITreeAttribute tree) =>
-        AnvilXpStation.ReadFromTree(__instance, tree);
-}

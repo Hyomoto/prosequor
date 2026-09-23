@@ -1,5 +1,5 @@
+using System;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -13,7 +13,7 @@ namespace Prosequor.Ability;
 /// absorb multiplier and the unpaid absorb remainder live on the same box and
 /// survive harvest. Watering XP uses a crop-scoped moisture budget that harvest
 /// clears. Berry bushes, saplings, and fruit-tree cuttings store planter only.
-/// Persistence lives on <see cref="BlockEntityBehaviorProsequorPedigree"/>.
+/// Persistence lives on <see cref="ProsequorChunkPedigree"/> (chunk moddata).
 /// </summary>
 public static class ProsequorBlockPedigreeStation
 {
@@ -50,8 +50,14 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        Require(be).Blob = blob;
-        be.MarkDirty(redrawOnClient: false);
+        if (!TryWorld(be, out IWorldAccessor world))
+        {
+            return;
+        }
+
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
+        box.Blob = blob;
+        Commit(world, be, box);
     }
 
     public static void CaptureAtPos(IWorldAccessor? world, BlockPos? pos, ItemStack? byItemStack)
@@ -70,7 +76,7 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static void StampPlanter(BlockEntity? be, string? planterUid)
     {
-        if (be == null)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
@@ -81,9 +87,9 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.Blob = box.Blob.WithMaker(uid);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     /// <summary>
@@ -192,7 +198,6 @@ public static class ProsequorBlockPedigreeStation
         }
 
         Clear(be);
-        be.MarkDirty(redrawOnClient: false);
     }
 
     /// <summary>Clear planter pedigree stored directly on a farmland BE.</summary>
@@ -202,8 +207,13 @@ public static class ProsequorBlockPedigreeStation
     public static bool TryGetBlob(BlockEntity? be, out ProsequorBlob blob)
     {
         blob = ProsequorBlob.Empty;
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box == null || box.Blob.IsAnonymous)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
+        {
+            return false;
+        }
+
+        if (!ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box)
+            || !box.Blob.HasPersistable)
         {
             return false;
         }
@@ -212,17 +222,44 @@ public static class ProsequorBlockPedigreeStation
         return true;
     }
 
-    /// <summary>Increments contributor weight on the BE Live blob (default +1).</summary>
-    public static void AddContributor(BlockEntity? be, string? contributorUid, int amount = 1)
+    /// <summary>Mutate the chunk pedigree box and commit (server).</summary>
+    public static void Mutate(BlockEntity? be, Action<ProsequorChunkPedigree.Box> mutate)
     {
-        if (be == null || string.IsNullOrWhiteSpace(contributorUid) || amount <= 0)
+        if (be == null || mutate == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
+        mutate(box);
+        Commit(world, be, box);
+    }
+
+    public static bool TryGetBox(BlockEntity? be, out ProsequorChunkPedigree.Box box)
+    {
+        box = new ProsequorChunkPedigree.Box();
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
+        {
+            return false;
+        }
+
+        return ProsequorChunkPedigree.TryGet(world, be.Pos, out box);
+    }
+
+    /// <summary>Increments contributor weight on the BE Live blob (default +1).</summary>
+    public static void AddContributor(BlockEntity? be, string? contributorUid, int amount = 1)
+    {
+        if (be == null
+            || string.IsNullOrWhiteSpace(contributorUid)
+            || amount <= 0
+            || !TryWorld(be, out IWorldAccessor world))
+        {
+            return;
+        }
+
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.Blob = box.Blob.WithContributor(contributorUid.Trim(), amount);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     /// <summary>
@@ -234,14 +271,17 @@ public static class ProsequorBlockPedigreeStation
         string? contributorUid,
         FarmlandCareKind kind)
     {
-        if (be == null || kind == FarmlandCareKind.None || string.IsNullOrWhiteSpace(contributorUid))
+        if (be == null
+            || kind == FarmlandCareKind.None
+            || string.IsNullOrWhiteSpace(contributorUid)
+            || !TryWorld(be, out IWorldAccessor world))
         {
             return false;
         }
 
         string uid = contributorUid.Trim();
         int bit = (int)kind;
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.CareFlags ??= new Dictionary<string, int>(StringComparer.Ordinal);
         box.CareFlags.TryGetValue(uid, out int flags);
         if ((flags & bit) != 0)
@@ -251,15 +291,16 @@ public static class ProsequorBlockPedigreeStation
 
         box.CareFlags[uid] = flags | bit;
         box.Blob = box.Blob.WithContributor(uid, 1);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
         return true;
     }
 
     /// <summary>Soil Enrichment slow-release multiplier (1 = vanilla). Missing stamp → 1.</summary>
     public static float GetAbsorbMultiplier(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box != null)
+        if (be != null
+            && TryWorld(be, out IWorldAccessor world)
+            && ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box))
         {
             return Math.Max(box.AbsorbMultiplier, DefaultAbsorbMultiplier);
         }
@@ -270,20 +311,21 @@ public static class ProsequorBlockPedigreeStation
     /// <summary>Stamps the absorb multiplier. Does not touch maker, contributors, or care flags.</summary>
     public static void StampAbsorbMultiplier(BlockEntity? be, float multiplier)
     {
-        if (be == null)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.AbsorbMultiplier = GameMath.Clamp(multiplier, DefaultAbsorbMultiplier, float.MaxValue);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     public static float GetAbsorbRemainder(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box != null)
+        if (be != null
+            && TryWorld(be, out IWorldAccessor world)
+            && ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box))
         {
             return Math.Max(0f, box.AbsorbRemainder);
         }
@@ -294,13 +336,14 @@ public static class ProsequorBlockPedigreeStation
     /// <summary>Adds drained nutrient percent to the unpaid remainder. Survives harvest.</summary>
     public static float AddAbsorbRemainder(BlockEntity? be, float transferred)
     {
-        if (be == null || transferred <= AbsorbEpsilon)
+        if (be == null || transferred <= AbsorbEpsilon || !TryWorld(be, out IWorldAccessor world))
         {
             return GetAbsorbRemainder(be);
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.AbsorbRemainder = Math.Max(0f, box.AbsorbRemainder) + transferred;
+        Commit(world, be, box);
         return box.AbsorbRemainder;
     }
 
@@ -310,8 +353,9 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static int TakeAbsorbPercents(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box == null)
+        if (be == null
+            || !TryWorld(be, out IWorldAccessor world)
+            || !ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box))
         {
             return 0;
         }
@@ -328,13 +372,15 @@ public static class ProsequorBlockPedigreeStation
             box.AbsorbRemainder = 0f;
         }
 
+        Commit(world, be, box);
         return whole;
     }
 
     public static float GetWaterCredit(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box != null)
+        if (be != null
+            && TryWorld(be, out IWorldAccessor world)
+            && ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box))
         {
             return Math.Clamp(box.WaterCredit, 0f, WaterCreditCap);
         }
@@ -348,12 +394,12 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static float TryAddWaterCredit(BlockEntity? be, float gained)
     {
-        if (be == null || gained <= WaterCreditMinGain)
+        if (be == null || gained <= WaterCreditMinGain || !TryWorld(be, out IWorldAccessor world))
         {
             return 0f;
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         float room = WaterCreditCap - Math.Clamp(box.WaterCredit, 0f, WaterCreditCap);
         if (room <= AbsorbEpsilon)
         {
@@ -362,21 +408,23 @@ public static class ProsequorBlockPedigreeStation
 
         float credited = Math.Min(gained, room);
         box.WaterCredit = Math.Clamp(box.WaterCredit + credited, 0f, WaterCreditCap);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
         return credited;
     }
 
     /// <summary>Growth spend: the next stage can earn another full pour.</summary>
     public static void ResetWaterCredit(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box == null || box.WaterCredit <= AbsorbEpsilon)
+        if (be == null
+            || !TryWorld(be, out IWorldAccessor world)
+            || !ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box)
+            || box.WaterCredit <= AbsorbEpsilon)
         {
             return;
         }
 
         box.WaterCredit = 0f;
-        be!.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     /// <summary>
@@ -385,7 +433,7 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static void StampSoleContributor(BlockEntity? be, string? contributorUid)
     {
-        if (be == null)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
@@ -396,9 +444,9 @@ public static class ProsequorBlockPedigreeStation
             return;
         }
 
-        BlockEntityBehaviorProsequorPedigree box = Require(be);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
         box.Blob = box.Blob.WithSoleContributor(uid);
-        be.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     /// <summary>True only when the BE Live blob has exactly one contributor share.</summary>
@@ -414,15 +462,17 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static void ClearContributors(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        if (box == null || box.Blob.IsAnonymous)
+        if (be == null
+            || !TryWorld(be, out IWorldAccessor world)
+            || !ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box)
+            || box.Blob.IsAnonymous)
         {
             return;
         }
 
         ProsequorBlob cleared = box.Blob.WithClearedContributors();
         box.Blob = cleared.IsAnonymous ? ProsequorBlob.Empty : cleared;
-        be!.MarkDirty(redrawOnClient: false);
+        Commit(world, be, box);
     }
 
     /// <summary>
@@ -431,7 +481,7 @@ public static class ProsequorBlockPedigreeStation
     /// </summary>
     public static void ApplyBlob(BlockEntity? be, ProsequorBlob blob)
     {
-        if (be == null)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
@@ -439,33 +489,34 @@ public static class ProsequorBlockPedigreeStation
         if (blob.IsAnonymous)
         {
             Clear(be);
-            be.MarkDirty(redrawOnClient: false);
             return;
         }
 
-        Require(be).Blob = blob;
-        be.MarkDirty(redrawOnClient: false);
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, be.Pos);
+        box.Blob = blob;
+        Commit(world, be, box);
     }
 
     public static void Clear(BlockEntity? be)
     {
-        BlockEntityBehaviorProsequorPedigree? box = TryGet(be);
-        box?.ClearPedigree();
-    }
-
-    /// <summary>
-    /// Ensure the pedigree behavior is on the block entity before
-    /// <see cref="BlockEntity.FromTreeAttributes"/> runs.
-    /// </summary>
-    public static void EnsureAttached(BlockEntity? be)
-    {
-        if (be == null)
+        if (be == null || !TryWorld(be, out IWorldAccessor world))
         {
             return;
         }
 
-        Require(be);
+        if (!ProsequorChunkPedigree.TryGet(world, be.Pos, out ProsequorChunkPedigree.Box box))
+        {
+            ProsequorChunkPedigree.Clear(world, be.Pos);
+            return;
+        }
+
+        box.ClearPedigree();
+        Commit(world, be, box);
     }
+
+    /// <summary>Drop the chunk pedigree entry when the block entity is removed.</summary>
+    public static void ClearAtPos(IWorldAccessor? world, BlockPos? pos) =>
+        ProsequorChunkPedigree.Clear(world, pos);
 
     /// <summary>
     /// Restore pedigree onto pick/break stacks that represent this block.
@@ -514,20 +565,22 @@ public static class ProsequorBlockPedigreeStation
         ApplyToStack(world.BlockAccessor?.GetBlockEntity(pos), block, stack);
     }
 
-    static BlockEntityBehaviorProsequorPedigree? TryGet(BlockEntity? be) =>
-        be?.GetBehavior<BlockEntityBehaviorProsequorPedigree>();
-
-    static BlockEntityBehaviorProsequorPedigree Require(BlockEntity be)
+    static bool TryWorld(BlockEntity be, out IWorldAccessor world)
     {
-        BlockEntityBehaviorProsequorPedigree? existing = be.GetBehavior<BlockEntityBehaviorProsequorPedigree>();
-        if (existing != null)
+        if (be.Api?.World is IWorldAccessor resolved)
         {
-            return existing;
+            world = resolved;
+            return true;
         }
 
-        BlockEntityBehaviorProsequorPedigree created = new(be);
-        be.Behaviors.Add(created);
-        return created;
+        world = null!;
+        return false;
+    }
+
+    static void Commit(IWorldAccessor world, BlockEntity be, ProsequorChunkPedigree.Box box)
+    {
+        ProsequorChunkPedigree.Set(world, be.Pos, box);
+        be.MarkDirty(redrawOnClient: false);
     }
 
     static void ApplyToStack(Block? block, ItemStack stack, ProsequorBlob blob)

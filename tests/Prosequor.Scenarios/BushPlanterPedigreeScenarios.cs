@@ -30,7 +30,8 @@ public class BushPlanterPedigreeScenarios : AtlasScenarioBase
         Assert.Equal(player.PlayerUID, blob.MakerUid);
 
         TreeAttribute tree = new();
-        be.ToTreeAttributes(tree);
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, be.Pos, out ProsequorChunkPedigree.Box stored));
+        stored.WriteTo(tree);
         ITreeAttribute? live = tree.GetTreeAttribute(ProsequorStackPedigree.LiveAttr);
         Assert.NotNull(live);
         Assert.Equal(player.PlayerUID, ProsequorBlob.ReadFrom(live!).MakerUid);

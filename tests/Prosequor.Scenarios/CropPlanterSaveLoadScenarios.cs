@@ -62,22 +62,13 @@ public class CropPlanterSaveLoadScenarios : AtlasScenarioBase
             cropCode = crop.Code?.ToString();
             planted = true;
 
-            TreeAttribute tree = new();
-            farmland.ToTreeAttributes(tree);
-            byte[] treeBytes = tree.ToBytes();
-            TreeAttribute roundTrip = new();
-            roundTrip.FromBytes(treeBytes);
-            ITreeAttribute? live = roundTrip.GetTreeAttribute(ProsequorStackPedigree.LiveAttr);
-            Assert.True(
-                live != null && ProsequorBlob.ReadFrom(live).MakerUid == uid,
-                "The farmland tree bytes do not contain the planter, so a chunk save cannot write it.");
-
-            BlockEntity restored = RestoreFarmland(roundTrip, farmland.Block);
-            Assert.True(
-                ProsequorBlockPedigreeStation.TryGetPlanter(restored, out string? treePlanter) && treePlanter == uid,
-                "FromTreeAttributes on a new farmland block entity did not restore the planter.");
-
             IWorldAccessor world = World.Api.World;
+            Assert.True(
+                ProsequorChunkPedigree.TryGet(world, farmlandPos, out ProsequorChunkPedigree.Box chunkBox)
+                && !chunkBox.Blob.IsAnonymous
+                && chunkBox.Blob.MakerUid == uid,
+                "The chunk moddata bag does not contain the planter, so a world save cannot keep it.");
+
             if (world.BlockAccessor.GetChunkAtBlockPos(farmlandPos) is not ServerChunk serverChunk)
             {
                 Assert.Fail("The planted farmland is not in a loaded server chunk.");
@@ -245,22 +236,23 @@ public class CropPlanterSaveLoadScenarios : AtlasScenarioBase
     bool DecodedHasPlanter(IWorldAccessor world, byte[] bytes, BlockPos farmlandPos, string uid)
     {
         ServerChunk decoded = DecodeChunk(RequireServerMain(world), bytes);
-        return FindFarmland(decoded, farmlandPos) is BlockEntity farmland
-            && ProsequorBlockPedigreeStation.TryGetPlanter(farmland, out string? planter)
-            && planter == uid;
+        return ProsequorChunkPedigree.TryGetFromChunk(decoded, farmlandPos, out ProsequorChunkPedigree.Box box)
+            && !box.Blob.IsAnonymous
+            && box.Blob.MakerUid == uid;
     }
 
     string DiskMissMessage(byte[] saved, BlockPos farmlandPos)
     {
         IWorldAccessor world = World.Api.World;
-        bool liveAttr = ContainsUtf8(saved, ProsequorStackPedigree.LiveAttr);
+        bool liveAttr = ContainsUtf8(saved, ProsequorChunkPedigree.ModDataKey)
+            || ContainsUtf8(saved, ProsequorStackPedigree.LiveAttr);
         string decoded = DescribeDecoded(world, saved, farmlandPos);
         if (liveAttr)
         {
-            return "The database chunk contains prosequorLive, but the restored farmland has no planter. " + decoded;
+            return "The database chunk contains pedigree moddata, but the restored entry has no planter. " + decoded;
         }
 
-        return "The database chunk does not contain prosequorLive. The planter never reached disk. " + decoded;
+        return "The database chunk does not contain pedigree moddata. The planter never reached disk. " + decoded;
     }
 
     string RestartMissMessage()

@@ -3,7 +3,6 @@ using HarmonyLib;
 using Prosequor.Xp;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -27,7 +26,8 @@ public static class CementationLoadScope
 
 /// <summary>
 /// Cementation furnace XP: BE contributor bag (loaders + fuel), settle once when
-/// <c>processComplete</c> rises. Paid flag persists so chunk reload cannot repay.
+/// <c>processComplete</c> rises. Paid flag persists on <see cref="ProsequorChunkPedigree"/>
+/// so chunk reload cannot repay. Rising-edge baseline is ephemeral.
 /// </summary>
 public static class CementationXpStation
 {
@@ -40,11 +40,10 @@ public static class CementationXpStation
     static readonly AccessTools.FieldRef<BlockEntityStoneCoffin, bool>? ProcessCompleteField =
         AccessTools.FieldRefAccess<BlockEntityStoneCoffin, bool>("processComplete");
 
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
+    static readonly ConditionalWeakTable<BlockEntity, EdgeBox> edges = new();
 
-    sealed class Box
+    sealed class EdgeBox
     {
-        public bool Paid;
         public bool PrevComplete;
         public bool HavePrev;
     }
@@ -117,16 +116,18 @@ public static class CementationXpStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(coffin);
+        EdgeBox edge = edges.GetOrCreateValue(coffin);
         bool complete = ProcessCompleteField(coffin);
-        if (!box.HavePrev)
+        bool paid = ProsequorBlockPedigreeStation.TryGetBox(coffin, out ProsequorChunkPedigree.Box host)
+            && host.CementationPaid;
+
+        if (!edge.HavePrev)
         {
-            box.PrevComplete = complete;
-            box.HavePrev = true;
-            // Mid-run load of an already-complete coffin: do not grant on first tick.
-            if (complete && !box.Paid)
+            edge.PrevComplete = complete;
+            edge.HavePrev = true;
+            if (complete && !paid)
             {
-                box.Paid = true;
+                ProsequorBlockPedigreeStation.Mutate(coffin, b => b.CementationPaid = true);
             }
 
             return;
@@ -141,50 +142,19 @@ public static class CementationXpStation
         if (!TrySettleRisingEdge(
                 complete,
                 hasContributors,
-                ref box.PrevComplete,
-                ref box.Paid))
+                ref edge.PrevComplete,
+                ref paid))
         {
+            if (!complete && paid)
+            {
+                ProsequorBlockPedigreeStation.Mutate(coffin, b => b.CementationPaid = false);
+            }
+
             return;
         }
 
+        ProsequorBlockPedigreeStation.Mutate(coffin, b => b.CementationPaid = true);
         CementationXp.Settle(coffin, shares);
-        coffin.MarkDirty(redrawOnClient: false);
-    }
-
-    public static void WriteToTree(BlockEntityStoneCoffin coffin, ITreeAttribute tree)
-    {
-        if (!boxes.TryGetValue(coffin, out Box? box) || box == null)
-        {
-            return;
-        }
-
-        if (box.Paid)
-        {
-            tree.SetBool(PaidAttr, true);
-        }
-
-        if (box.HavePrev && box.PrevComplete)
-        {
-            tree.SetBool(WasCompleteAttr, true);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntityStoneCoffin coffin, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        Box box = boxes.GetOrCreateValue(coffin);
-        box.Paid = tree.GetBool(PaidAttr);
-        box.PrevComplete = tree.GetBool(WasCompleteAttr) || IsProcessComplete(coffin);
-        box.HavePrev = true;
-        if (box.PrevComplete && !box.Paid)
-        {
-            // Legacy / mid-run save: treat as already settled.
-            box.Paid = true;
-        }
     }
 
     public static int BlisterQuantity(BlockEntityStoneCoffin? coffin)

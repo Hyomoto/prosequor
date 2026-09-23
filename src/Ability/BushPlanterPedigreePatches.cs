@@ -101,26 +101,6 @@ public static class BushPlanterPedigreePatches
         }
     }
 
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.OnBlockRemoved))]
-    public static class BlockEntityOnBlockRemovedBushPlanterPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance)
-        {
-            if (__instance?.Api?.Side != EnumAppSide.Server || __instance.Block == null)
-            {
-                return;
-            }
-
-            if (!AbilityBootstrap.IsBerryBushBlock(__instance.Block))
-            {
-                return;
-            }
-
-            ProsequorBlockPedigreeStation.ClearPlanter(__instance);
-        }
-    }
-
     [HarmonyPatch(typeof(BlockEntityBerryBush), nameof(BlockEntityBerryBush.GetBlockInfo))]
     public static class BerryBushGetBlockInfoPlanterPatch
     {

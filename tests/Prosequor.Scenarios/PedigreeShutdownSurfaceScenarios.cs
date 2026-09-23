@@ -138,16 +138,11 @@ public class PedigreeShutdownSurfaceScenarios : AtlasScenarioBase
                 continue;
             }
 
-            BlockEntity? saved = FindBlockEntity(chunk, pos);
-            if (saved == null)
+            if (!ProsequorChunkPedigree.TryGetFromChunk(chunk, pos, out ProsequorChunkPedigree.Box box)
+                || box.Blob.IsAnonymous
+                || box.Blob.MakerUid != subject.Uid)
             {
-                missing.Add($"{subject.Name}: chunk saved, block entity omitted");
-                continue;
-            }
-
-            if (!ProsequorBlockPedigreeStation.TryGetPlanter(saved, out string? planter) || planter != subject.Uid)
-            {
-                missing.Add($"{subject.Name}: block entity saved, planter omitted");
+                missing.Add($"{subject.Name}: chunk saved, planter omitted");
             }
         }
 
@@ -410,26 +405,10 @@ public class PedigreeShutdownSurfaceScenarios : AtlasScenarioBase
 
     string? DecodedPlanter(IWorldAccessor world, byte[] bytes, BlockPos pos)
     {
-        BlockEntity? be = FindBlockEntity(DecodeChunk(world, bytes), pos);
-        return be != null && ProsequorBlockPedigreeStation.TryGetPlanter(be, out string? planter) ? planter : null;
-    }
-
-    static BlockEntity? FindBlockEntity(ServerChunk chunk, BlockPos pos)
-    {
-        if (chunk.BlockEntities == null)
-        {
-            return null;
-        }
-
-        foreach (KeyValuePair<BlockPos, BlockEntity> entry in chunk.BlockEntities)
-        {
-            if (entry.Key.X == pos.X && entry.Key.Y == pos.Y && entry.Key.Z == pos.Z)
-            {
-                return entry.Value;
-            }
-        }
-
-        return null;
+        return ProsequorChunkPedigree.TryGetFromChunk(DecodeChunk(world, bytes), pos, out ProsequorChunkPedigree.Box box)
+            && !box.Blob.IsAnonymous
+            ? box.Blob.MakerUid
+            : null;
     }
 
     ServerChunk RequireChunk(BlockPos pos)

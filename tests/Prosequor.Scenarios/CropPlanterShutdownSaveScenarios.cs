@@ -197,13 +197,14 @@ public class CropPlanterShutdownSaveScenarios : AtlasScenarioBase
 
     static string RowMissMessage(byte[] saved)
     {
-        bool liveAttr = saved.AsSpan().IndexOf(Encoding.UTF8.GetBytes(ProsequorStackPedigree.LiveAttr)) >= 0;
-        if (liveAttr)
+        bool moddata = saved.AsSpan().IndexOf(Encoding.UTF8.GetBytes(ProsequorChunkPedigree.ModDataKey)) >= 0
+            || saved.AsSpan().IndexOf(Encoding.UTF8.GetBytes(ProsequorStackPedigree.LiveAttr)) >= 0;
+        if (moddata)
         {
-            return "Shutdown replaced the chunk row. The bytes contain prosequorLive, but the farmland block entity in that row has no planter.";
+            return "Shutdown replaced the chunk row. The bytes contain pedigree moddata, but the entry has no planter.";
         }
 
-        return "Shutdown replaced the chunk row. The new row does not contain prosequorLive.";
+        return "Shutdown replaced the chunk row. The new row does not contain pedigree moddata.";
     }
 
     static string HashChunk(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
@@ -211,9 +212,9 @@ public class CropPlanterShutdownSaveScenarios : AtlasScenarioBase
     static bool DecodedHasPlanter(IWorldAccessor world, byte[] bytes, BlockPos farmlandPos, string uid)
     {
         ServerChunk decoded = DecodeChunk((ServerMain)world, bytes);
-        return FindFarmland(decoded, farmlandPos) is BlockEntity farmland
-            && ProsequorBlockPedigreeStation.TryGetPlanter(farmland, out string? planter)
-            && planter == uid;
+        return ProsequorChunkPedigree.TryGetFromChunk(decoded, farmlandPos, out ProsequorChunkPedigree.Box box)
+            && !box.Blob.IsAnonymous
+            && box.Blob.MakerUid == uid;
     }
 
     static ServerChunk DecodeChunk(ServerMain server, byte[] bytes)

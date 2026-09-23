@@ -29,7 +29,8 @@ public class ProsequorBlockPedigreeScenarios : AtlasScenarioBase
         Assert.Equal("stash-maker", blob.MakerUid);
 
         TreeAttribute tree = new();
-        be!.ToTreeAttributes(tree);
+        Assert.True(ProsequorChunkPedigree.TryGet(World.Api.World, be!.Pos, out ProsequorChunkPedigree.Box stored));
+        stored.WriteTo(tree);
         ITreeAttribute? live = tree.GetTreeAttribute(ProsequorStackPedigree.LiveAttr);
         Assert.NotNull(live);
         Assert.Equal("stash-maker", ProsequorBlob.ReadFrom(live).MakerUid);

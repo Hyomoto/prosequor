@@ -36,12 +36,19 @@ public static class ProsequorBlockPedigreePatches
             ProsequorBlockPedigreeStation.CaptureFromPlacedStack(__instance, byItemStack);
     }
 
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.CreateBehaviors))]
-    public static class BlockEntityCreateBehaviorsPedigreePatch
+    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.OnBlockRemoved))]
+    public static class BlockEntityOnBlockRemovedPedigreePatch
     {
         [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance) =>
-            ProsequorBlockPedigreeStation.EnsureAttached(__instance);
+        public static void Postfix(BlockEntity __instance)
+        {
+            if (__instance?.Api?.Side != EnumAppSide.Server || __instance.Api.World == null)
+            {
+                return;
+            }
+
+            ProsequorBlockPedigreeStation.ClearAtPos(__instance.Api.World, __instance.Pos);
+        }
     }
 
     [HarmonyPatch(typeof(Block), nameof(Block.GetDrops))]

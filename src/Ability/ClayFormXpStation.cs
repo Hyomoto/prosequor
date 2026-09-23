@@ -1,27 +1,17 @@
-using System.Runtime.CompilerServices;
 using Prosequor.Xp;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
 /// High-water good-voxel count on a clay form, keyed by selected recipe.
-/// Survives chunk save/load so undo-redo cannot re-farm XP after a reload.
+/// Survives chunk save/load on <see cref="ProsequorChunkPedigree"/> so undo-redo cannot re-farm XP.
 /// </summary>
 public static class ClayFormXpStation
 {
     public const string HighWaterAttr = "prosequorClayXpHighWater";
     public const string RecipeKeyAttr = "prosequorClayXpRecipe";
-
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public int HighWater;
-        public string? RecipeKey;
-    }
 
     public static string? RecipeKeyOf(ClayFormingRecipe? recipe)
     {
@@ -30,8 +20,6 @@ public static class ClayFormXpStation
             return null;
         }
 
-        // RecipeBase.Name is the recipe id (e.g. game:recipes/clayforming/bowl).
-        // Color variants from one file share this name; voxel XP keys on it, collection membership does not.
         AssetLocation? name = recipe.Name;
         if (name == null)
         {
@@ -62,63 +50,44 @@ public static class ClayFormXpStation
         int layers = Math.Min(16, form.SelectedRecipe.QuantityLayers);
         int good = ClayFormXpMath.CountGood(form.Voxels, form.SelectedRecipe.Voxels, layers);
 
-        Box box = boxes.GetOrCreateValue(form);
+        if (!ProsequorBlockPedigreeStation.TryGetBox(form, out ProsequorChunkPedigree.Box box))
+        {
+            box = new ProsequorChunkPedigree.Box();
+        }
+
         int paid = ClayFormXpMath.TakeDelta(
             good,
-            box.HighWater,
-            box.RecipeKey,
+            box.ClayHighWater,
+            box.ClayRecipeKey,
             currentKey,
             out int newHighWater,
             out string? newKey);
 
-        if (box.HighWater != newHighWater || !string.Equals(box.RecipeKey, newKey, StringComparison.Ordinal))
+        if (box.ClayHighWater != newHighWater
+            || !string.Equals(box.ClayRecipeKey, newKey, StringComparison.Ordinal))
         {
-            box.HighWater = newHighWater;
-            box.RecipeKey = newKey;
-            form.MarkDirty(redrawOnClient: false);
+            ProsequorBlockPedigreeStation.Mutate(form, b =>
+            {
+                b.ClayHighWater = newHighWater;
+                b.ClayRecipeKey = newKey;
+            });
         }
 
         return paid;
     }
 
-    public static void WriteToTree(BlockEntityClayForm form, ITreeAttribute tree)
+    /// <summary>Scenario / test stamp of high-water state onto the pedigree host.</summary>
+    public static void Stamp(BlockEntityClayForm? form, int highWater, string? recipeKey)
     {
-        if (!boxes.TryGetValue(form, out Box? box) || box == null)
+        if (form == null)
         {
             return;
         }
 
-        if (box.HighWater > 0)
+        ProsequorBlockPedigreeStation.Mutate(form, box =>
         {
-            tree.SetInt(HighWaterAttr, box.HighWater);
-        }
-
-        if (!string.IsNullOrEmpty(box.RecipeKey))
-        {
-            tree.SetString(RecipeKeyAttr, box.RecipeKey);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntityClayForm form, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        bool hasWater = tree.HasAttribute(HighWaterAttr);
-        bool hasKey = tree.HasAttribute(RecipeKeyAttr);
-        if (!hasWater && !hasKey)
-        {
-            return;
-        }
-
-        Box box = boxes.GetOrCreateValue(form);
-        box.HighWater = hasWater ? Math.Max(0, tree.GetInt(HighWaterAttr)) : 0;
-        box.RecipeKey = hasKey ? tree.GetString(RecipeKeyAttr) : null;
-        if (string.IsNullOrWhiteSpace(box.RecipeKey))
-        {
-            box.RecipeKey = null;
-        }
+            box.ClayHighWater = Math.Max(0, highWater);
+            box.ClayRecipeKey = string.IsNullOrWhiteSpace(recipeKey) ? null : recipeKey.Trim();
+        });
     }
 }

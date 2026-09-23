@@ -40,21 +40,7 @@ public static class BlockFruitTreeBranchTryPlaceBlockSuccessPatch
     }
 }
 
-[HarmonyPatch(typeof(BlockEntityFruitTreeBranch), nameof(BlockEntityFruitTreeBranch.ToTreeAttributes))]
-public static class BlockEntityFruitTreeBranchToTreeAttributesSuccessPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityFruitTreeBranch __instance, ITreeAttribute tree) =>
-        FruitTreeCuttingSuccess.WriteToTree(__instance, tree);
-}
 
-[HarmonyPatch(typeof(BlockEntityFruitTreeBranch), nameof(BlockEntityFruitTreeBranch.FromTreeAttributes))]
-public static class BlockEntityFruitTreeBranchFromTreeAttributesSuccessPatch
-{
-    [HarmonyPostfix]
-    public static void Postfix(BlockEntityFruitTreeBranch __instance, ITreeAttribute tree) =>
-        FruitTreeCuttingSuccess.ReadFromTree(__instance, tree);
-}
 
 [HarmonyPatch(typeof(FruitTreeGrowingBranchBH), "TryGrow")]
 public static class FruitTreeGrowingBranchBHTryGrowSuccessPatch

@@ -97,21 +97,7 @@ public static class CollectXpEggPatches
         CollectXpBlockStampStation.SetAtPos(entity.World, pos);
     }
 
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.ToTreeAttributes))]
-    public static class BlockEntityToTreeCollectXpPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance, ITreeAttribute tree) =>
-            CollectXpBlockStampStation.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntity), nameof(BlockEntity.FromTreeAttributes))]
-    public static class BlockEntityFromTreeCollectXpPatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntity __instance, ITreeAttribute tree) =>
-            CollectXpBlockStampStation.ReadFromTree(__instance, tree);
-    }
 
     [HarmonyPatch(typeof(Block), nameof(Block.GetDrops))]
     public static class BlockGetDropsCollectXpPatch

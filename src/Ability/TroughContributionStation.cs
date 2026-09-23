@@ -1,15 +1,13 @@
-using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Weighted contributor bag on a trough (<c>playerUid → portion count</c>), same shape as
-/// deed <see cref="Xp.Activity.Deed.ContributorShare"/>. Fill increments weight; eat picks
-/// a random contributor proportional to weight and decrements by 1.
+/// Weighted contributor bag on a trough, stored as Live pedigree contributors
+/// (<c>playerUid → portion count</c>). Fill increments weight; eat picks a random
+/// contributor proportional to weight and decrements by 1.
 /// </summary>
 public static class TroughContributionStation
 {
@@ -17,13 +15,6 @@ public static class TroughContributionStation
     public const string CountKey = "n";
     public const string UidKey = "uid";
     public const string WeightKey = "w";
-
-    static readonly ConditionalWeakTable<BlockEntity, ContributionBox> boxes = new();
-
-    sealed class ContributionBox
-    {
-        public Dictionary<string, int> Weights { get; } = new(StringComparer.Ordinal);
-    }
 
     /// <summary>Add <paramref name="amount"/> to <paramref name="uid"/>'s weight (flat bag).</summary>
     public static void AddContribution(Dictionary<string, int> weights, string? uid, int amount = 1)
@@ -151,48 +142,65 @@ public static class TroughContributionStation
             return;
         }
 
-        ContributionBox box = boxes.GetOrCreateValue(trough);
-        AddContribution(box.Weights, uid, amount);
-        trough.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.AddContributor(trough, uid, amount);
     }
 
     public static bool TryTakeContribution(BlockEntityTrough? trough, out string? uid)
     {
         uid = null;
-        if (trough == null || !boxes.TryGetValue(trough, out ContributionBox? box))
+        if (trough == null
+            || !ProsequorBlockPedigreeStation.TryGetBlob(trough, out ProsequorBlob blob)
+            || blob.Contributors.Count == 0)
         {
             return false;
         }
 
+        Dictionary<string, int> weights = SharesToDict(blob);
         Random? rand = trough.Api?.World?.Rand;
-        if (!TryTakeContribution(box.Weights, out uid, rand))
+        if (!TryTakeContribution(weights, out uid, rand) || string.IsNullOrEmpty(uid))
         {
             return false;
         }
 
-        trough.MarkDirty(redrawOnClient: false);
+        string taken = uid;
+        ProsequorBlockPedigreeStation.Mutate(trough, box =>
+        {
+            box.Blob = box.Blob.WithContributorDecrement(taken, 1);
+            if (box.Blob.IsAnonymous && !box.Blob.HasSurface)
+            {
+                box.Blob = ProsequorBlob.Empty;
+            }
+        });
         return true;
     }
 
     public static int PendingCount(BlockEntityTrough? trough)
     {
-        if (trough == null || !boxes.TryGetValue(trough, out ContributionBox? box))
+        if (trough == null || !ProsequorBlockPedigreeStation.TryGetBlob(trough, out ProsequorBlob blob))
         {
             return 0;
         }
 
-        return TotalWeight(box.Weights);
+        int total = 0;
+        for (int i = 0; i < blob.Contributors.Count; i++)
+        {
+            if (blob.Contributors[i].Weight > 0)
+            {
+                total += blob.Contributors[i].Weight;
+            }
+        }
+
+        return total;
     }
 
     public static void Clear(BlockEntityTrough? trough)
     {
-        if (trough == null || !boxes.TryGetValue(trough, out ContributionBox? box))
+        if (trough == null)
         {
             return;
         }
 
-        box.Weights.Clear();
-        trough.MarkDirty(redrawOnClient: false);
+        ProsequorBlockPedigreeStation.ClearContributors(trough);
     }
 
     /// <summary>Fill levels currently in slot 0 (0 when empty / unknown config).</summary>
@@ -284,96 +292,18 @@ public static class TroughContributionStation
         return true;
     }
 
-    public static void WriteToTree(BlockEntityTrough? trough, ITreeAttribute? tree)
+    static Dictionary<string, int> SharesToDict(ProsequorBlob blob)
     {
-        if (trough == null || tree == null)
+        Dictionary<string, int> weights = new(StringComparer.Ordinal);
+        for (int i = 0; i < blob.Contributors.Count; i++)
         {
-            return;
-        }
-
-        if (!boxes.TryGetValue(trough, out ContributionBox? box) || box.Weights.Count == 0)
-        {
-            if (tree.HasAttribute(TreeKey))
+            ProsequorBlob.Share share = blob.Contributors[i];
+            if (share.Weight > 0 && !string.IsNullOrEmpty(share.PlayerUid))
             {
-                tree.RemoveAttribute(TreeKey);
+                weights[share.PlayerUid] = share.Weight;
             }
-
-            return;
         }
 
-        ITreeAttribute bag = tree.GetOrAddTreeAttribute(TreeKey);
-        int oldN = bag.GetInt(CountKey, 0);
-        for (int i = 0; i < oldN; i++)
-        {
-            bag.RemoveAttribute(i.ToString());
-        }
-
-        int index = 0;
-        foreach (KeyValuePair<string, int> pair in box.Weights)
-        {
-            if (pair.Value <= 0 || string.IsNullOrEmpty(pair.Key))
-            {
-                continue;
-            }
-
-            ITreeAttribute entry = bag.GetOrAddTreeAttribute(index.ToString());
-            entry.SetString(UidKey, pair.Key);
-            entry.SetInt(WeightKey, pair.Value);
-            index++;
-        }
-
-        bag.SetInt(CountKey, index);
-    }
-
-    public static void ReadFromTree(BlockEntityTrough? trough, ITreeAttribute? tree)
-    {
-        if (trough == null || tree == null)
-        {
-            return;
-        }
-
-        ITreeAttribute? bag = tree.GetTreeAttribute(TreeKey);
-        if (bag == null)
-        {
-            return;
-        }
-
-        ContributionBox box = boxes.GetOrCreateValue(trough);
-        box.Weights.Clear();
-
-        // New format: indexed { uid, w } entries.
-        int n = bag.GetInt(CountKey, 0);
-        if (n > 0)
-        {
-            for (int i = 0; i < n; i++)
-            {
-                ITreeAttribute? entry = bag.GetTreeAttribute(i.ToString());
-                if (entry == null)
-                {
-                    continue;
-                }
-
-                string? uid = entry.GetString(UidKey);
-                int weight = entry.GetInt(WeightKey, 0);
-                if (!string.IsNullOrEmpty(uid) && weight > 0)
-                {
-                    AddContribution(box.Weights, uid, weight);
-                }
-            }
-
-            return;
-        }
-
-        // Legacy FIFO list (string indices only) → weight 1 each.
-        for (int i = 0; ; i++)
-        {
-            string? uid = bag.GetString(i.ToString());
-            if (string.IsNullOrEmpty(uid))
-            {
-                break;
-            }
-
-            AddContribution(box.Weights, uid, 1);
-        }
+        return weights;
     }
 }

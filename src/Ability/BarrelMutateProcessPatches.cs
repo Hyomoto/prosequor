@@ -3,6 +3,7 @@ using HarmonyLib;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
+using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
@@ -23,7 +24,7 @@ public static class BarrelMutateProcessPatches
     sealed class Session
     {
         public string? LastActorUid;
-        public string? SealerUid;
+        public string? PendingSealerUid;
     }
 
     public sealed class SealCompleteState
@@ -216,47 +217,21 @@ public static class BarrelMutateProcessPatches
         }
     }
 
-    [HarmonyPatch(typeof(BlockEntityBarrel), nameof(BlockEntityBarrel.ToTreeAttributes))]
-    public static class BarrelSealerToTreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBarrel __instance, ITreeAttribute tree)
-        {
-            if (tree == null)
-            {
-                return;
-            }
-
-            string? sealer = SealerOf(__instance);
-            if (string.IsNullOrEmpty(sealer))
-            {
-                if (tree.HasAttribute(SealerAttr))
-                {
-                    tree.RemoveAttribute(SealerAttr);
-                }
-
-                return;
-            }
-
-            tree.SetString(SealerAttr, sealer);
-        }
-    }
-
     /// <summary>
-    /// Restore the closer after chunk unpack. <c>ServerChunk.AfterDeserialization</c>
-    /// calls this before <c>Initialize</c>, so do not dirty inventory slots — vanilla
-    /// <c>FindMatchingRecipe</c> uses <c>Api</c> and the chunk discards the BE on NRE.
-    /// The liquid maker stamp already rides on the serialized stack. Older in-flight
-    /// seals stored the closer as a sole contributor or a flat maker; adopt that uid
-    /// without replacing a bag that already has shares.
+    /// Restore the closer after chunk unpack from Live maker, or one-shot legacy
+    /// <c>prosequorBarrelSealer</c> / flat maker on an already-sealed barrel.
+    /// Runs before <c>Initialize</c>, so write chunk pedigree via <paramref name="world"/>.
     /// </summary>
     [HarmonyPatch(typeof(BlockEntityBarrel), nameof(BlockEntityBarrel.FromTreeAttributes))]
     public static class BarrelLegacySealerMigratePatch
     {
         [HarmonyPostfix]
-        public static void Postfix(BlockEntityBarrel __instance, ITreeAttribute tree)
+        public static void Postfix(
+            BlockEntityBarrel __instance,
+            ITreeAttribute tree,
+            IWorldAccessor worldForResolving)
         {
-            if (tree == null || !string.IsNullOrEmpty(SealerOf(__instance)))
+            if (tree == null || worldForResolving == null || !string.IsNullOrEmpty(SealerOf(__instance, worldForResolving)))
             {
                 return;
             }
@@ -266,7 +241,7 @@ public static class BarrelMutateProcessPatches
             {
                 sealer = tree.GetString(CraftAttribution.MakerAttr);
                 if (string.IsNullOrWhiteSpace(sealer)
-                    && ProsequorBlockPedigreeStation.TryGetSoleContributor(__instance, out string? sole))
+                    && TryGetSoleContributorAt(worldForResolving, __instance.Pos, out string? sole))
                 {
                     sealer = sole;
                 }
@@ -277,7 +252,7 @@ public static class BarrelMutateProcessPatches
                 return;
             }
 
-            AdoptSealer(__instance, sealer);
+            AdoptSealerAt(worldForResolving, __instance, sealer);
         }
     }
 
@@ -290,10 +265,33 @@ public static class BarrelMutateProcessPatches
 
     static void AdoptSealer(BlockEntityBarrel barrel, string uid)
     {
+        if (barrel.Api?.World is IWorldAccessor world)
+        {
+            AdoptSealerAt(world, barrel, uid);
+            return;
+        }
+
+        // Pre-Initialize: remember until a later call with world.
+        SessionOf(barrel).PendingSealerUid = uid.Trim();
+    }
+
+    static void AdoptSealerAt(IWorldAccessor world, BlockEntityBarrel barrel, string uid)
+    {
         string trimmed = uid.Trim();
-        SessionOf(barrel).SealerUid = trimmed;
-        SessionOf(barrel).LastActorUid = null;
-        AddOnce(barrel, trimmed);
+        if (sessions.TryGetValue(barrel, out Session? session))
+        {
+            session.LastActorUid = null;
+            session.PendingSealerUid = null;
+        }
+
+        ProsequorChunkPedigree.Box box = ProsequorChunkPedigree.GetOrCreate(world, barrel.Pos);
+        box.Blob = box.Blob.WithMaker(trimmed);
+        if (WeightOfBlob(box.Blob, trimmed) <= 0)
+        {
+            box.Blob = box.Blob.WithContributor(trimmed, 1);
+        }
+
+        ProsequorChunkPedigree.Set(world, barrel.Pos, box);
     }
 
     static void RememberActor(BlockEntityBarrel barrel, string uid) =>
@@ -334,7 +332,6 @@ public static class BarrelMutateProcessPatches
         }
 
         CraftAttribution.StampMakerUid(liquid, uid);
-        // SlotModified → FindMatchingRecipe needs Api. Skip during chunk unpack.
         if (barrel.Api != null && barrel.Inventory != null && barrel.Inventory.Count > LiquidSlot)
         {
             barrel.Inventory[LiquidSlot].MarkDirty();
@@ -343,21 +340,59 @@ public static class BarrelMutateProcessPatches
 
     static void ClearProcess(BlockEntityBarrel barrel)
     {
-        ProsequorBlockPedigreeStation.ClearContributors(barrel);
+        ProsequorBlockPedigreeStation.Clear(barrel);
         if (sessions.TryGetValue(barrel, out Session? session))
         {
-            session.SealerUid = null;
             session.LastActorUid = null;
+            session.PendingSealerUid = null;
         }
     }
 
     static string? SealerOf(BlockEntityBarrel barrel) =>
-        sessions.TryGetValue(barrel, out Session? session) ? session.SealerUid : null;
+        SealerOf(barrel, barrel.Api?.World);
+
+    static string? SealerOf(BlockEntityBarrel barrel, IWorldAccessor? world)
+    {
+        if (world != null
+            && ProsequorChunkPedigree.TryGet(world, barrel.Pos, out ProsequorChunkPedigree.Box box)
+            && !string.IsNullOrWhiteSpace(box.Blob.MakerUid))
+        {
+            return box.Blob.MakerUid;
+        }
+
+        if (sessions.TryGetValue(barrel, out Session? session)
+            && !string.IsNullOrWhiteSpace(session.PendingSealerUid))
+        {
+            return session.PendingSealerUid;
+        }
+
+        return null;
+    }
 
     static string? ActorOf(BlockEntityBarrel barrel) =>
         sessions.TryGetValue(barrel, out Session? session) ? session.LastActorUid : null;
 
     static Session SessionOf(BlockEntityBarrel barrel) => sessions.GetOrCreateValue(barrel);
+
+    static bool TryGetSoleContributorAt(IWorldAccessor world, BlockPos pos, out string? uid)
+    {
+        uid = null;
+        return ProsequorChunkPedigree.TryGet(world, pos, out ProsequorChunkPedigree.Box box)
+            && box.Blob.TryGetSoleContributor(out uid);
+    }
+
+    static int WeightOfBlob(ProsequorBlob blob, string uid)
+    {
+        for (int i = 0; i < blob.Contributors.Count; i++)
+        {
+            if (string.Equals(blob.Contributors[i].PlayerUid, uid, StringComparison.Ordinal))
+            {
+                return blob.Contributors[i].Weight;
+            }
+        }
+
+        return 0;
+    }
 
     static IReadOnlyList<Deed.ContributorShare> SnapshotShares(BlockEntityBarrel barrel)
     {

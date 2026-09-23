@@ -1,23 +1,14 @@
-using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
-using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Notes the last oven interactor so bake completion can stamp quality with their progress.
+/// Notes the last oven interactor on the pedigree host so bake completion can stamp quality.
 /// </summary>
 public static class OvenCookStarterStation
 {
     public const string LastInteractorAttr = "prosequorOvenLastInteractor";
-
-    static readonly ConditionalWeakTable<BlockEntity, Box> boxes = new();
-
-    sealed class Box
-    {
-        public string? LastInteractorUid;
-    }
 
     public static void NoteInteractor(BlockEntityOven? oven, IPlayer? player)
     {
@@ -36,47 +27,25 @@ public static class OvenCookStarterStation
             return;
         }
 
-        Box box = boxes.GetOrCreateValue(oven);
-        box.LastInteractorUid = playerUid.Trim();
-        oven.MarkDirty(redrawOnClient: false);
+        string uid = playerUid.Trim();
+        ProsequorBlockPedigreeStation.Mutate(oven, box => box.LastInteractorUid = uid);
+        ProsequorBlockPedigreeStation.StampSoleContributor(oven, uid);
     }
 
     public static string? TryGetLastInteractor(BlockEntityOven? oven)
     {
-        if (oven == null || !boxes.TryGetValue(oven, out Box? box) || box == null)
+        if (oven != null
+            && ProsequorBlockPedigreeStation.TryGetBox(oven, out ProsequorChunkPedigree.Box box)
+            && !string.IsNullOrWhiteSpace(box.LastInteractorUid))
         {
-            return null;
+            return box.LastInteractorUid;
         }
 
-        return string.IsNullOrWhiteSpace(box.LastInteractorUid) ? null : box.LastInteractorUid;
-    }
-
-    public static void WriteToTree(BlockEntityOven oven, ITreeAttribute tree)
-    {
-        if (!boxes.TryGetValue(oven, out Box? box)
-            || box == null
-            || string.IsNullOrEmpty(box.LastInteractorUid))
+        if (ProsequorBlockPedigreeStation.TryGetSoleContributor(oven, out string? uid))
         {
-            return;
+            return uid;
         }
 
-        tree.SetString(LastInteractorAttr, box.LastInteractorUid);
-    }
-
-    public static void ReadFromTree(BlockEntityOven oven, ITreeAttribute tree)
-    {
-        if (tree == null)
-        {
-            return;
-        }
-
-        string? last = tree.GetString(LastInteractorAttr);
-        if (string.IsNullOrWhiteSpace(last))
-        {
-            return;
-        }
-
-        Box box = boxes.GetOrCreateValue(oven);
-        box.LastInteractorUid = last.Trim();
+        return null;
     }
 }

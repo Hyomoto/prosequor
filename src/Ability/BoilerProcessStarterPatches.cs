@@ -85,23 +85,9 @@ public static class BoilerProcessStarterPatches
 
     /// <summary>
     /// Boiler overrides tree attrs; keep distill batch across chunk save/load.
-    /// Pedigree rides on <see cref="BlockEntityBehaviorProsequorPedigree"/>.
+    /// Pedigree rides on chunk moddata (<see cref="ProsequorChunkPedigree"/>).
     /// </summary>
-    [HarmonyPatch(typeof(BlockEntityBoiler), nameof(BlockEntityBoiler.ToTreeAttributes))]
-    public static class BoilerToTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBoiler __instance, ITreeAttribute tree) =>
-            BoilerDistillBatch.WriteToTree(__instance, tree);
-    }
 
-    [HarmonyPatch(typeof(BlockEntityBoiler), nameof(BlockEntityBoiler.FromTreeAttributes))]
-    public static class BoilerFromTreePedigreePatch
-    {
-        [HarmonyPostfix]
-        public static void Postfix(BlockEntityBoiler __instance, ITreeAttribute tree) =>
-            BoilerDistillBatch.ReadFromTree(__instance, tree);
-    }
 
     /// <summary>
     /// Condenser’s source slot belongs to an adjacent boiler — resolve that BE for the
@@ -151,10 +137,17 @@ public static class BoilerProcessStarterPatches
         string? mashMakerUid)
     {
         if (TryResolveBoilerForSourceSlot(condenser, sourceSlot, out BlockEntityBoiler? boiler)
-            && ProsequorBlockPedigreeStation.TryGetSoleContributor(boiler, out string? uid)
-            && !string.IsNullOrWhiteSpace(uid))
+            && ProsequorBlockPedigreeStation.TryGetBlob(boiler, out ProsequorBlob blob))
         {
-            return uid;
+            if (blob.TryGetSoleContributor(out string? uid) && !string.IsNullOrWhiteSpace(uid))
+            {
+                return uid;
+            }
+
+            if (!string.IsNullOrWhiteSpace(blob.MakerUid))
+            {
+                return blob.MakerUid;
+            }
         }
 
         return string.IsNullOrWhiteSpace(mashMakerUid) ? null : mashMakerUid.Trim();

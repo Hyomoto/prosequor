@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Reflection;
 using HarmonyLib;
@@ -6,7 +5,6 @@ using Prosequor.Ability.Hooks;
 using Prosequor.Player;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
-using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
@@ -14,13 +12,11 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Place-time success-chance pipeline for fruit-tree cuttings, plus establish/tooltip
-/// apply when an absolute chance was stamped on the block entity.
+/// apply when an absolute chance was stamped on the pedigree host.
 /// </summary>
 public static class FruitTreeCuttingSuccess
 {
     public const string EstablishChanceAttr = "prosequorEstablishChance";
-
-    static readonly ConditionalWeakTable<BlockEntity, ChanceBox> runtimeChances = new();
 
     static readonly MethodInfo? TryGrowToMethod =
         AccessTools.Method(
@@ -31,52 +27,30 @@ public static class FruitTreeCuttingSuccess
     static readonly FieldInfo? BranchBlockField =
         AccessTools.Field(typeof(FruitTreeGrowingBranchBH), "branchBlock");
 
-    sealed class ChanceBox
-    {
-        public float Chance;
-    }
-
     public static bool TryGetEstablishChance(BlockEntity? be, out float chance)
     {
         chance = 0f;
-        if (be == null)
+        if (be == null
+            || !ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            || box.EstablishChance <= 0.0001f)
         {
             return false;
         }
 
-        if (runtimeChances.TryGetValue(be, out ChanceBox? box))
-        {
-            chance = box.Chance;
-            return true;
-        }
-
-        return false;
+        chance = box.EstablishChance;
+        return true;
     }
 
     public static void StampEstablishChance(BlockEntity be, float chance)
     {
-        ChanceBox box = runtimeChances.GetOrCreateValue(be);
-        box.Chance = GameMath.Clamp(chance, 0f, 1f);
-        be.MarkDirty(redrawOnClient: false);
-    }
-
-    public static void WriteToTree(BlockEntity be, ITreeAttribute tree)
-    {
-        if (runtimeChances.TryGetValue(be, out ChanceBox? box))
-        {
-            tree.SetFloat(EstablishChanceAttr, box.Chance);
-        }
-    }
-
-    public static void ReadFromTree(BlockEntity be, ITreeAttribute tree)
-    {
-        if (!tree.HasAttribute(EstablishChanceAttr))
+        if (be == null)
         {
             return;
         }
 
-        ChanceBox box = runtimeChances.GetOrCreateValue(be);
-        box.Chance = GameMath.Clamp(tree.GetFloat(EstablishChanceAttr), 0f, 1f);
+        ProsequorBlockPedigreeStation.Mutate(
+            be,
+            box => box.EstablishChance = GameMath.Clamp(chance, 0f, 1f));
     }
 
     /// <summary>
