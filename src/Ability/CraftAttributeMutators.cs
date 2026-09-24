@@ -220,6 +220,51 @@ public sealed class HungerDelayAttributeMutator : ICraftAttributeMutator
 }
 
 /// <summary>
+/// Arrow flight-speed factor (Fletcher). Storage-only; applied when the projectile launches.
+/// </summary>
+public sealed class FlightAttributeMutator : ICraftAttributeMutator
+{
+    public const string KeyName = "flight";
+
+    public string Key => KeyName;
+
+    public bool Accepts(ItemStack stack) =>
+        stack?.Collectible is ItemArrow
+        || (stack?.Collectible?.Code?.Path?.StartsWith("arrow-", StringComparison.OrdinalIgnoreCase) ?? false);
+
+    public void OnStamped(ItemStack stack, float factor, float previousFactor, IWorldAccessor? world)
+    {
+        _ = stack;
+        _ = factor;
+        _ = previousFactor;
+        _ = world;
+    }
+}
+
+/// <summary>
+/// Bow accuracy factor (Bowyer). Storage-only; applied onto the holder&apos;s rangedWeaponsAcc.
+/// </summary>
+public sealed class RangedAccAttributeMutator : ICraftAttributeMutator
+{
+    public const string KeyName = "rangedAcc";
+
+    public string Key => KeyName;
+
+    public bool Accepts(ItemStack stack) =>
+        stack?.Collectible?.Tool == EnumTool.Bow
+        || (stack?.Collectible?.Attributes?["statModifier"]?["rangedWeaponsAcc"] != null
+            && stack.Collectible.Attributes["statModifier"]["rangedWeaponsAcc"].Exists);
+
+    public void OnStamped(ItemStack stack, float factor, float previousFactor, IWorldAccessor? world)
+    {
+        _ = stack;
+        _ = factor;
+        _ = previousFactor;
+        _ = world;
+    }
+}
+
+/// <summary>
 /// Distilled intoxication factor (Strong Spirits). Storage-only; drink reader is a follow-up.
 /// </summary>
 public sealed class IntoxicationAttributeMutator : ICraftAttributeMutator

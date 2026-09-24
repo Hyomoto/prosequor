@@ -82,14 +82,12 @@ public class BlockBreakXpAdapter
         }
 
         float hardness = 0f;
-        string? hardnessDomain = null;
         DeedToken deedToken;
         if (classify is BlockBreakClassification.TokenDig
             or BlockBreakClassification.TokenMine
             or BlockBreakClassification.TokenChop)
         {
             hardness = broken.Resistance;
-            hardnessDomain = classify;
             deedToken = DeedToken.BlockBroken;
         }
         else if (classify == BlockBreakClassification.TokenHarvest)
@@ -145,12 +143,11 @@ public class BlockBreakXpAdapter
                 : null;
 
         sapi.Logger.VerboseDebug(
-            "[prosequor] deed {0} {1} caller={2} hardness={3:0.###} domain={4} units={5} by {6}",
+            "[prosequor] deed {0} {1} caller={2} hardness={3:0.###} units={4} by {5}",
             deedToken.ToTag(),
             broken.Code,
             caller,
             hardness,
-            hardnessDomain ?? "-",
             SumUnits(quantityUnits),
             player?.PlayerName ?? playerUid);
 
@@ -161,10 +158,8 @@ public class BlockBreakXpAdapter
             caller: caller,
             target: EventFactBuilder.CodeOf(broken),
             lastCraft: EventFactBuilder.LastCraftCode(playerUid),
-            metric: hardness,
-            metricDomain: hardnessDomain,
             position: pos?.Copy(),
-            quantityUnits: quantityUnits);
+            outputs: quantityUnits);
     }
 
     /// <summary>Classify token dig/mine/chop/harvest, or null.</summary>

@@ -71,7 +71,7 @@ public sealed class CollectXpBuffer
                 tokens: Array.Empty<string>(),
                 caller: CallerIdentities.Hand,
                 target: pair.Key,
-                quantityUnits: [new Deed.QuantityUnit(pair.Key, pair.Value)],
+                outputs: [new Deed.QuantityUnit(pair.Key, pair.Value)],
                 activity: CollectXpItem.Activity);
         }
     }

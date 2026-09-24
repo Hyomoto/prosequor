@@ -119,7 +119,8 @@ public static class BoilerDistillBatch
 
         ProsequorBlob rolled = Roll(world, spiritTemplate, qualityUid, mashBlob, mashBonus);
         Store(boiler, rolled);
-        return rolled;
+        // Store may graft the pourer's sole contributor onto the lock; stamp that blob.
+        return TryGet(boiler, out ProsequorBlob locked) ? locked : rolled;
     }
 
     /// <summary>

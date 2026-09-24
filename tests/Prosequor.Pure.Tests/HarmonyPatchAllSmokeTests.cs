@@ -1001,6 +1001,56 @@ public class HarmonyPatchAllSmokeTests
     [Fact]
     [Trait("Layer", "Harmony")]
     [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeHuntProjectileDieAndTrap()
+    {
+        MethodInfo? spawn = AccessTools.Method(
+            typeof(EntityProjectileBase),
+            nameof(EntityProjectileBase.SpawnProjectile));
+        MethodInfo? die = AccessTools.Method(
+            typeof(Entity),
+            nameof(Entity.Die),
+            [typeof(EnumDespawnReason), typeof(DamageSource)]);
+        MethodInfo? trap = AccessTools.Method(typeof(BlockEntityAnimalTrap), "TrapAnimal");
+        Assert.NotNull(spawn);
+        Assert.NotNull(die);
+        Assert.NotNull(trap);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.huntxp.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+            Assert.Contains(spawn, harmony.GetPatchedMethods());
+            Assert.Contains(die, harmony.GetPatchedMethods());
+            Assert.Contains(trap, harmony.GetPatchedMethods());
+
+            Patches? spawnInfo = Harmony.GetPatchInfo(spawn);
+            Patches? dieInfo = Harmony.GetPatchInfo(die);
+            Patches? trapInfo = Harmony.GetPatchInfo(trap);
+            Assert.NotNull(spawnInfo);
+            Assert.NotNull(dieInfo);
+            Assert.NotNull(trapInfo);
+            Assert.True(
+                spawnInfo!.Prefixes.Count > 0,
+                "Expected EntityProjectileBase.SpawnProjectile hunting prefix.");
+            Assert.True(
+                dieInfo!.Postfixes.Count > 0,
+                "Expected Entity.Die hunting XP postfix.");
+            Assert.True(
+                trapInfo!.Postfixes.Count > 0,
+                "Expected BlockEntityAnimalTrap.TrapAnimal hunting XP postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
     public void TryPatch_WhenKnapsterMissing_ShouldNotThrow()
     {
         string harmonyId = $"{ProsequorModSystem.ModId}.test.knapsteroptional.{Guid.NewGuid():N}";

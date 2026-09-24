@@ -60,6 +60,7 @@ public class ProsequorModSystem : ModSystem
     public ClayFormingRecipeCatalog? ClayFormingRecipes { get; private set; }
     public SmithingRecipeCatalog? SmithingRecipes { get; private set; }
     public BlockBreakHardnessCatalog? BlockBreakHardness { get; private set; }
+    public AnimalWeightCatalog? AnimalWeight { get; private set; }
     public CropLifetimeCatalog? CropLifetime { get; private set; }
     public ProgressNetwork Network { get; } = new();
     public ContentFingerprint? Fingerprint { get; private set; }
@@ -269,6 +270,8 @@ public class ProsequorModSystem : ModSystem
 
             SmithingRecipes = SmithingRecipeCatalog.Build(api);
             SmithingRecipes.FillSmithingFormedCollection(Collections.Index);
+            Collections.Index.ApplyExcludes(msg => api.Logger.Warning(msg));
+            Collections.Index.MaterializeUnions(msg => api.Logger.Warning(msg));
             api.Logger.Notification(
                 "[prosequor] Smithing recipe catalog: {0} recipes, smithing-formed codes {1}.",
                 SmithingRecipes.RecipeCount,
@@ -281,6 +284,16 @@ public class ProsequorModSystem : ModSystem
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainDig);
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainMine);
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainChop);
+
+            AnimalWeight = AnimalWeightCatalog.Build(api);
+            if (AnimalWeight.TryGet() is AnimalWeightCatalog.Range animalSpan)
+            {
+                api.Logger.Notification(
+                    "[prosequor] Animal weight catalog: {0} entities, weight {1:0.###}–{2:0.###}.",
+                    animalSpan.EntityCount,
+                    animalSpan.Min,
+                    animalSpan.Max);
+            }
 
             CropLifetime = CropLifetimeCatalog.Build(api);
             if (CropLifetime.TryGet() is CropLifetimeCatalog.Range cropSpan)
@@ -723,6 +736,8 @@ public class ProsequorModSystem : ModSystem
     /// <summary>
     /// Award discrete amount XP (<c>prosequor:deed</c>) for a payee. Resolves at the call and
     /// pays through FatherXp (online or mailbox). Prefer <see cref="DeedToken"/> for standard tags.
+    /// Quantity and ingredients are summed from the unit lists. Measures are read from
+    /// <paramref name="target"/> / <paramref name="subject"/>.
     /// </summary>
     public void EmitDeed(
         string playerUid,
@@ -732,10 +747,10 @@ public class ProsequorModSystem : ModSystem
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        int totalUnits = 0,
-        int craftCount = 1) =>
+        BlockPos? position = null,
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null,
+        IReadOnlyList<Deed.QuantityUnit>? inputs = null,
+        ItemStack? subject = null) =>
         Deed.Emit(
             sapi!,
             playerUid,
@@ -745,12 +760,12 @@ public class ProsequorModSystem : ModSystem
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            totalUnits: totalUnits,
-            craftCount: craftCount);
+            position,
+            outputs,
+            inputs,
+            subject: subject);
 
-    /// <inheritdoc cref="EmitDeed(string, DeedToken, string?, string?, string?, string?, string?, float, string?, int, int)"/>
+    /// <inheritdoc cref="EmitDeed(string, DeedToken, string?, string?, string?, string?, string?, BlockPos?, IReadOnlyList{Deed.QuantityUnit}?, IReadOnlyList{Deed.QuantityUnit}?, ItemStack?)"/>
     public void EmitDeed(
         string playerUid,
         IReadOnlyList<string> tokens,
@@ -759,10 +774,10 @@ public class ProsequorModSystem : ModSystem
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        int totalUnits = 0,
-        int craftCount = 1) =>
+        BlockPos? position = null,
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null,
+        IReadOnlyList<Deed.QuantityUnit>? inputs = null,
+        ItemStack? subject = null) =>
         Deed.Emit(
             sapi!,
             playerUid,
@@ -772,12 +787,12 @@ public class ProsequorModSystem : ModSystem
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            totalUnits: totalUnits,
-            craftCount: craftCount);
+            position,
+            outputs,
+            inputs,
+            subject: subject);
 
-    /// <inheritdoc cref="EmitDeed(string, DeedToken, string?, string?, string?, string?, string?, float, string?, int, int)"/>
+    /// <inheritdoc cref="EmitDeed(string, DeedToken, string?, string?, string?, string?, string?, BlockPos?, IReadOnlyList{Deed.QuantityUnit}?, IReadOnlyList{Deed.QuantityUnit}?, ItemStack?)"/>
     public void EmitDeed(
         IPlayer player,
         IReadOnlyList<string> tokens,
@@ -786,10 +801,10 @@ public class ProsequorModSystem : ModSystem
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        int totalUnits = 0,
-        int craftCount = 1) =>
+        BlockPos? position = null,
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null,
+        IReadOnlyList<Deed.QuantityUnit>? inputs = null,
+        ItemStack? subject = null) =>
         Deed.Emit(
             sapi!,
             player,
@@ -799,10 +814,10 @@ public class ProsequorModSystem : ModSystem
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            totalUnits: totalUnits,
-            craftCount: craftCount);
+            position,
+            outputs,
+            inputs,
+            subject: subject);
 
     internal void PublishLevelUp(LevelUpEvent evt)
     {

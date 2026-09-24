@@ -12,7 +12,7 @@ namespace Prosequor.Scenarios;
 
 /// <summary>
 /// Planted fruit-tree harvest pays farming XP to the harvester (quantity).
-/// Structural growth batches block placements into one maker pay (amount 2 × craftCount).
+/// Structural growth batches placements into one flat maker pay (amount 2).
 /// Domesticated comes from the root cutting planter via RootOff.
 /// </summary>
 public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
@@ -74,7 +74,7 @@ public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Xp")]
     [Trait("Kind", "FruitTreeGrowth")]
-    public async Task StructuralBatch_Should_PayPlanterOnce_WithQuantity()
+    public async Task StructuralBatch_Should_PayPlanterOnce_Flat()
     {
         ITestPlayer joined = await World.JoinPlayer("FruitGrow");
         IPlayer player = joined.Player;
@@ -86,7 +86,7 @@ public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
         GrowthXp.NoteFruitTreeBlockGrown(be);
         GrowthXp.NoteFruitTreeBlockGrown(be);
         GrowthXp.FlushFruitTreeStructuralGrowth();
-        Assert.Equal(6f, TotalSkillXp(progress) - before, precision: 3);
+        Assert.Equal(2f, TotalSkillXp(progress) - before, precision: 3);
     }
 
     [AtlasScenario]

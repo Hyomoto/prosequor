@@ -119,6 +119,7 @@ public sealed class ContentFingerprint
                     .Append(" rate=").Append(F(rule.Rate))
                     .Append(" pay=").Append(XpPayChannels.Canonical(rule.Pay))
                     .Append(" payee=").Append(XpPayees.Canonical(rule.Payee))
+                    .Append(" include=").Append((rule.Include ?? XpQuantityExclude.Empty).Canonical())
                     .Append(" exclude=").Append((rule.Exclude ?? XpQuantityExclude.Empty).Canonical())
                     .Append(" pri=").Append(rule.Priority)
                     .Append(" ord=").Append(rule.SourceOrder)

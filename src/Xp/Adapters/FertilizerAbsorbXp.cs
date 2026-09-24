@@ -49,20 +49,23 @@ public static class FertilizerAbsorbXp
         }
 
         soil.Api.Logger.VerboseDebug(
-            "[prosequor] deed fertilizer-absorbed {0} quantity={1} contributors={2}",
+            "[prosequor] deed fertilizer-absorbed {0} times={1} contributors={2}",
             target.Code,
             whole,
             shares.Count);
 
-        Deed.Emit(
-            soil.Api,
-            playerUid: "",
-            DeedToken.FertilizerAbsorbed,
-            caller: CallerIdentities.Hand,
-            target: EventFactBuilder.CodeOf(target),
-            craftCount: whole,
-            position: soil.Pos?.Copy(),
-            contributors: shares);
+        for (int i = 0; i < whole; i++)
+        {
+            Deed.Emit(
+                soil.Api,
+                playerUid: "",
+                DeedToken.FertilizerAbsorbed,
+                caller: CallerIdentities.Hand,
+                target: EventFactBuilder.CodeOf(target),
+                position: soil.Pos?.Copy(),
+                contributors: shares);
+        }
+
         return whole;
     }
 

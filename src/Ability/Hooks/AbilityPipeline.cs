@@ -169,6 +169,7 @@ public sealed class AbilityPipeline
                 || rule.Action == ActionIds.RestockLastBait
                 || rule.Action == ActionIds.RestoreConsumedBait
                 || rule.Action == ActionIds.UpgradeOreGrade
+                || rule.Action == ActionIds.UpgradeHideSize
                 || rule.Action == ActionIds.AllowAnimalPet
                 || rule.Action == ActionIds.AllowMountedRideWithoutSaddle
                 || rule.Action == ActionIds.SetTrue

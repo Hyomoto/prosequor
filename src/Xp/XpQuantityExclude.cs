@@ -4,8 +4,9 @@ using Prosequor.Ability.Hooks;
 namespace Prosequor.Xp;
 
 /// <summary>
-/// Compiled <c>exclude</c> entries for quantity filtering: exact codes and/or collection ids.
-/// A code is excluded if it equals any exact entry or is in any listed collection.
+/// Compiled <c>include</c> / <c>exclude</c> entries for quantity and ingredient filtering:
+/// exact codes and/or collection ids. A code matches if it equals any exact entry or is in
+/// any listed collection.
 /// </summary>
 public sealed class XpQuantityExclude
 {
@@ -54,7 +55,7 @@ public sealed class XpQuantityExclude
     }
 
     /// <summary>
-    /// Parse one exclude entry: <c>&lt;collection&gt;</c> / <c>&lt;a, b&gt;</c> or an exact asset code.
+    /// Parse one filter entry: <c>&lt;collection&gt;</c> / <c>&lt;a, b&gt;</c> or an exact asset code.
     /// </summary>
     public static bool TryParseEntry(
         string? raw,
@@ -66,7 +67,7 @@ public sealed class XpQuantityExclude
         error = "";
         if (string.IsNullOrWhiteSpace(raw))
         {
-            error = "exclude entry must not be empty";
+            error = "filter entry must not be empty";
             return false;
         }
 
@@ -75,7 +76,7 @@ public sealed class XpQuantityExclude
         {
             if (ids == null)
             {
-                error = refError ?? "invalid collection ref in exclude";
+                error = refError ?? "invalid collection ref in filter";
                 return false;
             }
 
@@ -83,7 +84,7 @@ public sealed class XpQuantityExclude
             {
                 if (!collections.Exists(collectionId))
                 {
-                    error = $"unknown collection '<{collectionId}>' in exclude";
+                    error = $"unknown collection '<{collectionId}>' in filter";
                     return false;
                 }
 
@@ -95,7 +96,7 @@ public sealed class XpQuantityExclude
 
         if (trimmed.Contains('*'))
         {
-            error = $"wildcard '{trimmed}' is not allowed in exclude; use a collection";
+            error = $"wildcard '{trimmed}' is not allowed in filter; use a collection";
             return false;
         }
 

@@ -51,7 +51,7 @@ excludes  →  who you cannot also own
 - [XP rules](#xp-rules)
   - [XP `when`](#xp-when)
   - [Activities](#activities)
-  - [`pay` / `payee` / `exclude`](#pay--payee--exclude)
+  - [`pay` / `payee` / `include` / `exclude`](#pay--payee--include--exclude)
 - [Collections](#collections)
 - [Pools](#pools)
 - [Affix lists](#affix-lists)
@@ -371,6 +371,8 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `block-broken` | Block break (dig / mine / chop) |
 | `harvested` | Plant / forage harvest |
 | `butchered` | Dead-animal harvest |
+| `hunted` | Animal killed by a player arrow or thrown spear |
+| `trapped` | Animal caught in a basket / crate trap |
 | `crafted` | Craft-grid take / similar discrete craft |
 | `crafting` | Hand-shape progress (clay-form, smith voxels) |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
@@ -546,7 +548,7 @@ Fact `target` = animal / mount / boat code.
 | | `stack` | stack |
 | | `stacks` | stacks |
 
-`mounted`: filter with `mount:<raft>` / `sailboat`; boats also use `ground` water and tokens `moving` / `helmsman`. Entity `mutate-drops` `stack` / `stacks` are registered with no shipped actions.
+`mounted`: filter with `mount:<raft>` / `sailboat`; boats also use `ground` water and tokens `moving` / `helmsman`. Entity `mutate-drops` / `stack` supports `chance` and `upgrade-hide-size`.
 
 `animal-flee` `chance`: ordinary alert threat reduction fraction (seed 0, base 1). `animal-flee` / `animal-brood` `multiplier`: friendliness calm percent (seed 100 = ×1) on ordinary alert threat. `animal-melee` / `animal-milk` `multiplier` still scale melee fear-reduction and milking aggro.
 
@@ -555,13 +557,19 @@ Fact `target` = animal / mount / boat code.
 | Verb | Phase | Contract |
 | --- | --- | --- |
 | `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` | `default` | number |
-| `sprint-speed` / `swim-speed` / `sneak-speed` | `default` | number |
+| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` | `default` | number |
+| `unaware-damage` | `amount` | number |
+| | `threshold` | number |
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
 | `bleed-out` | `rate` | number |
 
 `animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat.
+
+`animal-sense-range`: sneak-only sense-range multiplier (seed 1). `animal-threat-sneak`: sneak-only threat-emission multiplier (seed 1). `arrow-break`: arrow break chance 0–1 (seed = current break chance).
+
+`unaware-damage` / `amount`: outgoing damage multiplier (seed 1) when the victim's alert-meter threat is below `unaware-damage` / `threshold` (seed 0, percent).
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 
@@ -667,6 +675,10 @@ NumberSpec. Surfaces: mutate-drops/`stack` (block + item).
 
 No params. Surface: mutate-drops/`stack` (block).
 
+#### `prosequor:upgrade-hide-size`
+
+No params. Surface: mutate-drops/`stack` (entity). Advances `hide-{process}-{size}` one step on the ladder small → medium → large → huge. Species pelts and already-huge hides are unchanged.
+
 #### `prosequor:replace-matching-stack-with-block`
 
 No params. Surface: mutate-drops/`stack` (block).
@@ -675,7 +687,7 @@ No params. Surface: mutate-drops/`stack` (block).
 
 `key` + NumberSpec. Surface: mutate-output/`attributes`.
 
-Known craft attribute keys: `durability`, `warmth`, `cooling`, `protection`, `freshness`, `satiety`, `hungerDelay`, `intoxication`, `price`, `regen`.
+Known craft attribute keys: `durability`, `warmth`, `cooling`, `protection`, `freshness`, `satiety`, `hungerDelay`, `intoxication`, `price`, `regen`, `flight`, `rangedAcc`.
 
 #### `prosequor:add-affix`
 
@@ -765,6 +777,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 | `amount` | Discrete grant: number, or number array (measure table) |
 | `rate` | XP per game-second while matched |
 | `pay` | Amount channel only (omit → `flat`) |
+| `include` | Codes / `<collections>` kept for quantity (outputs) or ingredients (inputs); requires `pay: quantity` or `pay: ingredients` |
 | `exclude` | Codes / `<collections>` omitted from quantity; requires `pay: quantity` |
 | `payee` | Who is paid (amount only; omit → `user`) |
 | `when` | Match filter |
@@ -787,7 +800,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`.
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`. For `hunted` / `trapped` deeds, `pay: effort` lerps against the GameReady animal-weight catalog (authored entity `weight` / `weightByType` min–max).
 
 ### XP `when`
 
@@ -807,12 +820,12 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `prosequor:collect-xp-item` | amount | Stamped collectible flush (`pay: quantity`) |
 | `game:…` / `<modid>:…` | either | Other registered activities |
 
-### `pay` / `payee` / `exclude`
+### `pay` / `payee` / `include` / `exclude`
 
 | `pay` | Effect |
 | --- | --- |
 | `flat` | Pay `amount` once (default) |
-| `resistance` | Lerp `amount` table against a float measure (block resistance, or an explicit 0–1 emit range) |
+| `resistance` | Lerp `amount` table against a float measure (block resistance, animal weight, or an explicit 0–1 emit range) |
 | `effort` | Alias for `resistance` (same channel) |
 | `voxels` | Lerp `amount` table against clay voxels-per-unit |
 | `quantity` | Multiply by emit quantity (crafts, voxels, drops, …) |
@@ -826,7 +839,9 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `contributor` | `selectedContributorUid` on the emit |
 | `contributors` | Weighted `contributors` bag on the emit |
 
-`pay`, `payee`, and `exclude` are invalid on rate rules. `exclude` requires `pay: quantity`.
+`include` keeps only matching codes / `<collections>` when summing quantity (output units) or ingredients (input units). `exclude` then omits matching codes from quantity. `when.tags` still match the deed subject and are not used for these list filters.
+
+`pay`, `payee`, `include`, and `exclude` are invalid on rate rules. `include` requires `pay: quantity` or `pay: ingredients`. `exclude` requires `pay: quantity`.
 
 ---
 
@@ -855,7 +870,7 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 | `excludes` | Other collection ids subtracted after includes, before unions |
 | `unions` | Other collection ids copied into this key (multi-pass, after excludes) |
 
-Pool ids share the same key space. Builtin classifiers and authored rows write into the same index (tools, materials, crops, fish, wearables, craft goods, watercraft, named unions such as `wearable` / `watercraft`, and pool ids).
+Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, and `smithing-formed`. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
 

@@ -258,7 +258,9 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             DeedToken.MoldCast,
             caller: CallerIdentities.Mold,
             target: EventFactBuilder.CodeOf(targetStack),
-            totalUnits: MoldCastXpStation.IngredientsFromFill(fill),
+            inputs: [new Deed.QuantityUnit(
+                EventFactBuilder.CodeOf(targetStack) ?? "",
+                MoldCastXpStation.IngredientsFromFill(fill))],
             contributors: [new Deed.ContributorShare(player.PlayerUID, 1f)]);
 
         float gained = ScenarioXp.TotalSkill(progress, Skill) - xpBefore;
@@ -333,7 +335,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             DeedToken.CementationFired,
             caller: CallerIdentities.Cementation,
             target: EventFactBuilder.CodeOf(targetStack),
-            craftCount: quantity,
+            outputs: [new Deed.QuantityUnit(EventFactBuilder.CodeOf(targetStack) ?? "", quantity)],
             contributors: [new Deed.ContributorShare(player.PlayerUID, 1f)]);
 
         float gained = ScenarioXp.TotalSkill(progress, Skill) - xpBefore;

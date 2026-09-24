@@ -158,9 +158,8 @@ public static class HarvestXp
             caller: caller,
             target: EventFactBuilder.CodeOf(block),
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-            craftCount: 1,
             position: pos.Copy(),
-            quantityUnits: quantityUnits);
+            outputs: quantityUnits);
     }
 
     public static bool IsCropOrBerry(Block? block) =>

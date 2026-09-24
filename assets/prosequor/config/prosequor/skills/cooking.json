@@ -56,15 +56,6 @@
         "activity": "prosequor:deed",
         "tags": [ "crafted", "target:<juice>" ]
       }
-    },
-    {
-      "id": "prosequor:butcher-cooking",
-      "amount": 0.082,
-      "pay": "quantity",
-      "when": {
-        "activity": "prosequor:deed",
-        "tags": [ "butchered" ]
-      }
     }
   ],
   "effects": [

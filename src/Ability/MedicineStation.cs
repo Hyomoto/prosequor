@@ -81,8 +81,7 @@ public static class MedicineStation
     }
 
     /// <summary>
-    /// Pay medicine XP for a healing-item apply. <paramref name="usableFraction"/> is the
-    /// effort metric on [0, 1] (how much of the heal capacity can land).
+    /// Pay medicine XP for a healing-item apply. Zero <paramref name="usableFraction"/> skips the emit.
     /// </summary>
     public static void EmitHealed(
         IPlayer caregiver,
@@ -107,10 +106,7 @@ public static class MedicineStation
             caregiver.PlayerUID,
             DeedToken.Healed,
             caller: caller,
-            target: target,
-            metric: Math.Clamp(usableFraction, 0f, 1f),
-            metricMin: 0f,
-            metricMax: 1f);
+            target: target);
     }
 
     /// <summary>Bleed-out rate fold for the wounded player (seed 1).</summary>

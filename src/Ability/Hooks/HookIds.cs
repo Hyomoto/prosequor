@@ -60,6 +60,8 @@ public static class HookIds
     public static readonly PhaseId Stacks = new("stacks");
     public static readonly PhaseId Amount = new("amount");
     public static readonly PhaseId Cap = new("cap");
+    /// <summary>Heartseeker threat gate percent (seed 0).</summary>
+    public static readonly PhaseId Threshold = new("threshold");
     public static readonly PhaseId Size = new("size");
     public static readonly PhaseId AssistRadius = new("assist-radius");
     public static readonly PhaseId AutoFinish = new("auto-finish");
@@ -192,6 +194,14 @@ public static class VerbIds
     /// <summary>On-foot sneak speed bonus fraction (seed 0).</summary>
     public static readonly VerbId SneakSpeed = new("prosequor:sneak-speed");
     public static readonly VerbId AnimalThreat = new("prosequor:animal-threat");
+    /// <summary>Sneak-only animal sense-range multiplier (seed 1).</summary>
+    public static readonly VerbId AnimalSenseRange = new("prosequor:animal-sense-range");
+    /// <summary>Sneak-only animal threat-emission multiplier (seed 1).</summary>
+    public static readonly VerbId AnimalThreatSneak = new("prosequor:animal-threat-sneak");
+    /// <summary>Arrow break-chance fold (seed = current break chance 0–1).</summary>
+    public static readonly VerbId ArrowBreak = new("prosequor:arrow-break");
+    /// <summary>Outgoing damage vs low-threat animals (amount / threshold phases).</summary>
+    public static readonly VerbId UnawareDamage = new("prosequor:unaware-damage");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
@@ -256,4 +266,6 @@ public static class ActionIds
         new("prosequor:restore-consumed-bait");
     public static readonly ActionId UpgradeOreGrade =
         new("prosequor:upgrade-ore-grade");
+    public static readonly ActionId UpgradeHideSize =
+        new("prosequor:upgrade-hide-size");
 }

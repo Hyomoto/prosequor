@@ -128,13 +128,17 @@ public static class PlayerInteractionAbilityPatches
 
     /// <summary>
     /// Before damage behaviors run: Inconspicuity crit ×2 on player weapon hits
-    /// (after melee/ranged Entity.Stats multipliers already applied at the attack site).
+    /// (after melee/ranged Entity.Stats multipliers already applied at the attack site),
+    /// then Heartseeker unaware damage.
     /// </summary>
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Entity), nameof(Entity.ReceiveDamage))]
     public static void ReceiveDamageCritPrefix(
         Entity __instance,
         DamageSource damageSource,
-        ref float damage) =>
+        ref float damage)
+    {
         PlayerInteractionStation.TryApplyCrit(damageSource, __instance, ref damage);
+        HeartseekerStation.TryApply(damageSource, __instance, ref damage);
+    }
 }

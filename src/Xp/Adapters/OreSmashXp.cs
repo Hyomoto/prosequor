@@ -101,8 +101,7 @@ public static class OreSmashXp
                 caller: caller,
                 target: __state.NuggetCode,
                 lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-                craftCount: oresProcessed,
-                quantityUnits: [new Deed.QuantityUnit(__state.NuggetCode!, oresProcessed)]);
+                outputs: [new Deed.QuantityUnit(__state.NuggetCode!, oresProcessed)]);
         }
     }
 

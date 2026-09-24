@@ -208,7 +208,7 @@ public static class SkepHarvestXp
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(block),
             position: pos.Copy(),
-            quantityUnits: units,
+            outputs: units,
             contributors: shares);
     }
 

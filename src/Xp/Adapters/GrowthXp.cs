@@ -12,8 +12,7 @@ namespace Prosequor.Xp.Adapters;
 /// Domesticated growable growth-stage deeds: planter is emit <c>makerUid</c>;
 /// crop farming pays with <c>payee: contributors</c> (till / plant / fertilize / water shares).
 /// Forestry saplings and fruit-tree structural growth use <c>payee: maker</c>.
-/// Fruit trees batch <c>TryGrowTo</c> placements into one emit (<c>craftCount</c> = blocks)
-/// so flat and quantity rules both see a single deed.
+/// Fruit trees batch <c>TryGrowTo</c> into one flat growth flush (blocks are not listed).
 /// </summary>
 public static class GrowthXp
 {
@@ -34,13 +33,11 @@ public static class GrowthXp
         ICoreAPI? api,
         BlockEntity? pedigreeBe,
         Block? targetBlock,
-        BlockPos? position,
-        int craftCount = 1)
+        BlockPos? position)
     {
         if (api?.Side != EnumAppSide.Server
             || api.World == null
             || targetBlock == null
-            || craftCount <= 0
             || !ProsequorBlockPedigreeStation.TryGetPlanter(pedigreeBe, out string? planterUid)
             || string.IsNullOrWhiteSpace(planterUid))
         {
@@ -48,7 +45,7 @@ public static class GrowthXp
         }
 
         IReadOnlyList<Deed.ContributorShare> shares = ResolveGrowthShares(pedigreeBe, planterUid!);
-        EmitGrown(api, planterUid!, targetBlock, position, shares, craftCount);
+        EmitGrown(api, planterUid!, targetBlock, position, shares);
     }
 
     /// <summary>
@@ -91,7 +88,7 @@ public static class GrowthXp
     }
 
     /// <summary>
-    /// Pay once for all structural placements since the last flush (<c>craftCount</c> = blocks).
+    /// Pay once for all structural placements since the last flush (flat growth deed).
     /// </summary>
     public static void FlushFruitTreeStructuralGrowth()
     {
@@ -112,7 +109,7 @@ public static class GrowthXp
             return;
         }
 
-        EmitIfDomesticated(root.Api, root, block, root.Pos, blocks);
+        EmitIfDomesticated(root.Api, root, block, root.Pos);
     }
 
     static void EmitGrown(
@@ -120,38 +117,18 @@ public static class GrowthXp
         string planterUid,
         Block? targetBlock,
         BlockPos? position,
-        IReadOnlyList<Deed.ContributorShare>? contributors = null,
-        int craftCount = 1)
+        IReadOnlyList<Deed.ContributorShare>? contributors = null)
     {
-        if (targetBlock == null || craftCount <= 0)
+        if (targetBlock == null)
         {
             return;
         }
 
-        float metric = 0f;
-        string? metricDomain = null;
-        int growthStages = 0;
-        BlockCropProperties? props = targetBlock.CropProps;
-        if (props != null && AbilityBootstrap.IsCropBlock(targetBlock))
-        {
-            float daysPerMonth = (float)(api.World?.Calendar?.DaysPerMonth ?? 0);
-            float days = CropLifetimeMath.TotalGrowthDays(props, daysPerMonth);
-            if (days > 0f)
-            {
-                metric = days;
-                metricDomain = Deed.MetricDomainCropLifetime;
-                growthStages = CropLifetimeMath.GrowthStages(props);
-            }
-        }
-
         api.Logger.VerboseDebug(
-            "[prosequor] deed grown+domesticated {0} maker={1} contributors={2} craftCount={3} lifetimeDays={4} stages={5}",
+            "[prosequor] deed grown+domesticated {0} maker={1} contributors={2}",
             targetBlock.Code,
             planterUid,
-            contributors?.Count ?? 0,
-            craftCount,
-            metric,
-            growthStages);
+            contributors?.Count ?? 0);
 
         Deed.Emit(
             api,
@@ -159,13 +136,9 @@ public static class GrowthXp
             [DeedToken.Grown.ToTag(), HarvestXp.TokenDomesticated],
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(targetBlock),
-            metric: metric,
-            metricDomain: metricDomain,
-            craftCount: craftCount,
             position: position,
             contributors: contributors,
-            makerUid: planterUid,
-            growthStages: growthStages);
+            makerUid: planterUid);
     }
 
     static bool TryResolveFruitTreeRoot(BlockEntityFruitTreePart? part, out BlockEntity? rootBe)

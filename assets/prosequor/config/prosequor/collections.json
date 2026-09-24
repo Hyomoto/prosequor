@@ -2,13 +2,14 @@
   {
     "id": "clothing",
     "includes": [
-      "game:clothes-*"
+      "*:clothes-*",
+      "*:*clothing*"
     ]
   },
   {
     "id": "armor",
     "includes": [
-      "game:armor-*"
+      "*:*armor*"
     ]
   },
   {
@@ -21,28 +22,60 @@
   {
     "id": "thread",
     "includes": [
-      "game:flaxtwine",
-      "game:*-twine",
-      "game:*-thread"
+      "*:flaxtwine",
+      "*:*-twine",
+      "*:*-thread"
     ]
   },
   {
     "id": "cloth",
     "includes": [
-      "game:cloth-*",
-      "game:linen-*"
+      "*:cloth-*",
+      "*:linen-*"
     ]
   },
   {
     "id": "leather",
     "includes": [
-      "game:leather*"
+      "*:leather*"
     ]
   },
   {
     "id": "hide",
     "includes": [
-      "game:hide-*"
+      "*:hide-*"
+    ]
+  },
+  {
+    "id": "arrow",
+    "includes": [
+      "game:arrow-*"
+    ]
+  },
+  {
+    "id": "bow",
+    "includes": [
+      "*:bow-*",
+      "*:sling-*"
+    ]
+  },
+  {
+    "id": "spear",
+    "includes": [
+      "*:spear-*"
+    ]
+  },
+  {
+    "id": "trap",
+    "includes": [
+      "game:baskettrap-*",
+      "game:trapcrate-*"
+    ]
+  },
+  {
+    "id": "spit-cooked",
+    "includes": [
+      "game:*-cooked"
     ]
   },
   {
@@ -61,13 +94,17 @@
     "id": "freshwater",
     "includes": [
       "game:water-*",
-      "game:lakeice-*"
+      "game:lakeice-*",
+      "*:fishraw-freshwater-*",
+      "*:creature-fish-freshwater-*"
     ]
   },
   {
     "id": "saltwater",
     "includes": [
-      "game:saltwater-*"
+      "game:saltwater-*",
+      "*:fishraw-saltwater-*",
+      "*:creature-fish-saltwater-*"
     ]
   },
   {
@@ -209,8 +246,7 @@
   {
     "id": "sap",
     "includes": [
-      "game:log-resin-pine-*",
-      "game:log-resin-acacia-*"
+      "*:log-resin-*"
     ]
   },
   {
@@ -327,5 +363,180 @@
     "includes": [
       "game:spiritportion-*"
     ]
-  }
+  },
+  {
+    "id": "clay",
+    "includes": ["*:rawclay-*"]
+  },
+  {
+    "id": "peat",
+    "includes": ["*:peat-*"]
+  },
+  {
+    "id": "charcoal",
+    "includes": ["*:charcoalpile-*"]
+  },
+  {
+    "id": "saltpeter",
+    "includes": ["*:saltpeter-*"]
+  },
+  {
+    "id": "gravel",
+    "includes": ["*:gravel", "*:gravel-*"]
+  },
+  {
+    "id": "sand",
+    "includes": ["*:sand", "*:sand-*"]
+  },
+  {
+    "id": "bonysoil",
+    "includes": ["*:*bonysoil*"]
+  },
+  {
+    "id": "nugget",
+    "includes": ["*:nugget-*"]
+  },
+  {
+    "id": "crystalizedore",
+    "includes": ["*:crystalizedore-*"]
+  },
+  {
+    "id": "farmland",
+    "includes": ["*:farmland*"]
+  },
+  {
+    "id": "berry-bush",
+    "includes": ["*:fruitingbush*", "*:berrybush*"]
+  },
+  {
+    "id": "fruit-tree",
+    "includes": ["*:fruittree*", "*:fruit-tree*"]
+  },
+  {
+    "id": "sapling",
+    "includes": ["*:sapling-*"]
+  },
+  {
+    "id": "seed",
+    "includes": ["*:seeds-*"]
+  },
+  {
+    "id": "crop",
+    "includes": ["*:crop-*"]
+  },
+  {
+    "id": "pine",
+    "includes": ["*:log-*-pine-*"]
+  },
+  {
+    "id": "gemstone",
+    "includes": [
+      "*:ore-*-emerald-*",
+      "*:ore-*-diamond-*",
+      "*:ore-*-olivine_peridot-*"
+    ]
+  },
+  {
+    "id": "ore",
+    "includes": ["*:ore-*"],
+    "excludes": ["gemstone"]
+  },
+  {
+    "id": "shovel",
+    "includes": ["*:shovel-*"]
+  },
+  {
+    "id": "axe",
+    "includes": ["*:axe-*"]
+  },
+  {
+    "id": "pickaxe",
+    "includes": ["*:pickaxe-*"]
+  },
+  {
+    "id": "saw",
+    "includes": ["*:saw-*"]
+  },
+  {
+    "id": "hammer",
+    "includes": ["*:hammer-*"]
+  },
+  {
+    "id": "hoe",
+    "includes": ["*:hoe-*"]
+  },
+  {
+    "id": "pan",
+    "includes": ["*:pan-*"]
+  },
+  {
+    "id": "watering-can",
+    "includes": ["*:wateringcan-*"]
+  },
+  {
+    "id": "fishingpole",
+    "includes": ["*:fishingpole-*", "*:fishingrod-*"]
+  },
+  {
+    "id": "bombs",
+    "includes": ["*:bomb*", "*:oreblastingbomb*"]
+  },
+  {
+    "id": "knife",
+    "includes": ["*:knife-*"]
+  },
+  {
+    "id": "tool",
+    "unions": ["shovel", "axe", "pickaxe", "saw", "hammer", "hoe"],
+    "includes": [
+      "*:chisel-*",
+      "*:shears-*",
+      "*:wrench*",
+      "*:scythe-*",
+      "*:sickle-*",
+      "*:probe*"
+    ]
+  },
+  {
+    "id": "weapon",
+    "unions": ["spear", "bow", "knife"],
+    "includes": ["*:blade-*", "*:club-*", "*:sword-*"]
+  },
+  {
+    "id": "fish",
+    "includes": ["*:fishraw-*", "*:creature-fish-*"]
+  },
+  {
+    "id": "reef",
+    "includes": ["*:fishraw-reef-*", "*:creature-fish-reef-*"]
+  },
+  {
+    "id": "adult",
+    "includes": ["*:fishraw-*-adult", "*:creature-fish-*-adult"]
+  },
+  {
+    "id": "juvenile",
+    "includes": ["*:fishraw-*-juvenile", "*:creature-fish-*-juvenile"]
+  },
+  { "id": "soil" },
+  { "id": "wood" },
+  { "id": "leaves" },
+  {
+    "id": "stone",
+    "includes": ["*:stone-*"]
+  },
+  { "id": "mature-crop" },
+  { "id": "immature-crop" },
+  { "id": "small-fish" },
+  { "id": "medium-fish" },
+  { "id": "large-fish" },
+  { "id": "metal-crafts" },
+  { "id": "clay-formed" },
+  { "id": "smithing-formed" },
+  { "id": "liquid" },
+  { "id": "graft" },
+  { "id": "root" },
+  { "id": "storagevessel" },
+  { "id": "flowerpot" },
+  { "id": "clayplanter" }
 ]

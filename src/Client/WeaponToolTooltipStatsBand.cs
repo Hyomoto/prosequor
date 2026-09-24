@@ -1,4 +1,5 @@
 using System.Globalization;
+using Prosequor.Ability;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -196,6 +197,11 @@ public static class WeaponToolTooltipStatsBand
         int tier = attrs["damageTier"].AsInt(col.ToolTier);
         float damage = attrs["damage"].AsFloat(0f);
         float acc = attrs["statModifier"]["rangedWeaponsAcc"].AsFloat(0f);
+        float quality = CraftAttributeMods.GetFactor(stack, RangedAccAttributeMutator.KeyName);
+        if (quality > 1.0001f)
+        {
+            acc += quality - 1f;
+        }
         int maxDura = col.GetMaxDurability(stack);
         int remDura = col.GetRemainingDurability(stack);
 

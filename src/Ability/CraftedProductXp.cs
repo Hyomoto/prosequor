@@ -53,9 +53,8 @@ public static class CraftedProductXp
             tokens,
             caller: CallerIdentities.Grid,
             target: target,
-            totalUnits: Math.Max(0, ingredients),
-            craftCount: quantity,
-            quantityUnits: [new Deed.QuantityUnit(target, quantity)],
+            outputs: [new Deed.QuantityUnit(target, quantity)],
+            inputs: ingredients > 0 ? [new Deed.QuantityUnit(target, ingredients)] : null,
             contributors: contributors,
             makerUid: makerUid);
     }

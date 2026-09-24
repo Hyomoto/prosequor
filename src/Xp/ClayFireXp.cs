@@ -8,6 +8,7 @@ namespace Prosequor.Xp;
 /// <summary>
 /// Pays clayforming fire XP through <see cref="Deed.Emit"/> / FatherXp.
 /// One <c>kiln-fired</c> emit per finished piece; rule <c>payee: contributors</c> splits shares.
+/// Voxels-per-unit are read from the fired stack's recipe stamp inside Emit.
 /// </summary>
 public static class ClayFireXp
 {
@@ -31,15 +32,6 @@ public static class ClayFireXp
         if (mod?.FatherXp == null || mod.XpRules == null)
         {
             return;
-        }
-
-        ClayFormingRecipeCatalog? catalog = mod.ClayFormingRecipes;
-        int voxelsPerUnit = 0;
-        if (catalog != null
-            && ProsequorStackPedigree.TryGetRecipeKey(stack, out string? recipeKey)
-            && catalog.TryGet(recipeKey, out ClayFormingRecipeCatalog.RecipeInfo info))
-        {
-            voxelsPerUnit = info.VoxelsPerUnit;
         }
 
         string caller = string.IsNullOrWhiteSpace(kilnCaller)
@@ -67,10 +59,9 @@ public static class ClayFireXp
             playerUid: "",
             ClayFireXpMath.BuildTokens(),
             caller: caller,
-            target: targetCode,
-            metric: voxelsPerUnit,
-            metricDomain: Deed.MetricDomainClayVoxels,
+            target: targetCode ?? EventFactBuilder.CodeOf(stack),
             contributors: shares,
-            makerUid: makerUid);
+            makerUid: makerUid,
+            subject: stack);
     }
 }

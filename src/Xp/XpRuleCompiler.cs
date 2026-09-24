@@ -59,15 +59,36 @@ public static class XpRuleCompiler
             pay = XpPayChannel.Flat;
         }
 
-        if (!TryCompileExclude(row.exclude, collections, out XpQuantityExclude exclude, out string excludeError))
+        if (!TryCompileFilter(row.include, "include", collections, out XpQuantityExclude include, out string includeError))
+        {
+            error = includeError;
+            return false;
+        }
+
+        if (!TryCompileFilter(row.exclude, "exclude", collections, out XpQuantityExclude exclude, out string excludeError))
         {
             error = excludeError;
+            return false;
+        }
+
+        if (hasRate && !include.IsEmpty)
+        {
+            error = "include is only valid on amount rules";
             return false;
         }
 
         if (hasRate && !exclude.IsEmpty)
         {
             error = "exclude is only valid on amount rules";
+            return false;
+        }
+
+        if (hasAmount
+            && !include.IsEmpty
+            && !XpPayChannels.UsesQuantity(pay)
+            && !XpPayChannels.UsesIngredients(pay))
+        {
+            error = "include requires pay quantity or ingredients";
             return false;
         }
 
@@ -123,6 +144,7 @@ public static class XpRuleCompiler
             AmountTable = hasAmount ? amountTable : null,
             Rate = hasRate ? row.rate : 0f,
             Pay = hasAmount ? pay : XpPayChannel.Flat,
+            Include = hasAmount ? include : XpQuantityExclude.Empty,
             Exclude = hasAmount ? exclude : XpQuantityExclude.Empty,
             Payee = hasAmount ? payeeMode : XpPayee.User,
             Criteria = criteria,
@@ -134,13 +156,14 @@ public static class XpRuleCompiler
         return true;
     }
 
-    static bool TryCompileExclude(
+    static bool TryCompileFilter(
         string[]? raw,
+        string field,
         CollectionIndex collections,
-        out XpQuantityExclude exclude,
+        out XpQuantityExclude filter,
         out string error)
     {
-        exclude = XpQuantityExclude.Empty;
+        filter = XpQuantityExclude.Empty;
         error = "";
         if (raw == null || raw.Length == 0)
         {
@@ -153,12 +176,13 @@ public static class XpRuleCompiler
         {
             if (!XpQuantityExclude.TryParseEntry(entry, collections, exact, collectionsOut, out error))
             {
-                exclude = XpQuantityExclude.Empty;
+                error = error.Replace("filter", field, StringComparison.Ordinal);
+                filter = XpQuantityExclude.Empty;
                 return false;
             }
         }
 
-        exclude = new XpQuantityExclude(exact, collectionsOut);
+        filter = new XpQuantityExclude(exact, collectionsOut);
         return true;
     }
 

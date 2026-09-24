@@ -1,0 +1,506 @@
+{
+  "id": "hunting",
+  "nameLang": "skill-hunting",
+  "descriptionLang": "skilldesc-hunting",
+  "descriptionParams": [
+    { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" }
+  ],
+  "icon": "textures/icons/hunting-skill.svg",
+  "attributeScores": [
+    { "id": "perception", "value": 1.0 },
+    { "id": "inconspicuity", "value": 0.5 }
+  ],
+  "xpRules": [
+    {
+      "id": "prosequor:craft-arrow-hunting",
+      "amount": 0.02,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<arrow>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-bow-hunting",
+      "amount": 0.75,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<bow>" ]
+      }
+    },
+    {
+      "id": "prosequor:butcher-hunting",
+      "amount": 0.082,
+      "pay": "quantity",
+      "include": ["<meat>", "<fat>"],
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "butchered" ]
+      }
+    },
+    {
+      "id": "prosequor:hunted-hunting",
+      "amount": [0.1, 10],
+      "pay": "effort",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "hunted" ]
+      }
+    },
+    {
+      "id": "prosequor:trapped-hunting",
+      "amount": [0.1, 10],
+      "pay": "effort",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "trapped" ]
+      }
+    }
+  ],
+  "effects": [
+    {
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:animal-sense-range",
+      "action": "prosequor:number",
+      "params": { "op": "scale", "base": 0, "perSkillLevel": -0.005 }
+    }
+  ],
+  "tree": {
+    "nodes": [
+      {
+        "id": "campfire-cooking",
+        "nameLang": "unlock-hunting-campfire-cooking",
+        "icon": "textures/icons/hunting/campfire-cooking.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-hunting-campfire-cooking",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<spit-cooked>" ]
+                },
+                "params": {
+                  "key": "hungerDelay",
+                  "op": "scale",
+                  "table": [0, 0.2]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 10,
+            "descriptionLang": "unlockdesc-hunting-campfire-cooking-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.4] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "descriptionLang": "unlockdesc-hunting-campfire-cooking-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.6] }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "stalker",
+        "nameLang": "unlock-hunting-stalker",
+        "icon": "textures/icons/hunting/stalker.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-hunting-stalker",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:animal-threat-sneak",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": -0.05 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 10,
+            "descriptionLang": "unlockdesc-hunting-stalker-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": -0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-hunting-stalker-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": -0.2 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "nice-shot",
+        "nameLang": "unlock-hunting-nice-shot",
+        "icon": "textures/icons/hunting/nice-shot.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-hunting-nice-shot",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:arrow-break",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": -0.05 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 15,
+            "descriptionLang": "unlockdesc-hunting-nice-shot-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": -0.1 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 25,
+            "descriptionLang": "unlockdesc-hunting-nice-shot-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": -0.25 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "fletcher",
+        "nameLang": "unlock-hunting-fletcher",
+        "icon": "textures/icons/hunting/fletcher.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-hunting-fletcher",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<arrow>" ]
+                },
+                "params": {
+                  "key": "flight",
+                  "op": "scale",
+                  "table": [0, 0.2]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 20,
+            "descriptionLang": "unlockdesc-hunting-fletcher-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.3] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 30,
+            "descriptionLang": "unlockdesc-hunting-fletcher-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.4] }
+              }
+            ]
+          }
+        ],
+        "requires": [ "campfire-cooking" ]
+      },
+      {
+        "id": "skilled-skinning",
+        "nameLang": "unlock-hunting-skilled-skinning",
+        "icon": "textures/icons/hunting/skilled-skinning.svg",
+        "cost": 1,
+        "minSkillLevel": 15,
+        "descriptionLang": "unlockdesc-hunting-skilled-skinning",
+        "descriptionParams": [
+          { "sum": [ "0.chance.base" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:entity-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stack",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "drop:<hide>" ]
+                },
+                "params": {
+                  "chance": { "base": 0.05, "perSkillLevel": 0, "cap": 0.05 },
+                  "onSuccess": { "action": "prosequor:upgrade-hide-size" }
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 40,
+            "descriptionLang": "unlockdesc-hunting-skilled-skinning-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "base": 0.1, "perSkillLevel": 0, "cap": 0.1 }
+                }
+              }
+            ]
+          }
+        ],
+        "requires": [ "campfire-cooking" ]
+      },
+      {
+        "id": "hunter",
+        "nameLang": "unlock-hunting-hunter",
+        "icon": "textures/icons/hunting/hunter.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "layout": { "columnBias": "right" },
+        "descriptionLang": "unlockdesc-hunting-hunter",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "stalker", "nice-shot" ]
+      },
+      {
+        "id": "bowyer",
+        "nameLang": "unlock-hunting-bowyer",
+        "icon": "textures/icons/hunting/bowyer.svg",
+        "cost": 1,
+        "minSkillLevel": 20,
+        "descriptionLang": "unlockdesc-hunting-bowyer",
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:crafting-interaction",
+                "verb": "prosequor:apply-quality",
+                "phase": "attributes",
+                "action": "prosequor:quality",
+                "when": {
+                  "tags": [ "target:<bow>" ]
+                },
+                "params": {
+                  "key": "rangedAcc",
+                  "op": "scale",
+                  "table": [0, 0.2]
+                }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 45,
+            "descriptionLang": "unlockdesc-hunting-bowyer-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.1, 0.4] }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 60,
+            "descriptionLang": "unlockdesc-hunting-bowyer-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "table": [0.2, 0.5] }
+              }
+            ]
+          }
+        ],
+        "requires": [ "fletcher" ]
+      },
+      {
+        "id": "heartseeker",
+        "nameLang": "unlock-hunting-heartseeker",
+        "icon": "textures/icons/hunting/heartseeker.svg",
+        "cost": 1,
+        "minSkillLevel": 35,
+        "layout": { "columnBias": "left" },
+        "descriptionLang": "unlockdesc-hunting-heartseeker",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" },
+          { "sum": [ "1.value" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:unaware-damage",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.15 }
+              },
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:unaware-damage",
+                "phase": "threshold",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 20 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 50,
+            "descriptionLang": "unlockdesc-hunting-heartseeker-t2",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.25 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 30 }
+              }
+            ]
+          },
+          {
+            "minSkillLevel": 70,
+            "descriptionLang": "unlockdesc-hunting-heartseeker-t3",
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "value": 0.5 }
+              },
+              {
+                "replicate": 1,
+                "params": { "value": 40 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "hunter" ]
+      },
+      
+      {
+        "id": "tracker",
+        "nameLang": "unlock-hunting-tracker",
+        "icon": "textures/icons/hunting/tracker.svg",
+        "cost": 1,
+        "minSkillLevel": 1,
+        "descriptionLang": "unlockdesc-hunting-tracker",
+        "tiers": [
+          {
+            "effects": []
+          },
+          {
+            "minSkillLevel": 50,
+            "descriptionLang": "unlockdesc-hunting-tracker-t2",
+            "effects": []
+          },
+          {
+            "minSkillLevel": 70,
+            "descriptionLang": "unlockdesc-hunting-tracker-t3",
+            "effects": []
+          }
+        ],
+        "requires": [ "hunter" ]
+      },
+      {
+        "id": "animal-sense",
+        "nameLang": "unlock-hunting-animal-sense",
+        "icon": "textures/icons/hunting/animal-sense.svg",
+        "cost": 1,
+        "minSkillLevel": 50,
+        "descriptionLang": "unlockdesc-hunting-animal-sense",
+        "tiers": [
+          {
+            "effects": []
+          }
+        ],
+        "requires": [ "tracker" ]
+      },
+      {
+        "id": "focus-shot",
+        "nameLang": "unlock-hunting-focus-shot",
+        "icon": "textures/icons/hunting/focus-shot.svg",
+        "cost": 1,
+        "minSkillLevel": 40,
+        "descriptionLang": "unlockdesc-hunting-focus-shot",
+        "tiers": [
+          {
+            "effects": []
+          },
+          {
+            "minSkillLevel": 55,
+            "descriptionLang": "unlockdesc-hunting-focus-shot-t2",
+            "effects": []
+          },
+          {
+            "minSkillLevel": 70,
+            "descriptionLang": "unlockdesc-hunting-focus-shot-t3",
+            "effects": []
+          },
+          {
+            "minSkillLevel": 90,
+            "descriptionLang": "unlockdesc-hunting-focus-shot-t4",
+            "effects": []
+          }
+        ],
+        "requires": [ "heartseeker", "bowyer" ]
+      }
+    ]
+  }
+}

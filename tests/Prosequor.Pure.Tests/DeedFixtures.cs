@@ -26,6 +26,7 @@ public static class DeedFixtures
         VerifyMissingLifetimeUsesTableZeroOverStages();
         VerifyPayCompileRejects();
         VerifyQuantityExclude();
+        VerifyQuantityInclude();
         VerifyDomesticatedHarvestQuantity();
         VerifyPayeeResolution();
         VerifyFedAnimalDeed();
@@ -55,6 +56,12 @@ public static class DeedFixtures
             || DeedToken.Butchered.ToTag() != DeedTokenTags.Butchered
             || !DeedTokenTags.TryParse("butchered", out DeedToken butcher)
             || butcher != DeedToken.Butchered
+            || DeedToken.Hunted.ToTag() != DeedTokenTags.Hunted
+            || !DeedTokenTags.TryParse("hunted", out DeedToken hunted)
+            || hunted != DeedToken.Hunted
+            || DeedToken.Trapped.ToTag() != DeedTokenTags.Trapped
+            || !DeedTokenTags.TryParse("trapped", out DeedToken trapped)
+            || trapped != DeedToken.Trapped
             || DeedToken.FertilizerAbsorbed.ToTag() != DeedTokenTags.FertilizerAbsorbed
             || !DeedTokenTags.TryParse("fertilizer-absorbed", out DeedToken fert)
             || fert != DeedToken.FertilizerAbsorbed
@@ -890,6 +897,172 @@ public static class DeedFixtures
         if (gated.Count != 0)
         {
             Assert.Fail("[prosequor] exclude should zero quantity when target matches and no units list.");
+        }
+    }
+
+    static void VerifyQuantityInclude()
+    {
+        CollectionIndex collections = new();
+        collections.EnsureKey("meat");
+        collections.EnsureKey("fat");
+        collections.EnsureKey("hide");
+        collections.AddCode("meat", "game:redmeat-raw");
+        collections.AddCode("fat", "game:fat");
+        collections.AddCode("hide", "game:hide-raw-small");
+
+        if (!XpRuleCompiler.TryCompile(
+                new XpRuleJson
+                {
+                    id = "butcher-meat-fat",
+                    amount = new Newtonsoft.Json.Linq.JValue(0.1),
+                    pay = new Newtonsoft.Json.Linq.JValue("quantity"),
+                    include = ["<meat>", "<fat>"],
+                    when = new XpRuleWhenJson
+                    {
+                        activity = Deed.Activity,
+                        tags = ["butchered"]
+                    }
+                },
+                "cooking",
+                1,
+                collections,
+                out XpRule qtyRule,
+                out string qtyError)
+            || qtyRule.Include.IsEmpty)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] quantity include compile failed: {0}",
+                qtyError));
+            return;
+        }
+
+        if (XpRuleCompiler.TryCompile(
+                new XpRuleJson
+                {
+                    id = "include-no-channel",
+                    amount = new Newtonsoft.Json.Linq.JValue(1),
+                    include = ["<meat>"],
+                    when = new XpRuleWhenJson { activity = Deed.Activity }
+                },
+                "fixture",
+                2,
+                collections,
+                out _,
+                out string includeError)
+            || (!includeError.Contains("quantity", StringComparison.OrdinalIgnoreCase)
+                && !includeError.Contains("ingredients", StringComparison.OrdinalIgnoreCase)))
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] include without quantity/ingredients should reject: {0}",
+                includeError));
+        }
+
+        Deed.Channels parts = new(
+            Resistance: 0f,
+            ResistanceMin: 0f,
+            ResistanceMax: 0f,
+            HasResistance: false,
+            Voxels: 0f,
+            VoxelsMin: 0f,
+            VoxelsMax: 0f,
+            HasVoxels: false,
+            Quantity: 10,
+            Ingredients: 0,
+            QuantityUnits:
+            [
+                new Deed.QuantityUnit("game:redmeat-raw", 4),
+                new Deed.QuantityUnit("game:fat", 2),
+                new Deed.QuantityUnit("game:hide-raw-small", 1)
+            ]);
+
+        IReadOnlyList<Deed.PlannedPay> filtered = Deed.PlanPays(
+            new FixedAmountRules(qtyRule),
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Butchered },
+            caller: CallerIdentities.Hand,
+            target: "game:pig-adult",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            parts);
+
+        // (4 meat + 2 fat) × 0.1 = 0.6
+        if (filtered.Count != 1 || Math.Abs(filtered[0].Amount - 0.6f) > 0.001f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] quantity include units filter failed, amount={0}",
+                filtered.Count == 0 ? "none" : filtered[0].Amount.ToString()));
+        }
+
+        if (!XpRuleCompiler.TryCompile(
+                new XpRuleJson
+                {
+                    id = "meal-ingredients",
+                    amount = new Newtonsoft.Json.Linq.JArray(0.1, 12),
+                    pay = new Newtonsoft.Json.Linq.JValue("ingredients"),
+                    include = ["<meat>"],
+                    when = new XpRuleWhenJson
+                    {
+                        activity = Deed.Activity,
+                        tags = ["crafted"]
+                    }
+                },
+                "cooking",
+                3,
+                collections,
+                out XpRule ingRule,
+                out string ingError)
+            || ingRule.Include.IsEmpty)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] ingredients include compile failed: {0}",
+                ingError));
+            return;
+        }
+
+        Deed.Channels meal = new(
+            Resistance: 0f,
+            ResistanceMin: 0f,
+            ResistanceMax: 0f,
+            HasResistance: false,
+            Voxels: 0f,
+            VoxelsMin: 0f,
+            VoxelsMax: 0f,
+            HasVoxels: false,
+            Quantity: 1,
+            Ingredients: 8,
+            HasIngredients: true,
+            IngredientUnits:
+            [
+                new Deed.QuantityUnit("game:redmeat-raw", 3),
+                new Deed.QuantityUnit("game:vegetable-carrot", 5)
+            ]);
+
+        IReadOnlyList<Deed.PlannedPay> mealPays = Deed.PlanPays(
+            new FixedAmountRules(ingRule),
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
+            caller: CallerIdentities.Grid,
+            target: "game:meal-meatystew",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            meal);
+
+        float expected = AmountTableMath.ResolveAmount(
+            ingRule.Amount,
+            ingRule.AmountTable,
+            3f,
+            AmountTableMath.IngredientsMin,
+            AmountTableMath.IngredientsMax);
+        if (mealPays.Count != 1 || Math.Abs(mealPays[0].Amount - expected) > 0.001f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] ingredients include filter failed, amount={0} expected={1}",
+                mealPays.Count == 0 ? "none" : mealPays[0].Amount.ToString(),
+                expected));
         }
     }
 

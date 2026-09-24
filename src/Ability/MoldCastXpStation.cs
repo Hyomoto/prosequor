@@ -319,7 +319,7 @@ public static class MoldCastXpStation
             DeedToken.MoldCast,
             caller: CallerIdentities.Mold,
             target: target,
-            totalUnits: ingredients,
+            inputs: [new Deed.QuantityUnit(target ?? "", ingredients)],
             contributors: [new Deed.ContributorShare(pourerUid.Trim(), 1f)]);
     }
 }

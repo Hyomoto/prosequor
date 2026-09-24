@@ -590,13 +590,23 @@ public sealed class NumberPlayerInteractionFloatAction
     : AbilityActionHandler<PlayerInteractionContext, float, NumberSpec>
 {
     readonly VerbId verb;
+    readonly PhaseId phase;
 
-    public NumberPlayerInteractionFloatAction(VerbId verb) => this.verb = verb;
+    public NumberPlayerInteractionFloatAction(VerbId verb)
+        : this(verb, HookIds.Default)
+    {
+    }
+
+    public NumberPlayerInteractionFloatAction(VerbId verb, PhaseId phase)
+    {
+        this.verb = verb;
+        this.phase = phase;
+    }
 
     public override ActionId Id => ActionIds.Number;
     public override HookId Hook => HookIds.PlayerInteraction;
     public override VerbId Verb => verb;
-    public override PhaseId Phase => HookIds.Default;
+    public override PhaseId Phase => phase;
 
     protected override bool TryParse(JObject? raw, out NumberSpec? parameters, out string error) =>
         NumberSpec.TryParse(raw, out parameters, out error);

@@ -29,7 +29,7 @@ public class ClayFormXpAdapter
     {
     }
 
-    /// <param name="voxelCount">Novel good-voxel delta (CraftCount multiplier).</param>
+    /// <param name="voxelCount">Novel good-voxel delta. Published as an output unit.</param>
     /// <param name="targetCode">Selected recipe output collectible code.</param>
     public void NotifyProgress(IPlayer byPlayer, int voxelCount, string? targetCode)
     {
@@ -50,6 +50,6 @@ public class ClayFormXpAdapter
             caller: CallerIdentities.Hand,
             target: targetCode,
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-            craftCount: voxelCount);
+            outputs: [new Deed.QuantityUnit(targetCode ?? "", voxelCount)]);
     }
 }

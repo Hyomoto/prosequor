@@ -168,4 +168,7 @@ public class MigratedFixtureTests
 
     [Fact]
     public void HobbySkillFixtures_Should_Pass() => HobbySkillFixtures.VerifyAll();
+
+    [Fact]
+    public void HuntingFixtures_Should_Pass() => HuntingFixtures.VerifyAll();
 }

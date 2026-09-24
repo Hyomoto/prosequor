@@ -72,9 +72,8 @@ public class CraftXpAdapter
             caller: CallerIdentities.Grid,
             target: target,
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-            totalUnits: Math.Max(0, totalUnits),
-            craftCount: reps,
-            quantityUnits: units);
+            outputs: units,
+            inputs: totalUnits > 0 ? [new Deed.QuantityUnit(target, totalUnits)] : null);
     }
 
     public static int SumTotalUnits(IReadOnlyList<ItemStack> stacks)

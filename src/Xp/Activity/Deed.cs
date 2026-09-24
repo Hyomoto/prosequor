@@ -1,13 +1,17 @@
 using Prosequor.Ability;
 using Prosequor.Ability.Hooks;
+using Prosequor.Xp;
 using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 
 namespace Prosequor.Xp.Activity;
 
 /// <summary>
-/// Fire-and-forget discrete amount XP. Emitters pass payee + tokens/roles; rules resolve at the
-/// call and pay through <see cref="FatherXp"/> (online or mailbox). No watcher involvement.
+/// Fire-and-forget discrete amount XP. Callsites pass who, the token, role identities,
+/// and output/input unit lists. Resistance, crop lifetime, growth stages, catalog ranges,
+/// voxels-per-unit (from <c>subject</c>), and list sums are resolved here.
+/// Pays through <see cref="FatherXp"/> (online or mailbox). No watcher involvement.
 /// </summary>
 public static class Deed
 {
@@ -21,7 +25,7 @@ public static class Deed
 
     public readonly record struct PlannedPay(string SkillId, float Amount, AbilityAction Fact);
 
-    /// <summary>One countable quantity unit (code + stack size) for <c>exclude</c> filtering.</summary>
+    /// <summary>One countable unit (code + count) for <c>include</c> / <c>exclude</c> filtering.</summary>
     public readonly record struct QuantityUnit(string Code, int Count);
 
     /// <summary>Weighted contributor share published on the emit for <c>payee</c> resolution.</summary>
@@ -41,6 +45,7 @@ public static class Deed
         int Ingredients,
         bool HasIngredients = false,
         IReadOnlyList<QuantityUnit>? QuantityUnits = null,
+        IReadOnlyList<QuantityUnit>? IngredientUnits = null,
         IReadOnlyList<ContributorShare>? Contributors = null,
         string? MakerUid = null,
         string? SelectedContributorUid = null,
@@ -65,19 +70,15 @@ public static class Deed
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        float? metricMin = null,
-        float? metricMax = null,
-        int totalUnits = 0,
-        int craftCount = 1,
-        XpAwardMode mode = XpAwardMode.Earn,
         BlockPos? position = null,
-        IReadOnlyList<QuantityUnit>? quantityUnits = null,
+        IReadOnlyList<QuantityUnit>? outputs = null,
+        IReadOnlyList<QuantityUnit>? inputs = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
-        int growthStages = 0) =>
+        ItemStack? subject = null,
+        string? activity = null,
+        XpAwardMode mode = XpAwardMode.Earn) =>
         Emit(
             api,
             playerUid,
@@ -87,19 +88,15 @@ public static class Deed
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            metricMin,
-            metricMax,
-            totalUnits,
-            craftCount,
-            mode,
             position,
-            quantityUnits,
+            outputs,
+            inputs,
             contributors,
             makerUid,
             selectedContributorUid,
-            growthStages);
+            subject,
+            activity,
+            mode);
 
     public static void Emit(
         ICoreAPI api,
@@ -110,19 +107,15 @@ public static class Deed
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        float? metricMin = null,
-        float? metricMax = null,
-        int totalUnits = 0,
-        int craftCount = 1,
-        XpAwardMode mode = XpAwardMode.Earn,
         BlockPos? position = null,
-        IReadOnlyList<QuantityUnit>? quantityUnits = null,
+        IReadOnlyList<QuantityUnit>? outputs = null,
+        IReadOnlyList<QuantityUnit>? inputs = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
-        int growthStages = 0)
+        ItemStack? subject = null,
+        string? activity = null,
+        XpAwardMode mode = XpAwardMode.Earn)
     {
         if (tokens == null || tokens.Count == 0)
         {
@@ -144,19 +137,15 @@ public static class Deed
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            metricMin,
-            metricMax,
-            totalUnits,
-            craftCount,
-            mode,
             position,
-            quantityUnits,
+            outputs,
+            inputs,
             contributors,
             makerUid,
             selectedContributorUid,
-            growthStages: growthStages);
+            subject,
+            activity,
+            mode);
     }
 
     public static void Emit(
@@ -168,19 +157,15 @@ public static class Deed
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        float? metricMin = null,
-        float? metricMax = null,
-        int totalUnits = 0,
-        int craftCount = 1,
-        XpAwardMode mode = XpAwardMode.Earn,
         BlockPos? position = null,
-        IReadOnlyList<QuantityUnit>? quantityUnits = null,
+        IReadOnlyList<QuantityUnit>? outputs = null,
+        IReadOnlyList<QuantityUnit>? inputs = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
-        int growthStages = 0)
+        ItemStack? subject = null,
+        string? activity = null,
+        XpAwardMode mode = XpAwardMode.Earn)
     {
         if (player?.PlayerUID == null)
         {
@@ -202,19 +187,15 @@ public static class Deed
             mount,
             ground,
             lastCraft,
-            metric,
-            metricDomain,
-            metricMin,
-            metricMax,
-            totalUnits,
-            craftCount,
-            mode,
             position,
-            quantityUnits,
+            outputs,
+            inputs,
             contributors,
             makerUid,
             selectedContributorUid,
-            growthStages: growthStages);
+            subject,
+            activity,
+            mode);
     }
 
     public static void Emit(
@@ -226,21 +207,15 @@ public static class Deed
         string? mount = null,
         string? ground = null,
         string? lastCraft = null,
-        float metric = 0f,
-        string? metricDomain = null,
-        float? metricMin = null,
-        float? metricMax = null,
-        int totalUnits = 0,
-        int craftCount = 1,
-        XpAwardMode mode = XpAwardMode.Earn,
         BlockPos? position = null,
-        IReadOnlyList<QuantityUnit>? quantityUnits = null,
+        IReadOnlyList<QuantityUnit>? outputs = null,
+        IReadOnlyList<QuantityUnit>? inputs = null,
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
-        int growthStages = 0,
+        ItemStack? subject = null,
         string? activity = null,
-        IReadOnlyList<string>? inputs = null)
+        XpAwardMode mode = XpAwardMode.Earn)
     {
         if (api == null || api.Side != EnumAppSide.Server)
         {
@@ -270,25 +245,112 @@ public static class Deed
             return;
         }
 
-        ResolveMetricRange(mod, metricDomain, metricMin, metricMax, out float min, out float max);
-        Channels channels = BuildChannels(
-            metric,
-            min,
-            max,
-            metricDomain,
-            totalUnits,
-            craftCount,
-            quantityUnits,
+        string? resolvedTarget = string.IsNullOrWhiteSpace(target)
+            ? EventFactBuilder.CodeOf(subject)
+            : target.Trim();
+
+        Channels channels = ResolveChannels(
+            api,
+            mod,
+            tokenSet,
+            resolvedTarget,
+            subject,
+            outputs,
+            inputs,
             shares,
             maker,
-            selected,
-            growthStages);
+            selected);
 
-        IReadOnlyList<PlannedPay> pays = PlanPays(
+        Deliver(
+            father,
             rules,
             mod?.Collections?.Index ?? new CollectionIndex(),
             actor,
             tokenSet,
+            caller,
+            resolvedTarget,
+            mount,
+            ground,
+            lastCraft,
+            channels,
+            position,
+            activity,
+            CodesOf(inputs),
+            mode);
+    }
+
+    /// <summary>
+    /// Legacy <see cref="XpAction"/> entry. The action already carries a resolved sample
+    /// (no world lookup). Activity is forced to <see cref="Activity"/>.
+    /// </summary>
+    public static void Emit(ICoreAPI api, XpAction action)
+    {
+        if (api == null
+            || api.Side != EnumAppSide.Server
+            || action == null
+            || string.IsNullOrWhiteSpace(action.ActorUid))
+        {
+            return;
+        }
+
+        ProsequorModSystem? mod = ProsequorModSystem.For(api);
+        FatherXp? father = mod?.FatherXp;
+        IXpRuleRegistry? rules = mod?.XpRules;
+        if (father == null || rules == null)
+        {
+            return;
+        }
+
+        int quantity = action.CraftCount > 0 ? action.CraftCount : 1;
+        ResolveMetricRange(mod, action.HardnessDomain, metricMin: null, metricMax: null, out float min, out float max);
+        Channels channels = BuildChannels(
+            action.Hardness,
+            min,
+            max,
+            action.HardnessDomain,
+            action.TotalUnits,
+            quantity);
+
+        Deliver(
+            father,
+            rules,
+            mod?.Collections?.Index ?? new CollectionIndex(),
+            action.ActorUid.Trim(),
+            BuildTokenSet(action.Tokens.Count > 0 ? action.Tokens.ToList() : Array.Empty<string>()),
+            action.Held,
+            action.Target,
+            action.Mount,
+            action.Ground,
+            action.LastCraft,
+            channels,
+            action.Position,
+            activity: null,
+            inputs: null,
+            XpAwardMode.Earn);
+    }
+
+    static void Deliver(
+        FatherXp father,
+        IXpRuleRegistry rules,
+        CollectionIndex collections,
+        string actor,
+        IReadOnlySet<string> tokens,
+        string? caller,
+        string? target,
+        string? mount,
+        string? ground,
+        string? lastCraft,
+        Channels channels,
+        BlockPos? position,
+        string? activity,
+        IReadOnlyList<string>? inputs,
+        XpAwardMode mode)
+    {
+        IReadOnlyList<PlannedPay> pays = PlanPays(
+            rules,
+            collections,
+            actor,
+            tokens,
             caller,
             target,
             mount,
@@ -305,36 +367,9 @@ public static class Deed
         }
     }
 
-    /// <summary>Legacy <see cref="XpAction"/> entry — activity forced to <see cref="Activity"/>.</summary>
-    public static void Emit(ICoreAPI api, XpAction action)
-    {
-        if (action == null || string.IsNullOrWhiteSpace(action.ActorUid))
-        {
-            return;
-        }
-
-        Emit(
-            api,
-            action.ActorUid,
-            action.Tokens.Count > 0 ? action.Tokens.ToList() : Array.Empty<string>(),
-            action.Held,
-            action.Target,
-            action.Mount,
-            action.Ground,
-            action.LastCraft,
-            action.Hardness,
-            action.HardnessDomain,
-            metricMin: null,
-            metricMax: null,
-            action.TotalUnits,
-            action.CraftCount > 0 ? action.CraftCount : 1,
-            XpAwardMode.Earn,
-            action.Position);
-    }
-
     /// <summary>
-    /// Pure match/pay planning for tests and callers that deliver XP themselves.
-    /// Legacy metric args map into <see cref="Channels"/> the same way as <see cref="Emit"/>.
+    /// Pure match/pay planning for tests. There is no world here, so resistance, lifetime,
+    /// ranges, and counts are passed in. <see cref="Emit"/> reads those itself.
     /// </summary>
     public static IReadOnlyList<PlannedPay> PlanPays(
         IXpRuleRegistry rules,
@@ -574,10 +609,10 @@ public static class Deed
             grant);
 
     /// <summary>
-    /// Map legacy Emit metric args into named channels.
+    /// Map an already-resolved sample into named channels (tests / PlanPays).
     /// dig/mine/chop → resistance; clay-voxels → voxels; crop-lifetime → lifetime;
-    /// totalUnits → ingredients measure; craftCount → quantity fallback;
-    /// quantityUnits (when present) override quantity as summed stack counts.
+    /// totalUnits → ingredients measure; craftCount → quantity when
+    /// <paramref name="quantityUnits"/> is empty (otherwise the stacks are summed).
     /// When domain is blank but a metric range is present (tests), publish as resistance.
     /// </summary>
     public static Channels BuildChannels(
@@ -591,7 +626,8 @@ public static class Deed
         IReadOnlyList<ContributorShare>? contributors = null,
         string? makerUid = null,
         string? selectedContributorUid = null,
-        int growthStages = 0)
+        int growthStages = 0,
+        IReadOnlyList<QuantityUnit>? ingredientUnits = null)
     {
         int quantity = craftCount > 0 ? craftCount : 1;
         int ingredients = Math.Max(0, totalUnits);
@@ -639,18 +675,16 @@ public static class Deed
             resistanceMax = metricMax;
         }
 
-        if (quantityUnits != null && quantityUnits.Count > 0)
+        int outputSum = SumCounts(quantityUnits);
+        if (outputSum > 0)
         {
-            int summed = 0;
-            for (int i = 0; i < quantityUnits.Count; i++)
-            {
-                summed += Math.Max(0, quantityUnits[i].Count);
-            }
+            quantity = outputSum;
+        }
 
-            if (summed > 0)
-            {
-                quantity = summed;
-            }
+        int inputSum = SumCounts(ingredientUnits);
+        if (inputSum > 0)
+        {
+            ingredients = inputSum;
         }
 
         IReadOnlyList<ContributorShare> shares = NormalizeContributors(contributors);
@@ -666,8 +700,9 @@ public static class Deed
             hasVoxels,
             quantity,
             ingredients,
-            HasIngredients: ingredients > 0,
+            HasIngredients: ingredients > 0 || (ingredientUnits != null && ingredientUnits.Count > 0),
             quantityUnits,
+            ingredientUnits,
             shares.Count > 0 ? shares : null,
             NormalizeUid(makerUid),
             NormalizeUid(selectedContributorUid),
@@ -676,6 +711,92 @@ public static class Deed
             lifetimeMax,
             hasLifetime,
             Math.Max(0, growthStages));
+    }
+
+    static Channels ResolveChannels(
+        ICoreAPI api,
+        ProsequorModSystem? mod,
+        IReadOnlySet<string> tokens,
+        string? target,
+        ItemStack? subject,
+        IReadOnlyList<QuantityUnit>? outputs,
+        IReadOnlyList<QuantityUnit>? inputs,
+        IReadOnlyList<ContributorShare> shares,
+        string? maker,
+        string? selected)
+    {
+        float resistance = 0f;
+        float resistanceMin = 0f;
+        float resistanceMax = 0f;
+        bool hasResistance = false;
+        float voxels = 0f;
+        float voxelsMin = 0f;
+        float voxelsMax = 0f;
+        bool hasVoxels = false;
+        float lifetime = 0f;
+        float lifetimeMin = 0f;
+        float lifetimeMax = 0f;
+        bool hasLifetime = false;
+        int growthStages = 0;
+
+        if (TryMeasureBlockBreak(api, mod, target, out float r, out float rMin, out float rMax))
+        {
+            hasResistance = true;
+            resistance = r;
+            resistanceMin = rMin;
+            resistanceMax = rMax;
+        }
+        else if (TryMeasureAnimalWeight(api, mod, target, out float w, out float wMin, out float wMax))
+        {
+            hasResistance = true;
+            resistance = w;
+            resistanceMin = wMin;
+            resistanceMax = wMax;
+        }
+
+        if (TryMeasureCropLifetime(api, mod, target, out float days, out float dMin, out float dMax, out int stages))
+        {
+            hasLifetime = true;
+            lifetime = days;
+            lifetimeMin = dMin;
+            lifetimeMax = dMax;
+            growthStages = stages;
+        }
+
+        if (TryMeasureVoxels(mod, subject, out float v, out float vMin, out float vMax))
+        {
+            hasVoxels = true;
+            voxels = v;
+            voxelsMin = vMin;
+            voxelsMax = vMax;
+        }
+
+        int outputSum = SumCounts(outputs);
+        int quantity = outputSum > 0 ? outputSum : 1;
+        int ingredients = SumCounts(inputs);
+
+        return new Channels(
+            resistance,
+            resistanceMin,
+            resistanceMax,
+            hasResistance,
+            voxels,
+            voxelsMin,
+            voxelsMax,
+            hasVoxels,
+            quantity,
+            ingredients,
+            HasIngredients: ingredients > 0 || (inputs != null && inputs.Count > 0),
+            outputs,
+            inputs,
+            shares.Count > 0 ? shares : null,
+            maker,
+            selected,
+            lifetime,
+            lifetimeMin,
+            lifetimeMax,
+            hasLifetime,
+            growthStages);
     }
 
     /// <summary>Drop blank uids and non-positive weights; preserve order.</summary>
@@ -725,6 +846,7 @@ public static class Deed
         }
 
         XpPayChannel pay = rule.Pay;
+        collections ??= new CollectionIndex();
         float baseAmount;
         if (XpPayChannels.IsFlat(pay))
         {
@@ -735,6 +857,21 @@ public static class Deed
                 value: 0f,
                 min: 0f,
                 max: 0f);
+        }
+        else if (XpPayChannels.UsesIngredients(pay))
+        {
+            int ingredients = ResolveIngredients(rule, channels, collections);
+            if (ingredients <= 0)
+            {
+                return 0f;
+            }
+
+            return AmountTableMath.ResolveAmount(
+                rule.Amount,
+                rule.AmountTable,
+                ingredients,
+                AmountTableMath.IngredientsMin,
+                AmountTableMath.IngredientsMax);
         }
         else if (XpPayChannels.UsesMeasure(pay))
         {
@@ -768,17 +905,12 @@ public static class Deed
             return baseAmount / stages;
         }
 
-        if (XpPayChannels.IsFlat(pay))
+        if (XpPayChannels.IsFlat(pay) || !XpPayChannels.UsesQuantity(pay))
         {
             return baseAmount;
         }
 
-        if (!XpPayChannels.UsesQuantity(pay))
-        {
-            return baseAmount;
-        }
-
-        int quantity = ResolveQuantity(rule, channels, target, collections ?? new CollectionIndex());
+        int quantity = ResolveQuantity(rule, channels, target, collections);
         if (quantity <= 0)
         {
             return 0f;
@@ -788,7 +920,8 @@ public static class Deed
     }
 
     /// <summary>
-    /// Apply <c>exclude</c> to quantity. Prefer per-unit <see cref="Channels.QuantityUnits"/>;
+    /// Apply <c>include</c> then <c>exclude</c> to output quantity.
+    /// Prefer per-unit <see cref="Channels.QuantityUnits"/>;
     /// otherwise gate the whole quantity on the deed <paramref name="target"/>.
     /// </summary>
     public static int ResolveQuantity(
@@ -797,30 +930,19 @@ public static class Deed
         string? target,
         CollectionIndex collections)
     {
-        int raw = channels.Quantity > 0 ? channels.Quantity : 1;
-        XpQuantityExclude exclude = rule.Exclude ?? XpQuantityExclude.Empty;
-        if (exclude.IsEmpty)
-        {
-            return raw;
-        }
-
         collections ??= new CollectionIndex();
+        XpQuantityExclude include = rule.Include ?? XpQuantityExclude.Empty;
+        XpQuantityExclude exclude = rule.Exclude ?? XpQuantityExclude.Empty;
         IReadOnlyList<QuantityUnit>? units = channels.QuantityUnits;
         if (units != null && units.Count > 0)
         {
-            int kept = 0;
-            for (int i = 0; i < units.Count; i++)
-            {
-                QuantityUnit unit = units[i];
-                if (exclude.Matches(unit.Code, collections))
-                {
-                    continue;
-                }
+            return SumFiltered(units, include, exclude, collections);
+        }
 
-                kept += Math.Max(0, unit.Count);
-            }
-
-            return kept;
+        int raw = channels.Quantity > 0 ? channels.Quantity : 1;
+        if (!include.IsEmpty && !include.Matches(target, collections))
+        {
+            return 0;
         }
 
         if (exclude.Matches(target, collections))
@@ -829,6 +951,58 @@ public static class Deed
         }
 
         return raw;
+    }
+
+    /// <summary>
+    /// Apply <c>include</c> to ingredient units. Prefer <see cref="Channels.IngredientUnits"/>;
+    /// otherwise use the scalar ingredients channel (tests).
+    /// </summary>
+    public static int ResolveIngredients(
+        XpRule rule,
+        Channels channels,
+        CollectionIndex collections)
+    {
+        collections ??= new CollectionIndex();
+        XpQuantityExclude include = rule.Include ?? XpQuantityExclude.Empty;
+        IReadOnlyList<QuantityUnit>? units = channels.IngredientUnits;
+        if (units != null && units.Count > 0)
+        {
+            return SumFiltered(units, include, XpQuantityExclude.Empty, collections);
+        }
+
+        if (!include.IsEmpty)
+        {
+            // Scalar channel cannot satisfy a positive include.
+            return 0;
+        }
+
+        return Math.Max(0, channels.Ingredients);
+    }
+
+    static int SumFiltered(
+        IReadOnlyList<QuantityUnit> units,
+        XpQuantityExclude include,
+        XpQuantityExclude exclude,
+        CollectionIndex collections)
+    {
+        int kept = 0;
+        for (int i = 0; i < units.Count; i++)
+        {
+            QuantityUnit unit = units[i];
+            if (!include.IsEmpty && !include.Matches(unit.Code, collections))
+            {
+                continue;
+            }
+
+            if (exclude.Matches(unit.Code, collections))
+            {
+                continue;
+            }
+
+            kept += Math.Max(0, unit.Count);
+        }
+
+        return kept;
     }
 
     static void PickMeasure(
@@ -873,7 +1047,8 @@ public static class Deed
         domain != null
         && (domain.Equals(BlockBreakHardnessCatalog.DomainDig, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainMine, StringComparison.OrdinalIgnoreCase)
-            || domain.Equals(BlockBreakHardnessCatalog.DomainChop, StringComparison.OrdinalIgnoreCase));
+            || domain.Equals(BlockBreakHardnessCatalog.DomainChop, StringComparison.OrdinalIgnoreCase)
+            || domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase));
 
     static bool IsLifetimeDomain(string? domain) =>
         domain != null
@@ -940,6 +1115,180 @@ public static class Deed
         return set;
     }
 
+    static IReadOnlyList<string> CodesOf(IReadOnlyList<QuantityUnit>? units)
+    {
+        if (units == null || units.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        List<string> list = new(units.Count);
+        for (int i = 0; i < units.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(units[i].Code))
+            {
+                list.Add(units[i].Code.Trim());
+            }
+        }
+
+        return list;
+    }
+
+    static int SumCounts(IReadOnlyList<QuantityUnit>? units)
+    {
+        if (units == null || units.Count == 0)
+        {
+            return 0;
+        }
+
+        int sum = 0;
+        for (int i = 0; i < units.Count; i++)
+        {
+            sum += Math.Max(0, units[i].Count);
+        }
+
+        return sum;
+    }
+
+    static bool TryMeasureBlockBreak(
+        ICoreAPI api,
+        ProsequorModSystem? mod,
+        string? target,
+        out float resistance,
+        out float min,
+        out float max)
+    {
+        resistance = 0f;
+        min = 0f;
+        max = 0f;
+        Block? block = ResolveBlock(api, target);
+        if (block == null)
+        {
+            return false;
+        }
+
+        string? classify = BlockBreakClassification.ClassifyToken(block);
+        if (classify is not (BlockBreakClassification.TokenDig
+            or BlockBreakClassification.TokenMine
+            or BlockBreakClassification.TokenChop))
+        {
+            return false;
+        }
+
+        resistance = block.Resistance;
+        ResolveMetricRange(mod, classify, metricMin: null, metricMax: null, out min, out max);
+        return true;
+    }
+
+    static bool TryMeasureAnimalWeight(
+        ICoreAPI api,
+        ProsequorModSystem? mod,
+        string? target,
+        out float weight,
+        out float min,
+        out float max)
+    {
+        weight = 0f;
+        min = 0f;
+        max = 0f;
+        if (string.IsNullOrWhiteSpace(target) || api?.World == null)
+        {
+            return false;
+        }
+
+        EntityProperties? props = api.World.GetEntityType(new AssetLocation(target.Trim()));
+        if (!AnimalWeightCatalog.IsCatalogAnimal(props))
+        {
+            return false;
+        }
+
+        weight = props!.Weight;
+        ResolveMetricRange(
+            mod,
+            AnimalWeightCatalog.MetricDomain,
+            metricMin: null,
+            metricMax: null,
+            out min,
+            out max);
+        if (min <= 0f && max <= 0f)
+        {
+            min = weight;
+            max = weight;
+        }
+
+        return true;
+    }
+
+    static bool TryMeasureCropLifetime(
+        ICoreAPI api,
+        ProsequorModSystem? mod,
+        string? target,
+        out float days,
+        out float min,
+        out float max,
+        out int stages)
+    {
+        days = 0f;
+        min = 0f;
+        max = 0f;
+        stages = 0;
+        Block? block = ResolveBlock(api, target);
+        if (block?.CropProps == null || !AbilityBootstrap.IsCropBlock(block))
+        {
+            return false;
+        }
+
+        float daysPerMonth = (float)(api.World?.Calendar?.DaysPerMonth ?? 0);
+        days = CropLifetimeMath.TotalGrowthDays(block.CropProps, daysPerMonth);
+        if (days <= 0f)
+        {
+            return false;
+        }
+
+        stages = CropLifetimeMath.GrowthStages(block.CropProps);
+        ResolveMetricRange(mod, MetricDomainCropLifetime, metricMin: null, metricMax: null, out min, out max);
+        return true;
+    }
+
+    static bool TryMeasureVoxels(
+        ProsequorModSystem? mod,
+        ItemStack? subject,
+        out float voxels,
+        out float min,
+        out float max)
+    {
+        voxels = 0f;
+        min = 0f;
+        max = 0f;
+        ClayFormingRecipeCatalog? catalog = mod?.ClayFormingRecipes;
+        if (catalog == null
+            || !ProsequorStackPedigree.TryGetRecipeKey(subject, out string? recipeKey)
+            || !catalog.TryGet(recipeKey, out ClayFormingRecipeCatalog.RecipeInfo info))
+        {
+            return false;
+        }
+
+        voxels = info.VoxelsPerUnit;
+        ResolveMetricRange(mod, MetricDomainClayVoxels, metricMin: null, metricMax: null, out min, out max);
+        return true;
+    }
+
+    static Block? ResolveBlock(ICoreAPI api, string? code)
+    {
+        if (api.World == null || string.IsNullOrWhiteSpace(code))
+        {
+            return null;
+        }
+
+        Block? block = api.World.GetBlock(new AssetLocation(code.Trim()));
+        if (block == null || block.Id == 0)
+        {
+            return null;
+        }
+
+        return block;
+    }
+
     static void ResolveMetricRange(
         ProsequorModSystem? mod,
         string? metricDomain,
@@ -965,6 +1314,13 @@ public static class Deed
         string domain = metricDomain.Trim();
         if (mod.BlockBreakHardness != null
             && mod.BlockBreakHardness.TryGetRange(domain, out min, out max))
+        {
+            return;
+        }
+
+        if (domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase)
+            && mod.AnimalWeight != null
+            && mod.AnimalWeight.TryGetRange(out min, out max))
         {
             return;
         }

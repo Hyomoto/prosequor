@@ -406,28 +406,38 @@ public static class AnimalAlertService
                     continue;
                 }
 
+                EntityControls controls = ep.ServerControls;
+                bool sneak = controls.Sneak;
+                float playerRange = range;
+                if (sneak)
+                {
+                    float senseFactor = PlayerInteractionStation.ResolveAnimalSenseRangeFactor(player);
+                    if (senseFactor > 0f && Math.Abs(senseFactor - 1f) > 0.0001f)
+                    {
+                        playerRange = Math.Max(1f, range * senseFactor);
+                    }
+                }
+
                 float dist = (float)entity.Pos.DistanceTo(ep.Pos);
-                if (dist > range)
+                if (dist > playerRange)
                 {
                     continue;
                 }
 
-                EntityControls controls = ep.ServerControls;
-                bool sneak = controls.Sneak;
                 bool sprint = controls.Sprint;
                 bool moving = controls.TriesToMove
                     || Math.Abs(controls.WalkVector.X) + Math.Abs(controls.WalkVector.Z) > 0.001
                     || ep.Pos.Motion.LengthSq() > 0.0001;
                 int band = AnimalAlertMath.MovementBand(moving, sneak, sprint);
 
-                // Proximity uses sense range (wider while spooked).
+                // Proximity uses sense range (wider while spooked; narrowed while sneaking).
                 float raw = EvaluateRawThreat(
                     entity,
                     state,
                     player,
                     ep,
                     dist,
-                    range,
+                    playerRange,
                     moving,
                     sneak,
                     sprint);
@@ -635,6 +645,14 @@ public static class AnimalAlertService
         }
 
         float detectability = AnimalAlertMath.ThreatEmissionFromPercent(threatPct);
+        if (sneak)
+        {
+            float sneakFactor = PlayerInteractionStation.ResolveAnimalThreatSneakFactor(player);
+            if (sneakFactor > 0f && Math.Abs(sneakFactor - 1f) > 0.0001f)
+            {
+                detectability *= sneakFactor;
+            }
+        }
 
         int generation = animal.WatchedAttributes.GetInt("generation", 0);
         JsonObject? attrs = animal.Properties?.Attributes;

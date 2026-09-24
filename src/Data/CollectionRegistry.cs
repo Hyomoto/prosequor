@@ -100,46 +100,17 @@ public sealed class CollectionRegistry
             }
         }
 
-        EnsureBuiltinKeys();
         api.Logger.Notification(
             "[prosequor] Loaded {0} collection definition(s) from assets.",
             loaded);
     }
 
-    /// <summary>Keys that C# fillers and skills rely on even without JSON includes.</summary>
+    /// <summary>
+    /// Kept for tests that register keys before loading <c>collections.json</c>.
+    /// Shipped membership lives in that file; do not re-add unions here or a patch cannot remove them.
+    /// </summary>
     public void EnsureBuiltinKeys()
     {
-        string[] keys =
-        [
-            "clay", "peat", "charcoal", "saltpeter", "dirt", "soil", "wood", "leaves", "pine",
-            "sapling", "seed", "crop", "mature-crop", "immature-crop",
-            "berry-bush", "fruit-tree", "farmland", "gravel", "sand", "bonysoil",
-            "stone", "ore", "gemstone", "crystalizedore", "nugget",
-            "axe", "shovel", "pickaxe", "saw", "hammer", "hoe", "pan", "watering-can", "fishingpole",
-            "bombs",
-            "knife", "tool", "weapon", "metal-crafts",
-            "clothing", "armor", "thread", "cloth", "leather", "hide", "wearable",
-            "firewood", "planks",
-            "raft", "sailboat", "watercraft", "freshwater", "saltwater", "liquid",
-            "fish", "small-fish", "medium-fish", "large-fish", "reef", "adult", "juvenile",
-            "graft", "root",
-            "storagevessel", "flowerpot", "clayplanter",
-            "clay-formed", "smithing-formed",
-            "honeycomb", "skep", "wildbeehive", "beehive",
-            "bloomery",
-            "egg",
-            "sap"
-        ];
-
-        foreach (string key in keys)
-        {
-            Index.EnsureKey(key);
-        }
-
-        // Builtin named unions (JSON may also declare them; AddUnion is idempotent on members).
-        Index.AddUnion("wearable", ["clothing", "armor"]);
-        Index.AddUnion("watercraft", ["raft", "sailboat"]);
-        Index.AddUnion("beehive", ["skep", "wildbeehive"]);
     }
 
     public void RebuildMembership(ICoreAPI api)

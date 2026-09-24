@@ -30,9 +30,9 @@ public static class AnimalFeedXp
             return;
         }
 
-        IReadOnlyList<string>? inputs = string.IsNullOrWhiteSpace(foodCode)
+        IReadOnlyList<Deed.QuantityUnit>? inputUnits = string.IsNullOrWhiteSpace(foodCode)
             ? null
-            : [foodCode.Trim()];
+            : [new Deed.QuantityUnit(foodCode.Trim(), 1)];
 
         Deed.Emit(
             api,
@@ -41,8 +41,8 @@ public static class AnimalFeedXp
             caller: caller,
             target: EventFactBuilder.CodeOf(animal),
             position: position,
-            selectedContributorUid: payerUid!.Trim(),
-            inputs: inputs);
+            inputs: inputUnits,
+            selectedContributorUid: payerUid!.Trim());
     }
 
     /// <summary>True when <paramref name="uid"/> can be a feed payee (not blank, not a sentinel).</summary>

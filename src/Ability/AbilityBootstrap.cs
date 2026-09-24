@@ -108,6 +108,8 @@ public static class AbilityBootstrap
         registry.Register(new FreshnessAttributeMutator());
         registry.Register(new SatietyAttributeMutator());
         registry.Register(new HungerDelayAttributeMutator());
+        registry.Register(new FlightAttributeMutator());
+        registry.Register(new RangedAccAttributeMutator());
         registry.Register(new IntoxicationAttributeMutator());
         registry.Register(new PriceAttributeMutator());
         registry.Register(new RegenAttributeMutator());
@@ -564,7 +566,10 @@ public static class AbilityBootstrap
                  {
                      VerbIds.SprintSpeed,
                      VerbIds.SwimSpeed,
-                     VerbIds.SneakSpeed
+                     VerbIds.SneakSpeed,
+                     VerbIds.AnimalSenseRange,
+                     VerbIds.AnimalThreatSneak,
+                     VerbIds.ArrowBreak
                  })
         {
             hooks.RegisterPhase(
@@ -574,6 +579,19 @@ public static class AbilityBootstrap
                 typeof(PlayerInteractionContext),
                 typeof(float));
         }
+
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.UnawareDamage,
+            HookIds.Amount,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.UnawareDamage,
+            HookIds.Threshold,
+            typeof(PlayerInteractionContext),
+            typeof(float));
 
         hooks.RegisterPhase(
             HookIds.PlayerInteraction,
@@ -731,6 +749,8 @@ public static class AbilityBootstrap
         actions.Register(new IncreaseFreshnessStackAction());
         actions.Register(new IncreaseFreshnessItemStackAction());
         actions.Register(new UpgradeOreGradeOnDropsStackAction());
+        actions.Register(new UpgradeHideSizeOnDropsStackAction());
+        actions.Register(new ChanceEntityDropsStackAction(actions));
         actions.Register(new ReplaceMatchingStackWithBlockStackAction());
         actions.Register(new AppendFromDropTableBlockAction());
         actions.Register(new AppendFromDropTableItemAction());
@@ -788,11 +808,17 @@ public static class AbilityBootstrap
                  {
                      VerbIds.SprintSpeed,
                      VerbIds.SwimSpeed,
-                     VerbIds.SneakSpeed
+                     VerbIds.SneakSpeed,
+                     VerbIds.AnimalSenseRange,
+                     VerbIds.AnimalThreatSneak,
+                     VerbIds.ArrowBreak
                  })
         {
             actions.Register(new NumberPlayerInteractionFloatAction(speedVerb));
         }
+
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Amount));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Threshold));
 
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.Amount));
@@ -846,7 +872,8 @@ public static class AbilityBootstrap
             return;
         }
 
-        foreach (string code in index.Codes("tool").Concat(index.Codes("weapon")))
+        foreach (string code in CodesIncludingUnions(index, "tool")
+                     .Concat(CodesIncludingUnions(index, "weapon")))
         {
             if (string.IsNullOrWhiteSpace(code) || !PathHasMetalToken(code, metals))
             {
@@ -873,6 +900,22 @@ public static class AbilityBootstrap
         return false;
     }
 
+    static IEnumerable<string> CodesIncludingUnions(CollectionIndex index, string id)
+    {
+        foreach (string code in index.Codes(id))
+        {
+            yield return code;
+        }
+
+        foreach (string member in index.UnionMembers(id))
+        {
+            foreach (string code in index.Codes(member))
+            {
+                yield return code;
+            }
+        }
+    }
+
     static void FillFromWorld(
         ICoreAPI api,
         Action<string, Block> addBlock,
@@ -885,51 +928,15 @@ public static class AbilityBootstrap
                 continue;
             }
 
-            if (item is ItemTreeSeed)
-            {
-                addItem(SaplingTag, item);
-            }
-
-            if (IsSeedItem(item))
-            {
-                addItem(SeedTag, item);
-            }
-
-            if (IsCrystallizedOreItemPath(item.Code.Path))
-            {
-                addItem(CrystallizedOreTag, item);
-            }
-
-            if (IsNuggetItem(item))
-            {
-                addItem(NuggetTag, item);
-            }
-
-            if (IsStoneItemPath(item.Code.Path))
-            {
-                addItem(StoneTag, item);
-            }
-
-            AddToolCollections(item, addItem);
-            AddThreadClothCollections(item, addItem);
-            AddLeatherCollections(item, addItem);
-            AddHideCollections(item, addItem);
-            AddWearableCollections(item, addItem);
-            AddFishCollections(item, addItem);
+            AddFishSizeCollections(item, addItem);
         }
 
-        int pineBlocks = 0;
         int leavesBlocks = 0;
         int woodBlocks = 0;
-        int saplingBlocks = 0;
         int cropBlocks = 0;
         int matureCropBlocks = 0;
         int immatureCropBlocks = 0;
-        int berryBushBlocks = 0;
-        int fruitTreeBlocks = 0;
         int stoneBlocks = 0;
-        int oreBlocks = 0;
-        int gemstoneBlocks = 0;
 
         foreach (Block block in api.World.Blocks)
         {
@@ -939,32 +946,6 @@ public static class AbilityBootstrap
             }
 
             string path = block.Code.Path;
-            if (IsRawClayBlockPath(path))
-            {
-                addBlock(ClayTag, block);
-            }
-
-            if (IsPeatBlockPath(path))
-            {
-                addBlock(PeatTag, block);
-            }
-
-            if (IsSaltpeterBlockPath(path))
-            {
-                addBlock(SaltpeterTag, block);
-            }
-
-            if (IsCharcoalBlockPath(path))
-            {
-                addBlock(CharcoalTag, block);
-            }
-
-            if (block is BlockSapling)
-            {
-                addBlock(SaplingTag, block);
-                saplingBlocks++;
-            }
-
             if (IsCropBlock(block))
             {
                 addBlock(CropTag, block);
@@ -979,28 +960,6 @@ public static class AbilityBootstrap
                     addBlock(ImmatureCropTag, block);
                     immatureCropBlocks++;
                 }
-            }
-
-            if (IsBerryBushBlock(block))
-            {
-                addBlock(BerryBushTag, block);
-                berryBushBlocks++;
-            }
-
-            if (ForageBlocks.IsSap(block))
-            {
-                addBlock("sap", block);
-            }
-
-            if (IsFruitTreeBlock(block))
-            {
-                addBlock(FruitTreeTag, block);
-                fruitTreeBlocks++;
-            }
-
-            if (IsFarmlandBlock(block))
-            {
-                addBlock(FarmlandTag, block);
             }
 
             if (block.BlockMaterial == EnumBlockMaterial.Leaves)
@@ -1027,27 +986,7 @@ public static class AbilityBootstrap
                 if (BlockBreakClassification.IsFellingWood(block))
                 {
                     woodBlocks++;
-                    if (BlockBreakClassification.IsPineWood(block))
-                    {
-                        addBlock(PineTag, block);
-                        pineBlocks++;
-                    }
                 }
-            }
-
-            if (IsGravelPath(path))
-            {
-                addBlock(GravelTag, block);
-            }
-
-            if (IsSandPath(path))
-            {
-                addBlock(SandTag, block);
-            }
-
-            if (IsBonySoilPath(path))
-            {
-                addBlock(BonySoilTag, block);
             }
 
             if (block.BlockMaterial == EnumBlockMaterial.Stone)
@@ -1055,205 +994,26 @@ public static class AbilityBootstrap
                 addBlock(StoneTag, block);
                 stoneBlocks++;
             }
-            else if (block.BlockMaterial == EnumBlockMaterial.Ore)
-            {
-                if (IsGemstoneOre(block))
-                {
-                    addBlock(GemstoneTag, block);
-                    gemstoneBlocks++;
-                }
-                else
-                {
-                    addBlock(OreTag, block);
-                    oreBlocks++;
-                }
-            }
-
-            AddToolCollections(block, (tag, collectible) =>
-            {
-                if (collectible is Block b)
-                {
-                    addBlock(tag, b);
-                }
-            });
-
-            // Linen (and cloth) bolts are blocks; the item classifier never sees them.
-            if (path.StartsWith("cloth-", StringComparison.OrdinalIgnoreCase)
-                || path.StartsWith("linen-", StringComparison.OrdinalIgnoreCase))
-            {
-                addBlock(CraftMutateOutputStation.TagCloth, block);
-            }
         }
 
         api.Logger.Notification(
-            "[prosequor] Builtin collections: wood {0}, pine {1}, leaves {2}, sapling {3}, crop {4} ({5} mature / {6} immature), berry-bush {7}, fruit-tree {8}, stone {9}, ore {10}, gemstone {11}.",
+            "[prosequor] Builtin collections: wood {0}, leaves {1}, crop {2} ({3} mature / {4} immature), stone {5}.",
             woodBlocks,
-            pineBlocks,
             leavesBlocks,
-            saplingBlocks,
             cropBlocks,
             matureCropBlocks,
             immatureCropBlocks,
-            berryBushBlocks,
-            fruitTreeBlocks,
-            stoneBlocks,
-            oreBlocks,
-            gemstoneBlocks);
+            stoneBlocks);
     }
 
-    static void AddToolCollections(CollectibleObject collectible, Action<string, Item> addItem)
-    {
-        if (collectible is not Item item)
-        {
-            return;
-        }
-
-        EnumTool? tool = item.Tool;
-        switch (tool)
-        {
-            case EnumTool.Shovel:
-                addItem("shovel", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Axe:
-                addItem("axe", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Pickaxe:
-                addItem("pickaxe", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Saw:
-                addItem("saw", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Hammer:
-                addItem("hammer", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Hoe:
-                addItem("hoe", item);
-                addItem("tool", item);
-                break;
-            case EnumTool.Chisel:
-            case EnumTool.Shears:
-            case EnumTool.Wrench:
-            case EnumTool.Scythe:
-            case EnumTool.Sickle:
-            case EnumTool.Probe:
-                addItem("tool", item);
-                break;
-            case EnumTool.Sword:
-            case EnumTool.Spear:
-            case EnumTool.Bow:
-            case EnumTool.Sling:
-            case EnumTool.Club:
-                addItem("weapon", item);
-                break;
-            case EnumTool.Knife:
-                addItem("knife", item);
-                addItem("weapon", item);
-                break;
-        }
-
-        if (item is ItemFishingPole)
-        {
-            addItem("fishingpole", item);
-        }
-    }
-
-    static void AddToolCollections(Block block, Action<string, CollectibleObject> add)
-    {
-        if (block is BlockPan)
-        {
-            add("pan", block);
-        }
-
-        if (block is BlockWateringCan)
-        {
-            add(WateringCanTag, block);
-        }
-
-        if (block is BlockBomb)
-        {
-            add(BombsTag, block);
-        }
-    }
-
-    static void AddThreadClothCollections(Item item, Action<string, Item> addItem)
-    {
-        string? path = item.Code?.Path;
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
-
-        if (path.Equals("flaxtwine", StringComparison.OrdinalIgnoreCase)
-            || path.Contains("twine", StringComparison.OrdinalIgnoreCase)
-            || path.Contains("thread", StringComparison.OrdinalIgnoreCase))
-        {
-            addItem(CraftMutateOutputStation.TagThread, item);
-        }
-
-        if (path.StartsWith("cloth-", StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith("linen-", StringComparison.OrdinalIgnoreCase))
-        {
-            addItem(CraftMutateOutputStation.TagCloth, item);
-        }
-    }
-
-    static void AddLeatherCollections(Item item, Action<string, Item> addItem)
-    {
-        string? path = item.Code?.Path;
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
-
-        if (path.StartsWith("leather", StringComparison.OrdinalIgnoreCase))
-        {
-            addItem(LeatherTag, item);
-        }
-    }
-
-    static void AddHideCollections(Item item, Action<string, Item> addItem)
-    {
-        string? path = item.Code?.Path;
-        if (string.IsNullOrEmpty(path))
-        {
-            return;
-        }
-
-        if (path.StartsWith("hide-", StringComparison.OrdinalIgnoreCase))
-        {
-            addItem(HideTag, item);
-        }
-    }
-
-    static void AddWearableCollections(Item item, Action<string, Item> addItem)
-    {
-        HashSet<string> tags = LastCraftStation.ClassifyProductTags(item.Code?.Path);
-        foreach (string tag in tags)
-        {
-            addItem(tag, item);
-        }
-    }
-
-    static void AddFishCollections(Item item, Action<string, Item> addItem)
+    static void AddFishSizeCollections(Item item, Action<string, Item> addItem)
     {
         if (!FishClassification.IsFishItem(item))
         {
             return;
         }
 
-        addItem(FishTag, item);
-        ItemStack probe = new(item);
-        HashSet<string> tags = new(StringComparer.OrdinalIgnoreCase);
-        FishClassification.AddContextualTags(probe, tags);
-        foreach (string tag in tags)
-        {
-            addItem(tag, item);
-        }
+        addItem(FishClassification.ClassifySize(new ItemStack(item)), item);
     }
 
     /// <summary>Crop plant blocks (farming harvest targets).</summary>

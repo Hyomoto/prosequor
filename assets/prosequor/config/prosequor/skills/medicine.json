@@ -21,8 +21,7 @@
     },
     {
       "id": "prosequor:heal-bandage-medicine",
-      "amount": [0, 1],
-      "pay": "effort",
+      "amount": 1,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "healed", "caller:<poultice, bandage>" ]

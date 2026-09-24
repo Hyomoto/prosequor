@@ -51,13 +51,14 @@ public static class CementationXp
             blister = coffin.Inventory[CementationXpStation.IngotSlotIndex]?.Itemstack;
         }
 
+        string? target = EventFactBuilder.CodeOf(blister) ?? EventFactBuilder.CodeOf(coffin.Block);
         Deed.Emit(
             coffin.Api,
             playerUid: "",
             DeedToken.CementationFired,
             caller: CallerIdentities.Cementation,
-            target: EventFactBuilder.CodeOf(blister) ?? EventFactBuilder.CodeOf(coffin.Block),
-            craftCount: quantity,
+            target: target,
+            outputs: [new Deed.QuantityUnit(target ?? "", quantity)],
             contributors: shares);
     }
 }

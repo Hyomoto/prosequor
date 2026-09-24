@@ -43,7 +43,6 @@
     {
       "id": "prosequor:fruit-tree-grown-farming",
       "amount": 2,
-      "pay": "quantity",
       "payee": "maker",
       "when": {
         "activity": "prosequor:deed",
@@ -53,7 +52,6 @@
     {
       "id": "prosequor:fertilizer-absorbed",
       "amount": 0.01,
-      "pay": "quantity",
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",

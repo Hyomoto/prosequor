@@ -1,5 +1,4 @@
 using Prosequor.Ability;
-using Prosequor.Ability.Hooks;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
@@ -8,14 +7,11 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Cooking butcher deed: <c>butchered</c> with <c>pay: quantity</c> = meat + fat
-/// after the cooking yield fold.
+/// Cooking butcher deed: <c>butchered</c> with all drops as outputs.
+/// Cooking rules keep meat and fat via <c>include</c>.
 /// </summary>
 public static class ButcherXp
 {
-    public const string MeatCollectionId = "meat";
-    public const string FatCollectionId = "fat";
-
     public static void NotifyHarvest(IPlayer byPlayer, Entity entity, ItemStack[]? drops)
     {
         ICoreAPI? api = entity?.World?.Api ?? byPlayer?.Entity?.Api;
@@ -32,8 +28,7 @@ public static class ButcherXp
             return;
         }
 
-        CollectionIndex? tags = ProsequorModSystem.For(api)?.Collections?.Index;
-        List<Deed.QuantityUnit> units = ToMeatFatUnits(drops, tags);
+        List<Deed.QuantityUnit> units = ToUnits(drops);
         if (units.Count == 0)
         {
             return;
@@ -55,17 +50,14 @@ public static class ButcherXp
             caller: caller,
             target: EventFactBuilder.CodeOf(entity),
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-            craftCount: 1,
             position: entity.Pos?.AsBlockPos?.Copy(),
-            quantityUnits: units);
+            outputs: units);
     }
 
-    public static List<Deed.QuantityUnit> ToMeatFatUnits(
-        ItemStack[]? drops,
-        CollectionIndex? tags)
+    public static List<Deed.QuantityUnit> ToUnits(ItemStack[]? drops)
     {
         List<Deed.QuantityUnit> units = new();
-        if (drops == null || tags == null)
+        if (drops == null)
         {
             return units;
         }
@@ -75,12 +67,6 @@ public static class ButcherXp
             ItemStack? stack = drops[i];
             string? code = EventFactBuilder.CodeOf(stack);
             if (string.IsNullOrWhiteSpace(code) || stack!.StackSize <= 0)
-            {
-                continue;
-            }
-
-            if (!tags.StackMatches(MeatCollectionId, stack)
-                && !tags.StackMatches(FatCollectionId, stack))
             {
                 continue;
             }

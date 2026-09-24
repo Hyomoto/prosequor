@@ -29,6 +29,12 @@ public sealed class XpRule
     public XpPayChannel Pay { get; init; }
 
     /// <summary>
+    /// Codes / collections kept for quantity (outputs) or ingredients (inputs).
+    /// Empty when unused. Only valid with quantity or ingredients pay.
+    /// </summary>
+    public XpQuantityExclude Include { get; init; } = XpQuantityExclude.Empty;
+
+    /// <summary>
     /// Codes / collections omitted from the quantity channel. Empty when unused.
     /// Only valid with <see cref="XpPayChannel.Quantity"/>.
     /// </summary>
@@ -66,6 +72,11 @@ public class XpRuleJson
 
     /// <summary>Single channel name; use <see cref="TryParsePay"/>. Null/omit → flat.</summary>
     public JToken? pay { get; set; }
+
+    /// <summary>
+    /// Codes / <c>&lt;collections&gt;</c> kept for quantity or ingredients. Null/omit → empty.
+    /// </summary>
+    public string[]? include { get; set; }
 
     /// <summary>
     /// Codes / <c>&lt;collections&gt;</c> omitted from quantity. Null/omit → empty.

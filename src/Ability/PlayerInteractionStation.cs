@@ -63,6 +63,26 @@ public static class PlayerInteractionStation
     public static float ResolveSneakSpeedBonus(IPlayer player) =>
         Math.Max(0f, RunFloat(player, VerbIds.SneakSpeed));
 
+    /// <summary>Animal sense-range multiplier while sneaking (seed 1).</summary>
+    public static float ResolveAnimalSenseRangeFactor(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.AnimalSenseRange, seed: 1f));
+
+    /// <summary>Animal threat-emission multiplier while sneaking (seed 1).</summary>
+    public static float ResolveAnimalThreatSneakFactor(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.AnimalThreatSneak, seed: 1f));
+
+    /// <summary>Arrow break chance after Nice Shot fold (seed = current break chance).</summary>
+    public static float ResolveArrowBreakChance(IPlayer player, float breakChance) =>
+        Math.Max(0f, RunFloat(player, VerbIds.ArrowBreak, seed: Math.Max(0f, breakChance)));
+
+    /// <summary>Heartseeker damage multiplier (seed 1) when threat is below the folded threshold.</summary>
+    public static float ResolveUnawareDamageFactor(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.UnawareDamage, HookIds.Amount, seed: 1f));
+
+    /// <summary>Heartseeker threat threshold percent (seed 0).</summary>
+    public static float ResolveUnawareDamageThreshold(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.UnawareDamage, HookIds.Threshold, seed: 0f));
+
     /// <summary>
     /// Which on-foot locomotion bonus applies. Liquid wins over sprint/sneak.
     /// Sprint and sneak are exclusive (both held → neither). Mounted is never a foot mode.
@@ -364,6 +384,7 @@ public static class PlayerInteractionStation
     public const string StatMeleeDamageKey = "prosequor-attr-str-melee";
     public const string StatRangedSpeedKey = "prosequor-attr-per-ranged-speed";
     public const string StatRangedAccKey = "prosequor-attr-per-ranged-acc";
+    public const string StatBowQualityAccKey = "prosequor-bow-quality-acc";
     public const string StatFallDamageFactorKey = "prosequor-attr-res-fall-factor";
     public const string StatFallDamageThresholdKey = "prosequor-attr-res-fall-threshold";
     public const string StatAnimalSeekingRangeKey = "prosequor-attr-inc-animal-seek";
@@ -455,7 +476,7 @@ public static class PlayerInteractionStation
 
     /// <summary>
     /// Writes absolute pipeline percent onto <c>rangedWeaponsAcc</c>
-    /// as an additive offset (<c>pct/100 - 1</c>).
+    /// as an additive offset (<c>pct/100 - 1</c>), plus any stamped bow quality factor.
     /// </summary>
     public static void ApplyRangedAcc(Entity entity)
     {
@@ -478,6 +499,27 @@ public static class PlayerInteractionStation
         else
         {
             entity.Stats.Set("rangedWeaponsAcc", StatRangedAccKey, offset, false);
+        }
+
+        float bowBonus = 0f;
+        ItemStack? held = entityPlayer.RightHandItemSlot?.Itemstack
+            ?? entityPlayer.LeftHandItemSlot?.Itemstack;
+        if (held != null)
+        {
+            float factor = CraftAttributeMods.GetFactor(held, RangedAccAttributeMutator.KeyName);
+            if (factor > 1.0001f)
+            {
+                bowBonus = factor - 1f;
+            }
+        }
+
+        if (Math.Abs(bowBonus) < 0.0001f)
+        {
+            entity.Stats.Remove("rangedWeaponsAcc", StatBowQualityAccKey);
+        }
+        else
+        {
+            entity.Stats.Set("rangedWeaponsAcc", StatBowQualityAccKey, bowBonus, false);
         }
     }
 
@@ -679,7 +721,10 @@ public static class PlayerInteractionStation
     static int RunInt(IPlayer player, VerbId verb, int seed = 0) =>
         RunPipelineInt(player, HookIds.PlayerInteraction, verb, HookIds.Default, seed);
 
-    static float RunFloat(IPlayer player, VerbId verb, float seed = 0f)
+    static float RunFloat(IPlayer player, VerbId verb, float seed = 0f) =>
+        RunFloat(player, verb, HookIds.Default, seed);
+
+    static float RunFloat(IPlayer player, VerbId verb, PhaseId phase, float seed = 0f)
     {
         if (player?.Entity == null)
         {
@@ -709,7 +754,7 @@ public static class PlayerInteractionStation
             }
         };
 
-        return mod.Pipeline.Run(HookIds.PlayerInteraction, verb, HookIds.Default, context, seed);
+        return mod.Pipeline.Run(HookIds.PlayerInteraction, verb, phase, context, seed);
     }
 
     static int RunPipelineInt(IPlayer player, HookId hook, VerbId verb, PhaseId phase, int seed)
