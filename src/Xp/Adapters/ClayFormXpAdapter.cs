@@ -2,12 +2,11 @@ using Prosequor.Ability;
 using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
-using Vintagestory.GameContent;
 
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// XP from clay-form good-voxel progress. <c>crafting</c> + target recipe output + caller @hand.
+/// XP from clay-form / anvil good-voxel progress. One flat <c>crafting</c> deed per novel voxel.
 /// </summary>
 public class ClayFormXpAdapter
 {
@@ -29,7 +28,7 @@ public class ClayFormXpAdapter
     {
     }
 
-    /// <param name="voxelCount">Novel good-voxel delta. Published as an output unit.</param>
+    /// <param name="voxelCount">Novel good-voxel delta. One flat emit per voxel.</param>
     /// <param name="targetCode">Selected recipe output collectible code.</param>
     public void NotifyProgress(IPlayer byPlayer, int voxelCount, string? targetCode)
     {
@@ -43,13 +42,16 @@ public class ClayFormXpAdapter
             return;
         }
 
-        Deed.Emit(
-            sapi,
-            serverPlayer.PlayerUID,
-            DeedToken.Crafting,
-            caller: CallerIdentities.Hand,
-            target: targetCode,
-            lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),
-            outputs: [new Deed.QuantityUnit(targetCode ?? "", voxelCount)]);
+        string? lastCraft = EventFactBuilder.LastCraftCode(serverPlayer);
+        for (int i = 0; i < voxelCount; i++)
+        {
+            Deed.Emit(
+                sapi,
+                serverPlayer.PlayerUID,
+                DeedToken.Crafting,
+                caller: CallerIdentities.Hand,
+                target: targetCode,
+                lastCraft: lastCraft);
+        }
     }
 }

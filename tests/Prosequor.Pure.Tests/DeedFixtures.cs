@@ -22,6 +22,7 @@ public static class DeedFixtures
         VerifyAmountTableMetric();
         VerifyLifetimePay();
         VerifyFlatIgnoresQuantity();
+        VerifyCraftingVoxelFlatProgress();
         VerifyMissingResistanceUsesTableZero();
         VerifyMissingLifetimeUsesTableZeroOverStages();
         VerifyPayCompileRejects();
@@ -633,6 +634,112 @@ public static class DeedFixtures
         if (flat.Pay != XpPayChannel.Flat)
         {
             Assert.Fail("[prosequor] AmountRule helper should default Pay to flat.");
+        }
+    }
+
+    /// <summary>
+    /// Clay-form / smith-work style: flat 0.01 per crafting emit; N novel voxels → N × 0.01.
+    /// </summary>
+    static void VerifyCraftingVoxelFlatProgress()
+    {
+        CollectionIndex collections = new();
+        collections.AddCode("clay-formed", "game:bowl-blue");
+        collections.AddCode("smithing-formed", "game:ingot-copper");
+
+        XpRule clayVoxel = AmountRule(
+            "prosequor:clay-form-voxel",
+            "clayforming",
+            0.01f,
+            order: 1,
+            collections,
+            tags: ["crafting", "caller:@hand", "target:<clay-formed>"]);
+        XpRule smithWork = AmountRule(
+            "prosequor:smith-work",
+            "metalworking",
+            0.01f,
+            order: 1,
+            collections,
+            tags: ["crafting", "caller:@hand", "target:<smithing-formed>"]);
+
+        FixedAmountRules clayRules = new(clayVoxel);
+        IReadOnlyList<Deed.PlannedPay> oneClay = Deed.PlanPays(
+            clayRules,
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            caller: CallerIdentities.Hand,
+            target: "game:bowl-blue",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 0f,
+            metricMin: 0f,
+            metricMax: 0f,
+            totalUnits: 0,
+            craftCount: 1);
+
+        if (oneClay.Count != 1 || Math.Abs(oneClay[0].Amount - 0.01f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Clay-form voxel rule must pay flat 0.01 per emit.");
+        }
+
+        // Quantity on a single emit must not scale flat crafting progress.
+        IReadOnlyList<Deed.PlannedPay> withQuantity = Deed.PlanPays(
+            clayRules,
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            caller: CallerIdentities.Hand,
+            target: "game:bowl-blue",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            Deed.BuildChannels(
+                metric: 0f,
+                metricMin: 0f,
+                metricMax: 0f,
+                metricDomain: null,
+                totalUnits: 0,
+                craftCount: 10,
+                quantityUnits: [new Deed.QuantityUnit("game:bowl-blue", 10)]));
+
+        if (withQuantity.Count != 1 || Math.Abs(withQuantity[0].Amount - 0.01f) > 0.0001f)
+        {
+            Assert.Fail(
+                "[prosequor] Flat clay-form must ignore quantity; N voxels are N separate emits.");
+        }
+
+        const int novelVoxels = 10;
+        if (Math.Abs(oneClay[0].Amount * novelVoxels - 0.1f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Ten clay voxel emits should total 0.1 XP.");
+        }
+
+        FixedAmountRules smithRules = new(smithWork);
+        IReadOnlyList<Deed.PlannedPay> oneSmith = Deed.PlanPays(
+            smithRules,
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            caller: CallerIdentities.Hand,
+            target: "game:ingot-copper",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 0f,
+            metricMin: 0f,
+            metricMax: 0f,
+            totalUnits: 0,
+            craftCount: 1);
+
+        if (oneSmith.Count != 1 || Math.Abs(oneSmith[0].Amount - 0.01f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Smith-work rule must pay flat 0.01 per emit.");
+        }
+
+        if (Math.Abs(oneSmith[0].Amount * novelVoxels - 0.1f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Ten smith voxel emits should total 0.1 XP.");
         }
     }
 

@@ -14,7 +14,6 @@
     {
       "id": "prosequor:clay-form-voxel",
       "amount": 0.01,
-      "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "crafting", "caller:@hand", "target:<clay-formed>" ]

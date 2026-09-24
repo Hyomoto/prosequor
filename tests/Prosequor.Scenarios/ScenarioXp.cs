@@ -110,7 +110,10 @@ static class ScenarioXp
             player.PlayerUID);
     }
 
-    /// <summary>Same fact clay/anvil voxel progress publishes (<c>crafting</c> + <c>@hand</c>).</summary>
+    /// <summary>
+    /// Clay/anvil voxel progress: one flat <c>crafting</c> deed per novel voxel
+    /// (N emits × flat amount; not <c>pay: quantity</c>).
+    /// </summary>
     public static float PlannedCraftingVoxels(
         IWorldAccessor world,
         string skillId,
@@ -119,10 +122,7 @@ static class ScenarioXp
         int voxelCount)
     {
         Assert.True(voxelCount > 0);
-        List<Deed.QuantityUnit>? units = !string.IsNullOrWhiteSpace(target)
-            ? [new Deed.QuantityUnit(target!, voxelCount)]
-            : null;
-        return Sum(
+        float one = Sum(
             Plan(
                 world,
                 playerUid,
@@ -130,10 +130,11 @@ static class ScenarioXp
                 CallerIdentities.Hand,
                 target,
                 totalUnits: 0,
-                craftCount: voxelCount,
-                units),
+                craftCount: 1,
+                quantityUnits: null),
             skillId,
             playerUid);
+        return one * voxelCount;
     }
 
     /// <summary>Same fact mold harden settle publishes (<c>mold-cast</c>, payee contributors).</summary>

@@ -374,7 +374,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `hunted` | Animal killed by a player arrow or thrown spear |
 | `trapped` | Animal caught in a basket / crate trap |
 | `crafted` | Craft-grid take / similar discrete craft |
-| `crafting` | Hand-shape progress (clay-form, smith voxels) |
+| `crafting` | Hand-shape progress (clay-form / smith); one flat deed per novel voxel |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
 | `till-soil` | Soil → farmland |
 | `fertilizer-absorbed` | Fertilizer nutrient transfer |
@@ -827,8 +827,8 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `flat` | Pay `amount` once (default) |
 | `resistance` | Lerp `amount` table against a float measure (block resistance, animal weight, or an explicit 0–1 emit range) |
 | `effort` | Alias for `resistance` (same channel) |
-| `voxels` | Lerp `amount` table against clay voxels-per-unit |
-| `quantity` | Multiply by emit quantity (crafts, voxels, drops, …) |
+| `voxels` | Lerp `amount` table against clay voxels-per-unit on the fired piece |
+| `quantity` | Multiply by produced units on the emit (drops, crafts, contents, …). Not used for clay-form / smith voxel pulses — those are flat per emit |
 | `ingredients` | Lerp `amount` table against recipe ingredient units (1–40) |
 | `lifetime` | Lerp `amount` table against crop growth days (catalog min–max), then divide by `GrowthStages` |
 
