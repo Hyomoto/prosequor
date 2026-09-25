@@ -1,3 +1,4 @@
+using Prosequor.Xp;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;

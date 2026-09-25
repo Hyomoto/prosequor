@@ -1,6 +1,7 @@
 using Atlas.Api;
 using Atlas.XUnit;
 using Prosequor.Ability;
+using Prosequor.Xp;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
@@ -9,9 +10,9 @@ using Xunit;
 namespace Prosequor.Scenarios;
 
 /// <summary>
-/// Cooking-pot stinkbait. Plain fennel and fennel stamped Grown By must resolve the
-/// same recipe and the same bait item. Bushmeat avoids the soup recipes that share
-/// raw redmeat, fish, and poultry.
+/// Cooking-pot stinkbait. Plain fennel, Grown By fennel, and fennel carrying the
+/// collect-XP stamp must resolve the same recipe and the same bait item.
+/// Bushmeat or dough avoids the soup recipes that share raw redmeat, fish, and poultry.
 /// </summary>
 public class StinkbaitScenarios : AtlasScenarioBase
 {
@@ -20,7 +21,7 @@ public class StinkbaitScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Pedigree")]
     [Trait("Kind", "Stinkbait")]
-    public async Task Stinkbait_Should_CookSameBait_When_FennelHasGrownBy()
+    public async Task Stinkbait_Should_CookSameBait_When_FennelHasStackMarks()
     {
         ITestPlayer joined = await World.JoinPlayer("Stinkbait");
         IPlayer player = joined.Player;
@@ -45,39 +46,56 @@ public class StinkbaitScenarios : AtlasScenarioBase
             string.IsNullOrEmpty(OwnerCredit.TryGetCreditLang(plainInputs[fennelIndex])),
             "Plain fennel must not carry Grown By.");
 
+        ItemStack[] collectedInputs = CloneAll(plainInputs);
+        CollectXpStamp.Set(collectedInputs[fennelIndex]);
+        Assert.True(CollectXpStamp.Has(collectedInputs[fennelIndex]));
+
         CookingRecipe? plainRecipe = pot.GetMatchingCookingRecipe(world, plainInputs, out int plainServings);
         Assert.True(
             plainRecipe != null && IsStinkbait(plainRecipe) && plainServings >= 1,
             $"Plain fennel must match a stinkbait recipe. Got '{plainRecipe?.Code ?? "none"}' "
             + $"servings={plainServings}. Inputs: {Describe(plainInputs)}. {discovery}");
 
-        CookingRecipe? grownRecipe = pot.GetMatchingCookingRecipe(world, grownInputs, out int grownServings);
-        Assert.True(
-            grownRecipe != null && IsStinkbait(grownRecipe) && grownServings >= 1,
-            $"Grown By fennel must match a stinkbait recipe. Got '{grownRecipe?.Code ?? "none"}' "
-            + $"servings={grownServings}. Plain matched '{plainRecipe!.Code}' servings={plainServings}. "
-            + $"Inputs: {Describe(grownInputs)}.");
-        Assert.Equal(plainRecipe!.Code, grownRecipe!.Code);
+        AssertSameRecipe(pot, world, grownInputs, plainRecipe!, plainServings, "Grown By fennel");
+        AssertSameRecipe(pot, world, collectedInputs, plainRecipe!, plainServings, "Collect-XP fennel");
 
         ItemStack plainBait = Cook(player, potBlock, plainInputs);
         ItemStack grownBait = Cook(player, potBlock, grownInputs);
-        Assert.Contains("stinkbait", plainBait.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fishingbait", plainBait.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(plainBait.Collectible.Code.ToString(), grownBait.Collectible.Code.ToString());
         Assert.True(
             string.IsNullOrEmpty(OwnerCredit.TryGetCreditLang(plainBait))
             && string.IsNullOrEmpty(OwnerCredit.TryGetCreditLang(grownBait)),
             "Cooked stinkbait must not inherit the fennel's Grown By tag.");
+        Assert.False(CollectXpStamp.Has(plainBait));
+        Assert.False(CollectXpStamp.Has(grownBait));
+    }
+
+    static void AssertSameRecipe(
+        BlockCookingContainer pot,
+        IWorldAccessor world,
+        ItemStack[] inputs,
+        CookingRecipe plainRecipe,
+        int plainServings,
+        string label)
+    {
+        CookingRecipe? hit = pot.GetMatchingCookingRecipe(world, inputs, out int servings);
+        Assert.True(
+            hit != null && IsStinkbait(hit) && servings >= 1,
+            $"{label} must match a stinkbait recipe. Got '{hit?.Code ?? "none"}' servings={servings}. "
+            + $"Plain matched '{plainRecipe.Code}' servings={plainServings}. Inputs: {Describe(inputs)}.");
+        Assert.Equal(plainRecipe.Code, hit!.Code);
     }
 
     ItemStack Cook(IPlayer player, Block pot, ItemStack[] ingredients)
     {
         BlockEntityFirepit firepit = PlaceFirepit(player);
+        firepit.inputSlot.Itemstack = new ItemStack(pot, 1);
+        firepit.inputSlot.MarkDirty();
         Assert.True(
             firepit.otherCookingSlots.Length >= ingredients.Length,
             $"Firepit has {firepit.otherCookingSlots.Length} cooking slots, need {ingredients.Length}.");
 
-        firepit.inputSlot.Itemstack = new ItemStack(pot, 1);
-        firepit.inputSlot.MarkDirty();
         for (int i = 0; i < firepit.otherCookingSlots.Length; i++)
         {
             firepit.otherCookingSlots[i].Itemstack = i < ingredients.Length ? ingredients[i].Clone() : null;
@@ -85,12 +103,11 @@ public class StinkbaitScenarios : AtlasScenarioBase
         }
 
         firepit.smeltItems();
-        ItemStack? bait = FindStack(firepit, "stinkbait");
-        Assert.NotNull(bait);
+        ItemStack? bait = FindStack(firepit, "fishingbait");
         Assert.True(
-            bait!.StackSize >= 1,
-            $"Expected a stinkbait stack from {Describe(ingredients)}. Slots: {DescribeFirepit(firepit)}.");
-        return bait;
+            bait != null && bait.StackSize >= 1,
+            $"Expected a fishing bait stack from {Describe(ingredients)}. Slots: {DescribeFirepit(firepit)}.");
+        return bait!;
     }
 
     static ItemStack[] FindStinkbaitInputs(IWorldAccessor world, BlockCookingContainer pot, out string discovery)
@@ -114,8 +131,7 @@ public class StinkbaitScenarios : AtlasScenarioBase
             }
 
             CookingRecipe? hit = pot.GetMatchingCookingRecipe(world, built, out int servings);
-            string hitCode = hit?.Code ?? "none";
-            attempts.Add($"{recipe.Code} -> pot '{hitCode}' servings={servings} [{Describe(built)}]");
+            attempts.Add($"{recipe.Code} -> pot '{hit?.Code ?? "none"}' servings={servings} [{Describe(built)}]");
             if (hit != null && IsStinkbait(hit) && servings >= 1)
             {
                 discovery = string.Join("; ", attempts);
