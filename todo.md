@@ -25,7 +25,6 @@ Sourced from ModDB comments around 2026-09-15. Items already shipped or declined
 
 ## Wishlist
 
-- [ ] **Level-up / skill-up volume control.** Sounds play at `1f` with no client config. Add a volume slider (or at least a dB drop) for the HUD stingers.
 - [ ] **Respec.** Admins have `/prosequor revoke` (one node) and `/prosequor clear` (full wipe). No player- or admin-facing respec that refunds a tree or redistributes attributes.
 - [ ] **Force class-attribute distribution.** Mid-save join already applies once. Servers that installed onto an existing world still want a command to re-run it (or to apply after Yang/Aldi changes) without wiping XP.
 - [ ] **Public authoring docs (C# surface).** JSON schema and contributions are in `docs/reference.md`. Injury Expanded / Logging Expanded authors still need the C# station/hook primer that was described as in progress.
@@ -36,6 +35,7 @@ Sourced from ModDB comments around 2026-09-15. Items already shipped or declined
 
 ## Already addressed (not work)
 
+- Level-up / skill-up volume. Clip gain defaults to 50 in `ModConfig/prosequor/client.json`. Integrated Mod Manager exposes the slider from `config/imm.json`. 0 skips the stinger.
 - XP awarding healed the player (cattails / any XP). Constitution health preservation used vanilla max instead of the pre-change pool. Fix + scenarios are in tree (`PlayerInteractionAbilityPatches`, `FatherXp` pay-only, `XpHealthSideEffectScenarios`). Swodobr confirmed.
 - Existing-world join crash / “what it means to join.” `AdmitInitialized` on init, `PlayerJoin`, `PlayerNowPlaying`, and host catch-up. Class scores apply from the cached profile when `DidSelect` never fires.
 - Gourmand C-menu crash when another mod injects nutrition bars. Stats panel adopts extra `ComposeExtraGuis` bars instead of assuming a fixed nutrition block.

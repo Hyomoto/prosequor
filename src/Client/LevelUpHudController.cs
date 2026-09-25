@@ -25,7 +25,6 @@ public sealed class LevelUpHudController
 
     static readonly double[] DimLabelColor = { 0.55, 0.55, 0.55, 1.0 };
     const double TextStrokeWidth = 1.0;
-    const float LevelUpSoundVolume = 1f;
 
     static readonly AssetLocation SkillUpSound = new(ProsequorModSystem.ModId, "sounds/skill_up.ogg");
     static readonly AssetLocation PlayerLevelUpSound = new(ProsequorModSystem.ModId, "sounds/level_up.ogg");
@@ -469,8 +468,14 @@ public sealed class LevelUpHudController
 
     void PlayLevelUpSound(LevelUpHudPacket packet)
     {
+        float volume = LevelUpAudio.ReadGain(capi);
+        if (volume <= 0f)
+        {
+            return;
+        }
+
         AssetLocation sound = packet.PlayerLeveledUp ? PlayerLevelUpSound : SkillUpSound;
-        capi.Gui.PlaySound(sound, randomizePitch: false, LevelUpSoundVolume);
+        capi.Gui.PlaySound(sound, randomizePitch: false, volume);
     }
 
     void EnsureTextures(ICoreClientAPI capi)

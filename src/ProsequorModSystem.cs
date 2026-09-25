@@ -113,6 +113,11 @@ public class ProsequorModSystem : ModSystem
         PhaseRefreshRegistry.RegisterBuiltIns(PhaseRefresh);
         AcquirePatches();
 
+        if (api.Side == EnumAppSide.Client)
+        {
+            LevelUpAudio.ReadGain(api);
+        }
+
         api.Logger.Notification("[{0}] Loaded.", ModId);
     }
 
