@@ -74,8 +74,8 @@ Vanilla-style asset patches (`assets/<domain>/patches/*.json`) are separate from
 1. `Collections.LoadFromAssets` — keys, include patterns, union declarations
 2. `OutputPools.LoadFromAssets` — pool defs; registers pool ids as collection keys
 3. `AffixLists.LoadFromAssets` — so skill compile can resolve `add-affix` list refs
-4. `SkillRegistry.LoadFromAssets` — skills, then contribution grafts, then compile
-5. `AttributeStats.LoadFromAssets`
+4. `AttributeStats.LoadFromAssets` — attribute ids come from loaded stat files
+5. `SkillRegistry.LoadFromAssets` — skills, then contribution grafts, then compile (needs attribute catalog for `attributeScores`)
 6. `TraitAttributes.LoadFromAssets`
 7. `LevelUps.LoadFromAssets` (also reads contribution `levelUps`)
 8. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
@@ -94,8 +94,8 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 | Collection | `config/prosequor/collections.json` or `collections/*.json` | `src/Data/CollectionRegistry.cs` | Named code sets for tags. Optional engine-style `dependsOn` |
 | Output pool | `config/prosequor/pools.json` or `pools/*.json` | `src/Data/OutputPoolRegistry.cs` | Weighted item codes; id is also a collection key |
 | Affix list | `config/prosequor/affixes.json` or `affixes/*.json` | `src/Data/AffixListRegistry.cs` | Display stamps; list id must be `<assetDomain>:localId` |
-| Attribute stat | `config/prosequor/stats/<id>.json` | `src/Data/AttributeStatRegistry.cs` | Same effect envelope as skills, gated by score |
-| Trait map | `config/prosequor/trait-attributes.json` | `src/Data/TraitAttributeRegistry.cs` | Vanilla class-trait → attribute mapping |
+| Attribute stat | `config/prosequor/stats/<id>.json` | `src/Data/AttributeStatRegistry.cs` | File `id` is the attribute; same effect envelope as skills, gated by score |
+| Trait map | `config/prosequor/trait-attributes.json` | `src/Data/TraitAttributeRegistry.cs` | Vanilla class-trait → attribute mapping; optional `skills` adds registered skill ids to that class set |
 | Level-ups | `config/prosequor/level-ups.json` | `src/Data/LevelUpRegistry.cs` | Player-level grants; also graftable via contribution `levelUps` |
 | XP rule | `xpRules` on the **owning skill** (or a contribution) | `src/Xp/XpRuleCompiler.cs` then `XpRuleRegistry` | No `skill` field — ownership is the enclosing skill |
 | Handbook | `assets/prosequor/config/handbook/*.json` | game handbook | Player prose only; not a code hook |
@@ -107,7 +107,9 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 
 Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
-**Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`.
+**Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `optional`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`.
+
+`optional: true` keeps the skill out of the shared class base set. Trait-attribute `skills` can still grant a registered id onto a class. Player skill membership is the `"class"` slot on `SkillAccess` (union of contributor sets). Menu, XP, effects, and purchases read that union. Later contributors call `SkillAccess.Update(key, set)`.
 
 **Node** — `id` unique within the skill, `requires` / `excludes`, `layout`, `tiers[]`, optional `specialization`. `requires`: **OR inside** a nested array, **AND across** entries. One-sided `excludes` is symmetrized at compile.
 
@@ -123,7 +125,7 @@ Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
 **Affix list** — `id` (`domain:localId`), `entries[]` of `{ code, lang, color? }`. Gameplay is a separate effect; the list is presentation metadata resolved at **skill compile** when an effect uses `{ "list", "item" }`.
 
-**Stat file** — `id` must be a known attribute (`src/Data/AttributeIds.cs`). `rules[]` use the effect envelope plus score gates (`minScore` / `maxScore`). Unknown id → skipped.
+**Stat file** — `id` is the attribute (loaded from `config/prosequor/stats/`; last-win by id). `rules[]` use the effect envelope plus score gates (`minScore` / `maxScore`). Failed compile → skipped (id does not exist).
 
 **Level of caps and curves** — authored `maxLevel` is **ignored**. Kind and cap come from `src/Data/SkillKind.cs` (`SkillKindPolicy`) and `src/Data/XpCurves.cs`. Classification: `hobby: true` wins; else a tree with any `specialization` node; else a non-empty tree; else no/empty tree. Read those types; do not hardcode caps. Hobby specialization flags are stripped at compile. Hobbies spend **local** unlock points derived from skill level vs tree cost, not global points — formula in [docs/reference.md](../../../docs/reference.md).
 
@@ -184,7 +186,7 @@ Blob schema version is `PlayerProgressState.CurrentSchema`. XP is truth — load
 
 Affix stamps: `src/Ability/ItemAffixes.cs` tree `prosequorAffixes` on the **stack**. Pedigree blob is the unit of record; the tree is a display cache. Never write `ItemStack.ItemAttributes` (type-level). Reserved leading grade code: `ItemAffixes.QualityCode`.
 
-Attribute ids and score clamps: `src/Data/AttributeIds.cs` and `src/Data/AttributeGrowth.cs`. Growth credit is separate from the integer score. Vanilla `Entity.Stats` modifiers (for example riding) are stations, not the attribute blob.
+Attribute ids come from loaded `stats/*.json`. Score clamps: `src/Data/AttributeGrowth.cs`. Growth credit is separate from the integer score. Vanilla `Entity.Stats` modifiers (for example riding) are stations, not the attribute blob. UI display order still uses `src/Data/AttributeIds.cs` constants.
 
 ## Agent workflows
 

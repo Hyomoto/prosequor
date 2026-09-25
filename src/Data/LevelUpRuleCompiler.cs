@@ -12,10 +12,15 @@ public static class LevelUpRuleCompiler
     /// <summary>
     /// Compiles one rule. Returns null and appends to <paramref name="errors"/> on failure.
     /// </summary>
-    public static LevelUpRuleDef? Compile(LevelUpRuleJson row, ref int sourceOrder, List<string> errors)
+    public static LevelUpRuleDef? Compile(
+        LevelUpRuleJson row,
+        ref int sourceOrder,
+        List<string> errors,
+        IReadOnlyList<string>? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(row);
         ArgumentNullException.ThrowIfNull(errors);
+        IReadOnlyList<string> attributeCatalog = catalog ?? AttributeIds.All;
 
         string id = row.id?.Trim() ?? "";
         if (id.Length == 0)
@@ -130,12 +135,12 @@ public static class LevelUpRuleCompiler
 
             if (!string.Equals(attributeKey, LevelUpRuleDef.BucketsKey, StringComparison.OrdinalIgnoreCase))
             {
-                string? canonical = AttributeIds.Canonicalize(attributeKey);
+                string? canonical = AttributeIds.Canonicalize(attributeKey, attributeCatalog);
                 if (canonical == null)
                 {
                     errors.Add(
                         $"level-up rule '{id}' unknown attribute key '{attributeKey}' "
-                        + $"(expected {LevelUpRuleDef.BucketsKey} or a known attribute).");
+                        + $"(expected {LevelUpRuleDef.BucketsKey} or a loaded attribute id).");
                     return null;
                 }
 

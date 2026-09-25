@@ -62,6 +62,7 @@ public static class AbilityFixtures
         LevelUpRuleFixtures.VerifyAll();
         AttributeStatFixtures.VerifyAll();
         TraitAttributeFixtures.VerifyAll();
+        SkillAccessFixtures.VerifyAll();
         CreateCharacterClassFixtures.VerifyAll();
         HobbySkillFixtures.VerifyAll();
         CollectXpFixtures.VerifyAll();
@@ -5352,6 +5353,7 @@ public static class AbilityFixtures
 
         public int GetAttribute(string id) => AttributeGrowth.DefaultScore;
         public float GetAttributeBucket(string id) => 0f;
+        public bool HasSkillAccess(string skillId) => true;
 
         public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
         {

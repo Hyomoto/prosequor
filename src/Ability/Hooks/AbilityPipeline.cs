@@ -210,7 +210,12 @@ public sealed class AbilityPipeline
 
         if (!rule.Source.IsTreeRule)
         {
-            return true;
+            return progress.HasSkillAccess(rule.Source.SkillId);
+        }
+
+        if (!progress.HasSkillAccess(rule.Source.SkillId))
+        {
+            return false;
         }
 
         int owned = progress.GetUnlockTier(rule.Source.SkillId, rule.Source.NodeId!);

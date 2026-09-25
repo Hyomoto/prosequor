@@ -22,11 +22,12 @@ public static class TraitAttributeConverter
     /// </summary>
     public static Dictionary<string, int> ResolveScores(
         ITraitAttributeRegistry registry,
-        IEnumerable<string>? traitCodes)
+        IEnumerable<string>? traitCodes,
+        IReadOnlyList<string>? catalog = null)
     {
-        Dictionary<string, int> scores = NewBaseScores();
+        Dictionary<string, int> scores = NewBaseScores(catalog);
         ApplyDeltas(scores, registry, traitCodes);
-        ClampScores(scores);
+        ClampScores(scores, catalog);
         return scores;
     }
 
@@ -56,14 +57,21 @@ public static class TraitAttributeConverter
     /// </summary>
     public static (int ClassesMutated, int TraitsStripped, int RetainStatsCleared) MutateLoadedClasses(
         CharacterSystem characterSystem,
-        ITraitAttributeRegistry registry)
+        ITraitAttributeRegistry registry,
+        IAttributeStatRegistry? stats = null)
     {
         if (characterSystem?.characterClasses == null || registry == null)
         {
             return (0, 0, 0);
         }
 
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+
         registry.ClearClassStartingScores();
+        registry.ClearClassSkillSets();
+        registry.ClearClassOriginalTraits();
 
         int classesMutated = 0;
         int traitsStripped = 0;
@@ -77,7 +85,8 @@ public static class TraitAttributeConverter
             }
 
             string[] original = characterClass.Traits ?? Array.Empty<string>();
-            registry.SetClassStartingScores(characterClass.Code, ResolveScores(registry, original));
+            registry.SetClassStartingScores(characterClass.Code, ResolveScores(registry, original, catalog));
+            registry.SetClassOriginalTraits(characterClass.Code, original);
 
             List<string> kept = new(original.Length);
             int strippedHere = 0;
@@ -177,7 +186,8 @@ public static class TraitAttributeConverter
             return;
         }
 
-        Dictionary<string, int> scores = NewBaseScores();
+        IReadOnlyList<string> catalog = CatalogFor(player);
+        Dictionary<string, int> scores = NewBaseScores(catalog);
         if (registry.ClassStartingScores.TryGetValue(classCode, out Dictionary<string, int>? cached)
             && cached != null)
         {
@@ -190,14 +200,14 @@ public static class TraitAttributeConverter
             && characterClass != null)
         {
             // Cache miss: leftover traits only (stripped list) — prefer warm cache from mutate.
-            scores = ResolveScores(registry, characterClass.Traits);
+            scores = ResolveScores(registry, characterClass.Traits, catalog);
         }
 
         string[]? extra = entityPlayer.WatchedAttributes.GetStringArray("extraTraits");
         if (extra != null && extra.Length > 0)
         {
             ApplyDeltas(scores, registry, extra);
-            ClampScores(scores);
+            ClampScores(scores, catalog);
         }
 
         EntityBehaviorProgress? progress = entityPlayer.GetBehavior<EntityBehaviorProgress>();
@@ -207,7 +217,7 @@ public static class TraitAttributeConverter
         }
 
         progress.EnsureLoaded(player, skills);
-        foreach (string id in AttributeIds.All)
+        foreach (string id in catalog)
         {
             progress.SetAttribute(id, scores[id]);
         }
@@ -252,18 +262,22 @@ public static class TraitAttributeConverter
         }
 
         progress.EnsureLoaded(player, skills);
-        Dictionary<string, int> scores = NewBaseScores();
-        foreach (string id in AttributeIds.All)
+        IReadOnlyList<string> catalog = CatalogFor(player);
+        Dictionary<string, int> scores = NewBaseScores(catalog);
+        foreach (string id in catalog)
         {
             scores[id] = progress.GetAttribute(id);
         }
 
         ApplyDeltas(scores, registry, fresh);
-        ClampScores(scores);
-        foreach (string id in AttributeIds.All)
+        ClampScores(scores, catalog);
+        foreach (string id in catalog)
         {
             progress.SetAttribute(id, scores[id]);
         }
+
+        progress.BindClassSkillAccess(player, skills);
+        progress.RebuildAbilityCachePublic();
 
         RememberFoldedExtras(player, folded.Concat(fresh));
     }
@@ -360,10 +374,19 @@ public static class TraitAttributeConverter
         return folded;
     }
 
-    static Dictionary<string, int> NewBaseScores()
+    static IReadOnlyList<string> CatalogFor(IPlayer? player)
     {
+        IAttributeStatRegistry? stats = player?.Entity != null
+            ? ProsequorModSystem.For(player.Entity.Api)?.AttributeStats
+            : null;
+        return stats != null ? AttributeIds.CatalogIds(stats) : AttributeIds.All;
+    }
+
+    static Dictionary<string, int> NewBaseScores(IReadOnlyList<string>? catalog = null)
+    {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         Dictionary<string, int> scores = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string id in AttributeIds.All)
+        foreach (string id in ids)
         {
             scores[id] = AttributeGrowth.DefaultScore;
         }
@@ -395,10 +418,16 @@ public static class TraitAttributeConverter
         }
     }
 
-    static void ClampScores(Dictionary<string, int> scores)
+    static void ClampScores(Dictionary<string, int> scores, IReadOnlyList<string>? catalog = null)
     {
-        foreach (string id in AttributeIds.All)
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        foreach (string id in ids)
         {
+            if (!scores.ContainsKey(id))
+            {
+                scores[id] = AttributeGrowth.DefaultScore;
+            }
+
             scores[id] = Math.Clamp(scores[id], 0, AttributeGrowth.MaxScore);
         }
     }

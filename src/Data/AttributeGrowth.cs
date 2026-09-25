@@ -16,7 +16,8 @@ public static class AttributeGrowth
     public static void AddScores(
         PlayerProgressState state,
         IReadOnlyList<AttributeScoreEntry> scores,
-        int levelsGained)
+        int levelsGained,
+        IReadOnlyList<string>? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         if (levelsGained <= 0 || scores == null || scores.Count == 0)
@@ -24,7 +25,8 @@ public static class AttributeGrowth
             return;
         }
 
-        PlayerProgressState.EnsureAttributeEntries(state);
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        PlayerProgressState.EnsureAttributeEntries(state, ids);
         foreach (AttributeScoreEntry entry in scores)
         {
             if (string.IsNullOrEmpty(entry.Id) || entry.Value == 0f)
@@ -52,14 +54,18 @@ public static class AttributeGrowth
     /// then RNG), increment its score by 1, and reset only that bucket to 0.
     /// </summary>
     /// <returns>The attribute id that received the point, or null if none can grow.</returns>
-    public static string? TryGrow(PlayerProgressState state, Random random)
+    public static string? TryGrow(
+        PlayerProgressState state,
+        Random random,
+        IReadOnlyList<string>? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(random);
-        PlayerProgressState.EnsureAttributeEntries(state);
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        PlayerProgressState.EnsureAttributeEntries(state, ids);
 
-        List<string> eligible = new(AttributeIds.All.Length);
-        foreach (string id in AttributeIds.All)
+        List<string> eligible = new(ids.Count);
+        foreach (string id in ids)
         {
             if (state.Attributes[id] < MaxScore)
             {

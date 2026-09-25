@@ -390,6 +390,7 @@ public static class HobbySkillFixtures
 
         public int GetAttribute(string id) => AttributeGrowth.DefaultScore;
         public float GetAttributeBucket(string id) => 0f;
+        public bool HasSkillAccess(string skillId) => true;
 
         public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
         {

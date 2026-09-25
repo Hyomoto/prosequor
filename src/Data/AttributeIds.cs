@@ -1,6 +1,9 @@
 namespace Prosequor.Data;
 
-/// <summary>Stable attribute id strings used in progress state and mirrors.</summary>
+/// <summary>
+/// Built-in attribute id constants for UI display order.
+/// Runtime membership comes from loaded <c>stats/*.json</c> via <see cref="IAttributeStatRegistry"/>.
+/// </summary>
 public static class AttributeIds
 {
     public const string Strength = "strength";
@@ -37,22 +40,48 @@ public static class AttributeIds
         return false;
     }
 
-    /// <summary>Canonical casing for a known id, or null when unknown.</summary>
-    public static string? Canonicalize(string id)
+    /// <summary>Canonical casing for a UI catalog id, or null when unknown.</summary>
+    public static string? Canonicalize(string id) => Canonicalize(id, All);
+
+    /// <summary>Canonical casing for an id in <paramref name="catalog"/>, or null when unknown.</summary>
+    public static string? Canonicalize(string id, IReadOnlyList<string> catalog)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (string.IsNullOrWhiteSpace(id) || catalog == null)
         {
             return null;
         }
 
-        foreach (string known in All)
+        string trimmed = id.Trim();
+        foreach (string known in catalog)
         {
-            if (string.Equals(known, id, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(known, trimmed, StringComparison.OrdinalIgnoreCase))
             {
                 return known;
             }
         }
 
         return null;
+    }
+
+    /// <summary>Whether <paramref name="id"/> is in <paramref name="catalog"/>.</summary>
+    public static bool IsKnown(string id, IReadOnlyList<string> catalog) =>
+        Canonicalize(id, catalog) != null;
+
+    /// <summary>Ordered attribute ids from a loaded stat registry.</summary>
+    public static IReadOnlyList<string> CatalogIds(IAttributeStatRegistry stats)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        if (stats.All.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        string[] ids = new string[stats.All.Count];
+        for (int i = 0; i < stats.All.Count; i++)
+        {
+            ids[i] = stats.All[i].Id;
+        }
+
+        return ids;
     }
 }

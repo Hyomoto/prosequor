@@ -16,14 +16,17 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     readonly ComposeMemo composeMemo = new();
     readonly ActiveAbilityRuleCache? abilityCache;
     readonly ISkillRegistry? registry;
+    readonly SkillAccess skillAccess;
 
     public ParkedPlayerProgress(
         PlayerProgressState state,
         AbilityRuleIndex? ruleIndex = null,
-        ISkillRegistry? registry = null)
+        ISkillRegistry? registry = null,
+        SkillAccess? skillAccess = null)
     {
         this.state = state ?? throw new ArgumentNullException(nameof(state));
         this.registry = registry;
+        this.skillAccess = skillAccess ?? new SkillAccess();
         if (ruleIndex != null)
         {
             abilityCache = ActiveAbilityRuleCache.Rebuild(ruleIndex, this);
@@ -40,12 +43,17 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
 
     public ComposeMemo ComposeMemo => composeMemo;
 
+    public SkillAccess SkillAccess => skillAccess;
+
     public int PlayerLevel => state.PlayerLevel;
     public float PlayerXp => state.PlayerXp;
     public int UnlockPoints => state.UnlockPoints;
 
     public float PlayerXpUntilNext =>
         XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
+
+    public bool HasSkillAccess(string skillId) =>
+        skillAccess.IsUnbound || skillAccess.Contains(skillId);
 
     public void BumpProgressRevision() => composeMemo.BumpProgressRevision();
 

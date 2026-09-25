@@ -102,7 +102,8 @@ public class SkillRegistry : ISkillRegistry
         ICoreAPI api,
         IHookRegistry hooks,
         IAbilityActionRegistry actions,
-        CollectionIndex collections)
+        CollectionIndex collections,
+        IAttributeStatRegistry? stats = null)
     {
         Dictionary<string, SkillDefJson> drafts = new(StringComparer.OrdinalIgnoreCase);
         List<KeyValuePair<AssetLocation, SkillDefJson>> skillAssets = api.Assets
@@ -224,7 +225,7 @@ public class SkillRegistry : ISkillRegistry
         foreach (SkillDefJson row in drafts.Values
                      .OrderBy(r => r.id, StringComparer.OrdinalIgnoreCase))
         {
-            CompileAndRegister(api, hooks, actions, collections, row, ref sourceOrder);
+            CompileAndRegister(api, hooks, actions, collections, row, ref sourceOrder, stats);
         }
 
         MenuIndex = SkillMenuIndex.Build(ordered);
@@ -237,7 +238,8 @@ public class SkillRegistry : ISkillRegistry
         IAbilityActionRegistry actions,
         CollectionIndex collections,
         SkillDefJson row,
-        ref int sourceOrder)
+        ref int sourceOrder,
+        IAttributeStatRegistry? stats)
     {
         string skillId = row.id.Trim();
         List<string> rootErrors = new();
@@ -256,7 +258,8 @@ public class SkillRegistry : ISkillRegistry
         IReadOnlyList<AttributeScoreEntry> attributeScores = AttributeScoreCompiler.Compile(
             skillId,
             row.attributeScores,
-            attributeScoreErrors);
+            attributeScoreErrors,
+            stats);
 
         SkillKind kind = SkillKindPolicy.ClassifyDraft(row);
         int maxLevel = SkillKindPolicy.MaxLevelFor(kind);
@@ -280,6 +283,7 @@ public class SkillRegistry : ISkillRegistry
             Icon = row.icon?.Trim() ?? "",
             Kind = kind,
             MaxLevel = maxLevel,
+            IsOptional = row.optional,
             Rules = rootRules ?? new List<AbilityRule>(),
             RootEffectSnapshots = SkillDescriptionResolver.SnapshotEffects(row.effects),
             XpRules = XpRuleCompiler.CompileAll(

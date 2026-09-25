@@ -74,6 +74,7 @@ Path: `skills/<id>.json` (one object per file).
 | `descriptionParams` | Optional `{0}`… args for `descriptionLang` (same grammar as [nodes](#description-params)) |
 | `icon` | Texture path (bare paths resolve under `prosequor:`) |
 | `hobby` | `true` = hobby skill (see [kind](#kind--level-caps)) |
+| `optional` | `true` = omitted from the shared class skill set (trait `skills` can still grant it). Default `false` |
 | `maxLevel` | Ignored if present; caps are derived |
 | `attributeScores` | Optional bucket fill on each skill level gained |
 | `xpRules` | XP amount/rate rules owned by this skill |
@@ -108,7 +109,7 @@ On each skill level gained (natural XP commit), each entry’s `value` is added 
 
 | Field | Values |
 | --- | --- |
-| `id` | `strength` \| `perception` \| `constitution` \| `inconspicuity` \| `resilience` |
+| `id` | A loaded attribute-stat id (`stats/<id>.json`) |
 | `value` | Finite number `> 0` |
 
 Duplicate ids last-win. Omitted or empty = no fill.
@@ -954,7 +955,7 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Known attribute id (`strength`, `perception`, `constitution`, `inconspicuity`, `resilience`) |
+| `id` | Attribute id (the file defines this attribute; last-win across mods) |
 | `rules[].id` | Optional rule id |
 | `rules[].minScore` | Inactive below this score (default `0`) |
 | `rules[].maxScore` | Optional inclusive upper gate |
@@ -968,7 +969,7 @@ Path: `trait-attributes.json` (JSON array). Maps vanilla class traits to attribu
 
 ```json
 [
-  { "code": "soldier", "attributes": { "strength": 2 } },
+  { "code": "soldier", "attributes": { "strength": 2 }, "skills": ["prosequor:some-optional"] },
   { "code": "bowyer", "attributes": {} },
   { "code": "technical", "attributes": { "resilience": 1 }, "retainTrait": true }
 ]
@@ -979,8 +980,11 @@ Path: `trait-attributes.json` (JSON array). Maps vanilla class traits to attribu
 | `code` | Vanilla trait code |
 | `attributes` | Map of attribute id → score delta. Empty `{}` = flavor / crafting gate only |
 | `retainTrait` | If `true`, keep the trait on the class and clear only its vanilla `Entity.Stats` bag |
+| `skills` | Optional string array of skill ids added to a class that has this trait. Unknown ids are skipped with a warning. Ids already in the class base are ignored |
 
-Valid attribute keys: `strength`, `perception`, `constitution`, `inconspicuity`, `resilience`. Last-win by `code`.
+Valid attribute keys: any loaded stat id (`config/prosequor/stats/`). Last-win by `code`.
+
+Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set.
 
 ---
 
@@ -1013,7 +1017,7 @@ Path: `level-ups.json` or `level-ups/*.json`.
 | --- | --- |
 | `prosequor:earn-skill-point` | Optional `value` (default 1) — add unlock points |
 | `prosequor:earn-specialization-point` | Optional `value` (default 1) — specialization slot capacity |
-| `prosequor:earn-attribute` | `key`: attribute id → add `value` to score (cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
+| `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to score (cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
 
 ---
 

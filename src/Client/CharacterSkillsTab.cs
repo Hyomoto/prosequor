@@ -8,6 +8,7 @@ using Prosequor.Player;
 using Prosequor.Progress;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 
@@ -197,6 +198,13 @@ public class CharacterSkillsTab
             return;
         }
 
+        ISkillRegistry? registry = ProsequorModSystem.For(capi)?.Registry;
+        IReadOnlySet<string>? access = ResolveLocalSkillAccess(registry);
+        if (access != null && !access.Contains(skillId))
+        {
+            return;
+        }
+
         OnSkillClicked(skillId);
     }
 
@@ -291,15 +299,22 @@ public class CharacterSkillsTab
                 ElementBounds.Fixed(0, footerY, width, FooterHeight), PointsKey);
 
         SkillMenuIndex menu = registry?.MenuIndex ?? SkillMenuIndex.Empty;
+        IReadOnlySet<string>? access = ResolveLocalSkillAccess(registry);
         EnsureSectionTextures();
 
         double contentHeight = 4;
         foreach (SkillMenuSection section in menu.Sections)
         {
+            int visibleCount = CountVisibleSkills(section, access);
+            if (visibleCount == 0)
+            {
+                continue;
+            }
+
             contentHeight += SectionHeaderHeight;
             if (!IsCollapsed(section.Kind))
             {
-                contentHeight += section.Skills.Count * RowHeight;
+                contentHeight += visibleCount * RowHeight;
             }
         }
 
@@ -328,6 +343,11 @@ public class CharacterSkillsTab
         double y = 2;
         foreach (SkillMenuSection section in menu.Sections)
         {
+            if (CountVisibleSkills(section, access) == 0)
+            {
+                continue;
+            }
+
             bool collapsed = IsCollapsed(section.Kind);
             SkillMenuSectionKind kind = section.Kind;
 
@@ -401,6 +421,11 @@ public class CharacterSkillsTab
 
             foreach (SkillDef def in section.Skills)
             {
+                if (access != null && !access.Contains(def.Id))
+                {
+                    continue;
+                }
+
                 string skillId = def.Id;
                 composedSkillIds.Add(skillId);
                 double rowY = y;
@@ -636,6 +661,45 @@ public class CharacterSkillsTab
 
     bool IsCollapsed(SkillMenuSectionKind kind) =>
         sectionCollapsed.TryGetValue(kind, out bool collapsed) && collapsed;
+
+    static int CountVisibleSkills(SkillMenuSection section, IReadOnlySet<string>? access)
+    {
+        if (access == null)
+        {
+            return section.Skills.Count;
+        }
+
+        int count = 0;
+        foreach (SkillDef skill in section.Skills)
+        {
+            if (access.Contains(skill.Id))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    IReadOnlySet<string>? ResolveLocalSkillAccess(ISkillRegistry? registry)
+    {
+        ProsequorModSystem? mod = ProsequorModSystem.For(capi);
+        if (mod?.TraitAttributes == null || registry == null)
+        {
+            return null;
+        }
+
+        ITraitAttributeRegistry traits = mod.TraitAttributes;
+        if (traits.BaseSkillSet.Count == 0 && registry.All.Count > 0)
+        {
+            traits.RebuildClassSkillSets(registry, capi);
+        }
+
+        EntityPlayer? entity = capi.World?.Player?.Entity;
+        string? classCode = entity?.WatchedAttributes?.GetString("characterClass");
+        string[]? extras = entity?.WatchedAttributes?.GetStringArray("extraTraits");
+        return traits.SkillSetForClass(classCode, extras, registry, capi);
+    }
 
     void EnsureSectionTextures()
     {

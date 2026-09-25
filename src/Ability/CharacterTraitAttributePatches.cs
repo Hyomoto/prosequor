@@ -34,7 +34,12 @@ public static class CharacterTraitAttributePatches
         }
 
         (int classesMutated, int traitsStripped, int retainCleared) =
-            TraitAttributeConverter.MutateLoadedClasses(__instance, mod.TraitAttributes);
+            TraitAttributeConverter.MutateLoadedClasses(__instance, mod.TraitAttributes, mod.AttributeStats);
+        if (mod.Registry.All.Count > 0)
+        {
+            mod.TraitAttributes.RebuildClassSkillSets(mod.Registry, api);
+        }
+
         api.Logger.Notification(
             "[prosequor] Stripped {0} mapped trait(s) from {1} class(es); cleared Entity.Stats on {2} retainTrait mapping(s).",
             traitsStripped,

@@ -99,6 +99,7 @@ public sealed class ContentFingerprint
             sb.Append(skill.Id)
                 .Append(" kind=").Append(skill.Kind)
                 .Append(" max=").Append(skill.MaxLevel)
+                .Append(" optional=").Append(skill.IsOptional ? '1' : '0')
                 .Append(" name=").Append(skill.NameLang)
                 .Append(" desc=").Append(skill.DescriptionLang)
                 .Append(" icon=").Append(skill.Icon)
@@ -289,6 +290,13 @@ public sealed class ContentFingerprint
 
                 sb.Append(attr.Key).Append('=').Append(attr.Value);
                 first = false;
+            }
+
+            if (mapping.Skills.Count > 0)
+            {
+                sb.Append(" skills=").Append(string.Join(
+                    ',',
+                    mapping.Skills.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)));
             }
 
             sb.Append('\n');

@@ -1,5 +1,6 @@
 using Prosequor.Ability.Hooks;
 using Prosequor.Data;
+using Prosequor.Progress;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
 
@@ -53,27 +54,49 @@ public sealed class ProgressPark
             return;
         }
 
-        parked[playerUid.Trim()] = new ParkedPlayerProgress(behavior.State, ruleIndex, registry);
+        parked[playerUid.Trim()] = new ParkedPlayerProgress(
+            behavior.State,
+            ruleIndex,
+            registry,
+            CloneAccess(behavior.SkillAccess));
     }
 
     public void ParkStored(
         string? playerUid,
         PlayerProgressState state,
         AbilityRuleIndex? ruleIndex,
-        ISkillRegistry? registry = null)
+        ISkillRegistry? registry = null,
+        SkillAccess? skillAccess = null)
     {
         if (string.IsNullOrWhiteSpace(playerUid) || state == null)
         {
             return;
         }
 
-        parked[playerUid.Trim()] = new ParkedPlayerProgress(state, ruleIndex, registry);
+        parked[playerUid.Trim()] = new ParkedPlayerProgress(state, ruleIndex, registry, skillAccess);
+    }
+
+    static SkillAccess CloneAccess(SkillAccess source)
+    {
+        SkillAccess copy = new();
+        if (source == null || source.IsUnbound)
+        {
+            return copy;
+        }
+
+        copy.Update(SkillAccess.ClassKey, source.Union);
+        return copy;
     }
 
     /// <summary>
     /// Load ModData for every known account UID. Missing bytes are skipped (original degrade).
     /// </summary>
-    public int Preload(ICoreServerAPI sapi, ISkillRegistry registry, AbilityRuleIndex? ruleIndex)
+    public int Preload(
+        ICoreServerAPI sapi,
+        ISkillRegistry registry,
+        AbilityRuleIndex? ruleIndex,
+        IReadOnlySet<string>? defaultSkillAccess = null,
+        IAttributeStatRegistry? stats = null)
     {
         if (sapi?.PlayerData?.PlayerDataByUid == null || registry == null)
         {
@@ -89,12 +112,23 @@ public sealed class ProgressPark
             }
 
             IPlayer? player = sapi.World?.PlayerByUid(uid);
-            if (!ProgressStore.TryHydrateStored(ProgressStore.ReadModData(player), registry, out PlayerProgressState state))
+            if (!ProgressStore.TryHydrateStored(
+                    ProgressStore.ReadModData(player),
+                    registry,
+                    out PlayerProgressState state,
+                    stats))
             {
                 continue;
             }
 
-            ParkStored(uid, state, ruleIndex, registry);
+            SkillAccess? access = null;
+            if (defaultSkillAccess != null)
+            {
+                access = new SkillAccess();
+                access.Update(SkillAccess.ClassKey, defaultSkillAccess);
+            }
+
+            ParkStored(uid, state, ruleIndex, registry, access);
             loaded++;
         }
 

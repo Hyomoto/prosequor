@@ -171,7 +171,8 @@ public static class ProgressCommands
         StringBuilder sb = new();
         sb.AppendLine($"Player {player.PlayerName}: level {progress.PlayerLevel}, xp {progress.PlayerXp:0.##}, until next {progress.PlayerXpUntilNext:0.##}, points {progress.UnlockPoints}");
         sb.Append("  Attributes:");
-        foreach (string id in AttributeIds.All)
+        IReadOnlyList<string> catalog = AttributeCatalog(api);
+        foreach (string id in catalog)
         {
             sb.Append($" {id}={progress.GetAttribute(id)} (bucket {progress.GetAttributeBucket(id):0.##})");
         }
@@ -379,11 +380,12 @@ public static class ProgressCommands
         }
 
         string? attribute = args[1] as string;
-        string? canonical = AttributeIds.Canonicalize(attribute ?? "");
+        IReadOnlyList<string> catalog = AttributeCatalog(api);
+        string? canonical = AttributeIds.Canonicalize(attribute ?? "", catalog);
         if (canonical == null)
         {
             return TextCommandResult.Error(
-                $"Unknown attribute '{attribute}'. Expected: {string.Join(", ", AttributeIds.All)}.");
+                $"Unknown attribute '{attribute}'. Expected: {string.Join(", ", catalog)}.");
         }
 
         float amount = args[2] is float f ? f : Convert.ToSingle(args[2], CultureInfo.InvariantCulture);
@@ -407,11 +409,12 @@ public static class ProgressCommands
         }
 
         string? attribute = args[1] as string;
-        string? canonical = AttributeIds.Canonicalize(attribute ?? "");
+        IReadOnlyList<string> catalog = AttributeCatalog(api);
+        string? canonical = AttributeIds.Canonicalize(attribute ?? "", catalog);
         if (canonical == null)
         {
             return TextCommandResult.Error(
-                $"Unknown attribute '{attribute}'. Expected: {string.Join(", ", AttributeIds.All)}.");
+                $"Unknown attribute '{attribute}'. Expected: {string.Join(", ", catalog)}.");
         }
 
         int value = args[2] is int i ? i : Convert.ToInt32(args[2]);
@@ -797,6 +800,12 @@ public static class ProgressCommands
     static bool IsPlayerTrack(string target) =>
         string.Equals(target, "player", StringComparison.OrdinalIgnoreCase)
         || string.Equals(target, "self", StringComparison.OrdinalIgnoreCase);
+
+    static IReadOnlyList<string> AttributeCatalog(ICoreServerAPI api)
+    {
+        IAttributeStatRegistry? stats = ProsequorModSystem.For(api)?.AttributeStats;
+        return stats != null ? AttributeIds.CatalogIds(stats) : AttributeIds.All;
+    }
 
     static EntityBehaviorProgress? GetProgress(ICoreServerAPI api, IServerPlayer player)
     {

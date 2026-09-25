@@ -190,13 +190,14 @@ public class ProsequorModSystem : ModSystem
         Collections.LoadFromAssets(api);
         OutputPools.LoadFromAssets(api, Collections.Index);
         AffixLists.LoadFromAssets(api);
-        Registry.LoadFromAssets(api, Hooks, Actions, Collections.Index);
         AttributeStats.LoadFromAssets(api, Hooks, Actions, Collections.Index);
-        TraitAttributes.LoadFromAssets(api);
-        LevelUps.LoadFromAssets(api);
+        Registry.LoadFromAssets(api, Hooks, Actions, Collections.Index, AttributeStats);
+        TraitAttributes.LoadFromAssets(api, AttributeStats);
+        LevelUps.LoadFromAssets(api, AttributeStats);
         AttributeEffects = new AttributeEffectService(AttributeStats.EffectIndex, PhaseRefresh);
         Pipeline = new AbilityPipeline(Actions, Registry, AttributeStats);
         XpRules.LoadFromSkills(api, Registry);
+        TraitAttributes.RebuildClassSkillSets(Registry, api);
 
         Fingerprint = ContentFingerprint.Compute(
             Registry,
@@ -587,7 +588,12 @@ public class ProsequorModSystem : ModSystem
             return;
         }
 
-        int loaded = ProgressPark.Preload(sapi, Registry, Pipeline?.RuleIndex);
+        int loaded = ProgressPark.Preload(
+            sapi,
+            Registry,
+            Pipeline?.RuleIndex,
+            TraitAttributes.BaseSkillSet,
+            AttributeStats);
         if (loaded > 0)
         {
             sapi.Logger.Notification("[{0}] Parked progress for {1} player(s).", ModId, loaded);

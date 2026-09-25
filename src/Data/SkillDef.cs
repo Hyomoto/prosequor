@@ -37,6 +37,12 @@ public class SkillDef
     /// <summary>True when <see cref="Kind"/> is <see cref="SkillKind.Hobby"/>.</summary>
     public bool IsHobby => Kind == SkillKind.Hobby;
 
+    /// <summary>
+    /// When true, omitted from the shared class base set (trait <c>skills</c> can still add it).
+    /// Defaults false so every skill stays class-accessible unless authored otherwise.
+    /// </summary>
+    public bool IsOptional { get; set; }
+
     /// <summary>Level cap derived from <see cref="Kind"/> (not authored in JSON).</summary>
     public int MaxLevel { get; set; } = XpCurves.SkillMaxLevel;
 
@@ -82,6 +88,11 @@ public class SkillDefJson
 
     /// <summary>When true, this skill is a hobby (cap 20, local unlock points).</summary>
     public bool hobby { get; set; }
+
+    /// <summary>
+    /// When true, not in the shared class base set. Trait <c>skills</c> can still grant it.
+    /// </summary>
+    public bool optional { get; set; }
 
     public AttributeScoreJson[]? attributeScores { get; set; }
     public XpRuleJson[]? xpRules { get; set; }

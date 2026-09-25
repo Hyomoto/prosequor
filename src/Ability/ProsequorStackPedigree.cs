@@ -1030,9 +1030,10 @@ public static class ProsequorStackPedigree
     }
 
     /// <summary>
-    /// Pedigree must not block vanilla stack merges — bags exist so heterogeneous units can share a stack.
-    /// Appends Live/Frozen plus craft surface trees to
-    /// <see cref="GlobalConstants.IgnoredStackAttributes"/> once.
+    /// Pedigree must not block vanilla stack merges or recipe equality. Cooking matches
+    /// exact stacks with <see cref="GlobalConstants.IgnoredStackAttributes"/>, so a Grown By
+    /// lang key on harvested fennel would otherwise reject the stack.
+    /// Appends Live/Frozen, craft surface trees, and that lang key once.
     /// </summary>
     public static void EnsurePedigreeIgnoredForMerge()
     {
@@ -1040,7 +1041,8 @@ public static class ProsequorStackPedigree
             LiveAttr,
             FrozenAttr,
             ItemAffixes.TreeAttr,
-            CraftAttributeMods.TreeAttr);
+            CraftAttributeMods.TreeAttr,
+            OwnerCredit.CreditLangAttr);
     }
 
     static void AppendIgnoredStackAttributes(params string[] keys)

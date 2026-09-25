@@ -6,8 +6,12 @@ namespace Prosequor.Player;
 /// <summary>Builds owner-channel snapshot/delta packets from live progress state.</summary>
 public static class ProgressChannelCodec
 {
-    public static ProgressSnapshotPacket BuildSnapshot(PlayerProgressState state, int seq)
+    public static ProgressSnapshotPacket BuildSnapshot(
+        PlayerProgressState state,
+        int seq,
+        IReadOnlyList<string>? catalog = null)
     {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         ProgressSnapshotPacket packet = new()
         {
             Seq = seq,
@@ -31,8 +35,8 @@ public static class ProgressChannelCodec
             });
         }
 
-        PlayerProgressState.EnsureAttributeEntries(state);
-        foreach (string id in AttributeIds.All)
+        PlayerProgressState.EnsureAttributeEntries(state, ids);
+        foreach (string id in ids)
         {
             packet.AttributeBuckets.Add(new ProgressAttributeBucketDto
             {
@@ -47,8 +51,10 @@ public static class ProgressChannelCodec
     public static ProgressDeltaPacket BuildDelta(
         PlayerProgressState state,
         PendingProgressFlush pending,
-        int seq)
+        int seq,
+        IReadOnlyList<string>? catalog = null)
     {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         ProgressDeltaPacket packet = new() { Seq = seq };
 
         if (pending.PlayerTrack)
@@ -77,8 +83,8 @@ public static class ProgressChannelCodec
         if (pending.AttributeBuckets)
         {
             packet.HasAttributeBuckets = true;
-            PlayerProgressState.EnsureAttributeEntries(state);
-            foreach (string id in AttributeIds.All)
+            PlayerProgressState.EnsureAttributeEntries(state, ids);
+            foreach (string id in ids)
             {
                 packet.AttributeBuckets.Add(new ProgressAttributeBucketDto
                 {

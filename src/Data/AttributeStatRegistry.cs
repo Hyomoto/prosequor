@@ -9,10 +9,14 @@ public interface IAttributeStatRegistry
     IReadOnlyList<AttributeStatDef> All { get; }
     AttributeEffectIndex EffectIndex { get; }
     bool TryGet(string id, out AttributeStatDef def);
+
+    /// <summary>Canonical casing for a loaded attribute id, or null when unknown.</summary>
+    string? Canonicalize(string id);
 }
 
 /// <summary>
 /// Loads attribute-stat definitions from <c>config/prosequor/stats/*.json</c>.
+/// A loaded file's <c>id</c> is the attribute; last-win by id across mods.
 /// </summary>
 public sealed class AttributeStatRegistry : IAttributeStatRegistry
 {
@@ -33,6 +37,21 @@ public sealed class AttributeStatRegistry : IAttributeStatRegistry
 
         def = null!;
         return false;
+    }
+
+    public string? Canonicalize(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return null;
+        }
+
+        if (byId.TryGetValue(id.Trim(), out AttributeStatDef? found) && found != null)
+        {
+            return found.Id;
+        }
+
+        return null;
     }
 
     public void Register(AttributeStatDef def)
@@ -80,17 +99,6 @@ public sealed class AttributeStatRegistry : IAttributeStatRegistry
             }
 
             string attributeId = row.id.Trim();
-            string? canonical = AttributeIds.Canonicalize(attributeId);
-            if (canonical == null)
-            {
-                api.Logger.Warning(
-                    "[prosequor] Skipping attribute-stat asset {0}: unknown attribute '{1}'.",
-                    kv.Key,
-                    attributeId);
-                continue;
-            }
-
-            attributeId = canonical;
             List<string> errors = new();
             List<AbilityRule>? rules = AttributeRuleCompiler.CompileRules(
                 attributeId,

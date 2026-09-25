@@ -45,7 +45,11 @@ public sealed class AttributeEffectService
     {
         HashSet<(HookId, VerbId, PhaseId)> seen = new();
         List<(HookId Hook, VerbId Verb, PhaseId Phase)> distinct = new();
-        foreach (string id in AttributeIds.All)
+        IAttributeStatRegistry? stats = ProsequorModSystem.For(entity.Api)?.AttributeStats;
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+        foreach (string id in catalog)
         {
             foreach ((HookId hook, VerbId verb, PhaseId phase) in index.ForAttribute(id))
             {

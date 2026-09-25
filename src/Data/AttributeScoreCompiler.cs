@@ -4,14 +4,32 @@ namespace Prosequor.Data;
 public static class AttributeScoreCompiler
 {
     /// <summary>
-    /// Validates and canonicalizes <paramref name="rows"/>. Invalid entries are skipped and
-    /// reported via <paramref name="errors"/>. Duplicate canonical ids last-win (with an error).
+    /// Validates and canonicalizes <paramref name="rows"/> against loaded attribute ids.
+    /// Invalid entries are skipped and reported via <paramref name="errors"/>.
+    /// Duplicate canonical ids last-win (with an error).
     /// </summary>
     public static IReadOnlyList<AttributeScoreEntry> Compile(
         string skillId,
         AttributeScoreJson[]? rows,
-        List<string> errors)
+        List<string> errors,
+        IAttributeStatRegistry? stats = null)
     {
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+        return Compile(skillId, rows, errors, catalog);
+    }
+
+    /// <summary>
+    /// Validates and canonicalizes <paramref name="rows"/> against <paramref name="catalog"/>.
+    /// </summary>
+    public static IReadOnlyList<AttributeScoreEntry> Compile(
+        string skillId,
+        AttributeScoreJson[]? rows,
+        List<string> errors,
+        IReadOnlyList<string> catalog)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
         if (rows == null || rows.Length == 0)
         {
             return Array.Empty<AttributeScoreEntry>();
@@ -28,7 +46,7 @@ public static class AttributeScoreCompiler
                 continue;
             }
 
-            string? canonical = AttributeIds.Canonicalize(row.id);
+            string? canonical = AttributeIds.Canonicalize(row.id ?? "", catalog);
             if (canonical == null)
             {
                 errors.Add(
@@ -58,7 +76,7 @@ public static class AttributeScoreCompiler
         }
 
         List<AttributeScoreEntry> compiled = new(byId.Count);
-        foreach (string id in AttributeIds.All)
+        foreach (string id in catalog)
         {
             if (byId.TryGetValue(id, out AttributeScoreEntry entry))
             {

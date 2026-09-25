@@ -68,6 +68,12 @@ public sealed class FatherXp
             return;
         }
 
+        IPlayerProgress? parked = ProsequorModSystem.GetProgress(sapi, playerUid);
+        if (parked != null && !parked.HasSkillAccess(skillId))
+        {
+            return;
+        }
+
         mailbox.Enqueue(playerUid, skillId, amount);
     }
 
@@ -143,6 +149,11 @@ public sealed class FatherXp
         if (progress == null)
         {
             return false;
+        }
+
+        if (!progress.HasSkillAccess(skillId))
+        {
+            return true;
         }
 
         // Enroll (AdmitInitialized) owns load + attribute apply. Pay only.

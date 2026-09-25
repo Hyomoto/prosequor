@@ -6,6 +6,9 @@ public sealed class TraitAttributeMappingJson
     public string? code { get; set; }
     public Dictionary<string, int>? attributes { get; set; }
     public bool retainTrait { get; set; }
+
+    /// <summary>Skill ids added to a class that has this trait. Omit means none.</summary>
+    public string[]? skills { get; set; }
 }
 
 /// <summary>Compiled trait → attribute score deltas (empty = crafting gate / flavor-only).</summary>
@@ -20,6 +23,9 @@ public sealed class TraitAttributeMapping
     /// and clear only that trait's vanilla Entity.Stats bag.
     /// </summary>
     public bool RetainTrait { get; init; }
+
+    /// <summary>Registered skill ids this trait adds to a class set. Empty when none.</summary>
+    public IReadOnlyList<string> Skills { get; init; } = Array.Empty<string>();
 
     public bool HasScoreDeltas => Attributes.Count > 0;
 

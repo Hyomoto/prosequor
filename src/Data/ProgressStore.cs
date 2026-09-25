@@ -25,14 +25,17 @@ public static class ProgressStore
     /// <summary>Public attribute scores only.</summary>
     public const string AttrScores = "prosequorA";
 
-    public static PlayerProgressState Load(IServerPlayer player, ISkillRegistry registry)
+    public static PlayerProgressState Load(
+        IServerPlayer player,
+        ISkillRegistry registry,
+        IAttributeStatRegistry? stats = null)
     {
-        if (TryHydrateStored(ReadModData(player), registry, out PlayerProgressState stored))
+        if (TryHydrateStored(ReadModData(player), registry, out PlayerProgressState stored, stats))
         {
             return stored;
         }
 
-        PlayerProgressState created = PlayerProgressState.CreateNew(registry);
+        PlayerProgressState created = PlayerProgressState.CreateNew(registry, stats);
         XpBucketFormulas.RefreshAllCaps(created);
         return created;
     }
@@ -54,7 +57,8 @@ public static class ProgressStore
     public static bool TryHydrateStored(
         byte[]? bytes,
         ISkillRegistry registry,
-        out PlayerProgressState state)
+        out PlayerProgressState state,
+        IAttributeStatRegistry? stats = null)
     {
         state = null!;
         if (bytes == null || bytes.Length == 0)
@@ -82,7 +86,10 @@ public static class ProgressStore
 
         stored.Schema = PlayerProgressState.CurrentSchema;
         PlayerProgressState.EnsureSkillEntries(stored, registry);
-        PlayerProgressState.EnsureAttributeEntries(stored);
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+        PlayerProgressState.EnsureAttributeEntries(stored, catalog);
         stored.ReconcileLevelsFromXp();
         XpBucketFormulas.RefreshAllCaps(stored);
         state = stored;
@@ -97,16 +104,22 @@ public static class ProgressStore
         player.SetModdata(ModDataKey, Serialize(state));
     }
 
-    public static void Save(IServerPlayer player, PlayerProgressState state)
+    public static void Save(
+        IServerPlayer player,
+        PlayerProgressState state,
+        IReadOnlyList<string>? catalog = null)
     {
         WriteModData(player, state);
-        MirrorToEntity(player.Entity, state);
+        MirrorToEntity(player.Entity, state, catalog);
     }
 
     /// <summary>
     /// Full public mirror: unlock tiers + attribute scores. Removes the legacy blob root.
     /// </summary>
-    public static void MirrorToEntity(Entity? entity, PlayerProgressState state)
+    public static void MirrorToEntity(
+        Entity? entity,
+        PlayerProgressState state,
+        IReadOnlyList<string>? catalog = null)
     {
         if (entity == null)
         {
@@ -115,14 +128,18 @@ public static class ProgressStore
 
         RemoveLegacyTree(entity);
         MirrorUnlocks(entity, state);
-        MirrorAttributeScores(entity, state);
+        MirrorAttributeScores(entity, state, catalog);
     }
 
-    public static void MirrorAttributeScores(Entity entity, PlayerProgressState state)
+    public static void MirrorAttributeScores(
+        Entity entity,
+        PlayerProgressState state,
+        IReadOnlyList<string>? catalog = null)
     {
-        PlayerProgressState.EnsureAttributeEntries(state);
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        PlayerProgressState.EnsureAttributeEntries(state, ids);
         TreeAttribute scores = new();
-        foreach (string id in AttributeIds.All)
+        foreach (string id in ids)
         {
             scores.SetInt(id, state.Attributes[id]);
         }
@@ -206,13 +223,17 @@ public static class ProgressStore
         entity.WatchedAttributes.MarkPathDirty(AttrUnlocks);
     }
 
-    public static void ApplyVisibleMirror(Entity entity, PlayerProgressState state, VisibleProgressChange change)
+    public static void ApplyVisibleMirror(
+        Entity entity,
+        PlayerProgressState state,
+        VisibleProgressChange change,
+        IReadOnlyList<string>? catalog = null)
     {
         RemoveLegacyTree(entity);
 
         if (change.MirrorAttributeScores)
         {
-            MirrorAttributeScores(entity, state);
+            MirrorAttributeScores(entity, state, catalog);
         }
 
         if (change.MirrorUnlockTiers)
@@ -238,13 +259,17 @@ public static class ProgressStore
     /// Merge public unlock tiers and attribute scores into <paramref name="into"/>.
     /// Does not touch XP, points, or attribute buckets.
     /// </summary>
-    public static bool MergePublicFromEntity(Entity entity, PlayerProgressState into)
+    public static bool MergePublicFromEntity(
+        Entity entity,
+        PlayerProgressState into,
+        IReadOnlyList<string>? catalog = null)
     {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         bool any = false;
         ITreeAttribute? scores = entity.WatchedAttributes.GetTreeAttribute(AttrScores);
         if (scores != null)
         {
-            foreach (string id in AttributeIds.All)
+            foreach (string id in ids)
             {
                 if (scores.HasAttribute(id))
                 {
@@ -302,11 +327,11 @@ public static class ProgressStore
         // Legacy full blob (pre-sparse): hydrate once for clients mid-upgrade.
         if (!any && entity.WatchedAttributes.GetTreeAttribute(AttrTree) is ITreeAttribute legacy)
         {
-            MergeLegacyTree(legacy, into);
+            MergeLegacyTree(legacy, into, ids);
             any = true;
         }
 
-        PlayerProgressState.EnsureAttributeEntries(into);
+        PlayerProgressState.EnsureAttributeEntries(into, ids);
         return any || scores != null || unlocks != null;
     }
 
@@ -427,12 +452,16 @@ public static class ProgressStore
         return count == 0 ? null : tiers;
     }
 
-    static void MergeLegacyTree(ITreeAttribute tree, PlayerProgressState into)
+    static void MergeLegacyTree(
+        ITreeAttribute tree,
+        PlayerProgressState into,
+        IReadOnlyList<string>? catalog = null)
     {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         ITreeAttribute? attributesTree = tree.GetTreeAttribute("attributes");
         if (attributesTree != null)
         {
-            foreach (string id in AttributeIds.All)
+            foreach (string id in ids)
             {
                 if (attributesTree.HasAttribute(id))
                 {

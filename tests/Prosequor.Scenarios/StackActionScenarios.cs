@@ -605,6 +605,7 @@ public class StackActionScenarios : AtlasScenarioBase
         public bool HasUnlock(string skillId, string code) => false;
         public int GetUnlockTier(string skillId, string nodeId) => 0;
         public float GetAttributeBucket(string id) => 0f;
+        public bool HasSkillAccess(string skillId) => true;
 
         public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
         {

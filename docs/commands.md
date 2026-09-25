@@ -8,7 +8,7 @@ Server console / in-game chat. Requires `controlserver`. Online players only (na
 | `/prosequor setlevel <player> <skill\|player\|self> <level>` | player + target + int | Set overall player level (`player` / `self`) or a skill level (skill id or localized display name) |
 | `/prosequor addxp <player> <skill\|player\|self> <amount> [nb\|fb]` | player + target + float + optional flag | Add player XP or skill XP. Skill default Earn is skill-bucketed; player-track awards are unmetered (`nb`/`fb` no-ops there). Skill `nb` = Grant (full commit, no meters). Skill `fb` = GrantAndFill (full commit + fill skill meter) |
 | `/prosequor points <player> <amount>` | player + int | Add or subtract unspent unlock points (negative allowed) |
-| `/prosequor addbucket <player> <attribute> <amount>` | player + attribute + float | Add growth credit to an attribute bucket (`strength`, `perception`, `constitution`, `inconspicuity`, `resilience`) |
+| `/prosequor addbucket <player> <attribute> <amount>` | player + attribute + float | Add growth credit to an attribute bucket (any loaded stat id) |
 | `/prosequor setattr <player> <attribute> <value>` | player + attribute + int | Set attribute score (clamped 0–18); refreshes that attribute’s player-interaction effects |
 | `/prosequor unlock <player> <skill> <code>` | player + skill + node id | Grant a tree unlock (costs points / respects purchase rules when a tree exists) |
 | `/prosequor revoke <player> <skill> <code>` | player + skill + node id | Revoke an unlock and refund 1 point |

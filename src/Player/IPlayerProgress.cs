@@ -39,6 +39,12 @@ public interface IPlayerProgress
     /// <summary>In-level skill XP and need for the progress bar.</summary>
     void GetSkillBar(string skillId, out float intoLevel, out int needForNext, out int level);
 
+    /// <summary>
+    /// Whether this player can learn / gain XP / fire effects for <paramref name="skillId"/>.
+    /// Unbound access (no slots yet) allows every skill.
+    /// </summary>
+    bool HasSkillAccess(string skillId);
+
     // Server-only mutations
     void AddPlayerXp(float amount, XpAwardMode mode = XpAwardMode.Earn);
     void AddSkillXp(

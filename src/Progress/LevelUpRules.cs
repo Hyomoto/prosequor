@@ -17,7 +17,8 @@ public static class LevelUpRules
         IReadOnlyList<LevelUpRuleDef> rules,
         int beforeLevel,
         int afterLevel,
-        Random random)
+        Random random,
+        IReadOnlyList<string>? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(rules);
@@ -43,7 +44,7 @@ public static class LevelUpRules
                     continue;
                 }
 
-                ApplyOne(state, rule, random, winners);
+                ApplyOne(state, rule, random, winners, catalog);
             }
         }
 
@@ -86,7 +87,8 @@ public static class LevelUpRules
         PlayerProgressState state,
         LevelUpRuleDef rule,
         Random random,
-        List<string> winners)
+        List<string> winners,
+        IReadOnlyList<string>? catalog)
     {
         switch (rule.Action)
         {
@@ -99,7 +101,7 @@ public static class LevelUpRules
                 break;
 
             case LevelUpActionKind.EarnAttribute:
-                ApplyAttribute(state, rule, random, winners);
+                ApplyAttribute(state, rule, random, winners, catalog);
                 break;
         }
     }
@@ -108,14 +110,16 @@ public static class LevelUpRules
         PlayerProgressState state,
         LevelUpRuleDef rule,
         Random random,
-        List<string> winners)
+        List<string> winners,
+        IReadOnlyList<string>? catalog)
     {
-        PlayerProgressState.EnsureAttributeEntries(state);
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        PlayerProgressState.EnsureAttributeEntries(state, ids);
         if (string.Equals(rule.AttributeKey, LevelUpRuleDef.BucketsKey, StringComparison.OrdinalIgnoreCase))
         {
             for (int i = 0; i < rule.Value; i++)
             {
-                string? winner = AttributeGrowth.TryGrow(state, random);
+                string? winner = AttributeGrowth.TryGrow(state, random, ids);
                 if (winner != null)
                 {
                     winners.Add(winner);

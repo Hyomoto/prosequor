@@ -24,7 +24,8 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
     public static List<LevelUpRuleDef> CompileDrafts(
         IDictionary<string, LevelUpRuleJson> drafts,
         Action<string> error,
-        Action<string>? warn = null)
+        Action<string>? warn = null,
+        IReadOnlyList<string>? catalog = null)
     {
         ArgumentNullException.ThrowIfNull(drafts);
         ArgumentNullException.ThrowIfNull(error);
@@ -35,7 +36,7 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
                      .OrderBy(d => d.Key, StringComparer.OrdinalIgnoreCase))
         {
             List<string> errors = new();
-            LevelUpRuleDef? def = LevelUpRuleCompiler.Compile(kv.Value, ref sourceOrder, errors);
+            LevelUpRuleDef? def = LevelUpRuleCompiler.Compile(kv.Value, ref sourceOrder, errors, catalog);
             if (def == null)
             {
                 foreach (string msg in errors)
@@ -65,9 +66,12 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
         return compiled;
     }
 
-    public void LoadFromAssets(ICoreAPI api)
+    public void LoadFromAssets(ICoreAPI api, IAttributeStatRegistry? stats = null)
     {
         rules.Clear();
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
 
         Dictionary<string, LevelUpRuleJson> drafts = new(StringComparer.OrdinalIgnoreCase);
         List<KeyValuePair<AssetLocation, LevelUpFileJson>> assets = api.Assets
@@ -118,7 +122,8 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
         List<LevelUpRuleDef> compiled = CompileDrafts(
             drafts,
             msg => api.Logger.Error(msg),
-            msg => api.Logger.Warning(msg));
+            msg => api.Logger.Warning(msg),
+            catalog);
         rules.AddRange(compiled);
 
         api.Logger.Notification(

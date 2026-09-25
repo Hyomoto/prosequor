@@ -52,6 +52,8 @@ public sealed class ActionTestProgress : IPlayerProgress
         unlockTiers.TryGetValue($"{skillId}:{nodeId}", out int tier) ? tier : 0;
     public float GetAttributeBucket(string id) => 0f;
 
+    public bool HasSkillAccess(string skillId) => true;
+
     public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
     {
         intoLevel = 0;

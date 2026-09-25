@@ -16,6 +16,7 @@ public static class AttributeStatFixtures
     public static void VerifyAll()
     {
         VerifyCompilerAndIndex();
+        VerifyCatalogDefinesAttributes();
         VerifyPipelineDeltas();
         VerifySatietyAndHungerDelay();
         VerifyMappedIntRegisteredForAllPlayerStatPhases();
@@ -27,6 +28,90 @@ public static class AttributeStatFixtures
         VerifyAttributeMappedFloatFormulaMechanism();
         VerifyShippedMappedIntRulesMatchPipeline();
         VerifyCatEyesCapacityPipeline();
+    }
+
+    /// <summary>
+    /// A registered stat id is the attribute catalog: canonicalize, score compile, and ensure.
+    /// </summary>
+    static void VerifyCatalogDefinesAttributes()
+    {
+        AttributeStatRegistry stats = new();
+        stats.Register(new AttributeStatDef { Id = "strength", Rules = new() });
+        stats.Register(new AttributeStatDef { Id = "Luck", Rules = new() });
+        stats.Register(new AttributeStatDef { Id = "luck", Rules = new() }); // last-win casing
+
+        if (stats.Canonicalize("LUCK") != "luck"
+            || stats.Canonicalize("missing") != null
+            || stats.All.Count != 2
+            || stats.All[1].Id != "luck")
+        {
+            Assert.Fail(
+                $"[prosequor] Stat registry catalog fixture failed (canonicalize/last-win; count={stats.All.Count}).");
+            return;
+        }
+
+        List<string> errors = new();
+        IReadOnlyList<AttributeScoreEntry> scores = AttributeScoreCompiler.Compile(
+            "fixture",
+            [
+                new AttributeScoreJson { id = "Luck", value = 0.4f },
+                new AttributeScoreJson { id = "strength", value = 0.1f }
+            ],
+            errors,
+            stats);
+        if (errors.Count != 0
+            || scores.Count != 2
+            || scores[0].Id != "strength"
+            || scores[1].Id != "luck")
+        {
+            Assert.Fail(
+                $"[prosequor] Stat registry catalog fixture failed (attributeScores; errors={errors.Count} count={scores.Count}).");
+            return;
+        }
+
+        errors.Clear();
+        IReadOnlyList<AttributeScoreEntry> unknown = AttributeScoreCompiler.Compile(
+            "fixture",
+            [new AttributeScoreJson { id = "perception", value = 1f }],
+            errors,
+            stats);
+        if (unknown.Count != 0 || errors.Count != 1)
+        {
+            Assert.Fail(
+                $"[prosequor] Stat registry catalog fixture failed (unknown vs catalog; count={unknown.Count} errors={errors.Count}).");
+            return;
+        }
+
+        PlayerProgressState state = new();
+        IReadOnlyList<string> catalog = AttributeIds.CatalogIds(stats);
+        PlayerProgressState.EnsureAttributeEntries(state, catalog);
+        if (!state.Attributes.ContainsKey("luck")
+            || !state.Attributes.ContainsKey("strength")
+            || state.Attributes.ContainsKey(AttributeIds.Perception))
+        {
+            Assert.Fail("[prosequor] Stat registry catalog fixture failed (EnsureAttributeEntries).");
+        }
+
+        TraitAttributeRegistry traits = new();
+        traits.Register(new TraitAttributeMapping
+        {
+            Code = "lucky",
+            Attributes = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["luck"] = 2
+            }
+        });
+        // Load path uses Canonicalize against catalog; emulate by resolving with ResolveScores catalog.
+        Dictionary<string, int> resolved = TraitAttributeConverter.ResolveScores(
+            traits,
+            ["lucky"],
+            catalog);
+        if (resolved["luck"] != AttributeGrowth.DefaultScore + 2
+            || resolved["strength"] != AttributeGrowth.DefaultScore)
+        {
+            Assert.Fail(
+                $"[prosequor] Stat registry catalog fixture failed (trait delta; luck={resolved["luck"]}).");
+        }
     }
 
     static NumberSpec ParseNumberSpec(string json)
@@ -1100,6 +1185,7 @@ public static class AttributeStatFixtures
             attributes.TryGetValue(id, out int score) ? score : AttributeGrowth.DefaultScore;
 
         public float GetAttributeBucket(string id) => 0f;
+        public bool HasSkillAccess(string skillId) => true;
 
         public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
         {

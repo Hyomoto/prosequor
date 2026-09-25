@@ -140,6 +140,9 @@ public class MigratedFixtureTests
     public void TraitAttributeFixtures_Should_Pass() => TraitAttributeFixtures.VerifyAll();
 
     [Fact]
+    public void SkillAccessFixtures_Should_Pass() => SkillAccessFixtures.VerifyAll();
+
+    [Fact]
     public void QualitativeStatScaleFixtures_Should_Pass() => QualitativeStatScaleFixtures.VerifyAll();
 
     [Fact]

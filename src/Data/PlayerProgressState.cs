@@ -129,7 +129,9 @@ public class PlayerProgressState
     /// </summary>
     public Dictionary<string, float> AttributeBuckets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public static PlayerProgressState CreateNew(ISkillRegistry registry)
+    public static PlayerProgressState CreateNew(
+        ISkillRegistry registry,
+        IAttributeStatRegistry? stats = null)
     {
         PlayerProgressState state = new()
         {
@@ -140,7 +142,10 @@ public class PlayerProgressState
         };
 
         EnsureSkillEntries(state, registry);
-        EnsureAttributeEntries(state);
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+        EnsureAttributeEntries(state, catalog);
         state.ReconcileLevelsFromXp();
         return state;
     }
@@ -158,18 +163,24 @@ public class PlayerProgressState
     }
 
     /// <summary>
-    /// Ensure every known attribute has a score and bucket entry.
+    /// Ensure every catalog attribute has a score and bucket entry.
     /// Does not wipe existing values; missing keys get defaults.
     /// </summary>
-    public static void EnsureAttributeEntries(PlayerProgressState state)
+    public static void EnsureAttributeEntries(
+        PlayerProgressState state,
+        IReadOnlyList<string>? catalog = null)
     {
-        NormalizeAttributeDictionary(state.Attributes, AttributeGrowth.DefaultScore);
-        NormalizeAttributeDictionary(state.AttributeBuckets, 0f);
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        NormalizeAttributeDictionary(state.Attributes, AttributeGrowth.DefaultScore, ids);
+        NormalizeAttributeDictionary(state.AttributeBuckets, 0f, ids);
     }
 
-    static void NormalizeAttributeDictionary<T>(Dictionary<string, T> dict, T defaultValue)
+    static void NormalizeAttributeDictionary<T>(
+        Dictionary<string, T> dict,
+        T defaultValue,
+        IReadOnlyList<string> catalog)
     {
-        foreach (string id in AttributeIds.All)
+        foreach (string id in catalog)
         {
             if (!dict.ContainsKey(id))
             {
@@ -178,9 +189,9 @@ public class PlayerProgressState
         }
     }
 
-    public int GetAttribute(string id)
+    public int GetAttribute(string id, IReadOnlyList<string>? catalog = null)
     {
-        string? canonical = AttributeIds.Canonicalize(id);
+        string? canonical = AttributeIds.Canonicalize(id, catalog ?? AttributeIds.All);
         if (canonical == null)
         {
             return AttributeGrowth.DefaultScore;
@@ -191,9 +202,9 @@ public class PlayerProgressState
             : AttributeGrowth.DefaultScore;
     }
 
-    public float GetAttributeBucket(string id)
+    public float GetAttributeBucket(string id, IReadOnlyList<string>? catalog = null)
     {
-        string? canonical = AttributeIds.Canonicalize(id);
+        string? canonical = AttributeIds.Canonicalize(id, catalog ?? AttributeIds.All);
         if (canonical == null)
         {
             return 0f;

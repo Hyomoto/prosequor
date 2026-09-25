@@ -298,6 +298,11 @@ public sealed class ActivityWatchService
                     continue;
                 }
 
+                if (!progress.HasSkillAccess(winner.SkillId))
+                {
+                    continue;
+                }
+
                 float raw = winner.Rate * dt;
                 if (raw <= 0f)
                 {
