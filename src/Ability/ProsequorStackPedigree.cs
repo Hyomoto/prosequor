@@ -1,3 +1,4 @@
+using Prosequor.Xp;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
@@ -1030,9 +1031,9 @@ public static class ProsequorStackPedigree
     }
 
     /// <summary>
-    /// Pedigree must not block vanilla stack merges — bags exist so heterogeneous units can share a stack.
-    /// Appends Live/Frozen plus craft surface trees to
-    /// <see cref="GlobalConstants.IgnoredStackAttributes"/> once.
+    /// Pedigree and pickup marks must not block vanilla stack merges or recipe equality.
+    /// Cooking matches exact stacks with <see cref="GlobalConstants.IgnoredStackAttributes"/>.
+    /// Appends Live/Frozen, craft surface trees, the Grown By lang key, and the collect-XP stamp once.
     /// </summary>
     public static void EnsurePedigreeIgnoredForMerge()
     {
@@ -1040,7 +1041,9 @@ public static class ProsequorStackPedigree
             LiveAttr,
             FrozenAttr,
             ItemAffixes.TreeAttr,
-            CraftAttributeMods.TreeAttr);
+            CraftAttributeMods.TreeAttr,
+            OwnerCredit.CreditLangAttr,
+            CollectXpStamp.AttrKey);
     }
 
     static void AppendIgnoredStackAttributes(params string[] keys)
