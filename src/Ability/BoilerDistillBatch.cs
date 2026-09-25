@@ -26,26 +26,32 @@ public static class BoilerDistillBatch
         return true;
     }
 
-    public static void Store(BlockEntity? be, ProsequorBlob blob)
+    /// <summary>
+    /// Locks <paramref name="blob"/> on the still. Returns the blob actually stored,
+    /// including the pourer's sole contributor when the roll only stamped a maker.
+    /// </summary>
+    public static ProsequorBlob Store(BlockEntity? be, ProsequorBlob blob)
     {
+        ProsequorBlob next = blob ?? ProsequorBlob.Empty;
         if (be == null)
         {
-            return;
+            return next;
         }
 
-        ProsequorBlockPedigreeStation.Mutate(be, box =>
+        if (ProsequorBlockPedigreeStation.TryGetBox(be, out ProsequorChunkPedigree.Box box)
+            && box.Blob.TryGetSoleContributor(out string? sole)
+            && !next.TryGetSoleContributor(out _))
         {
-            ProsequorBlob next = blob ?? ProsequorBlob.Empty;
-            // Keep the pourer's sole contributor when the quality roll only stamps maker.
-            if (box.Blob.TryGetSoleContributor(out string? sole)
-                && !next.TryGetSoleContributor(out _))
-            {
-                next = next.WithSoleContributor(sole);
-            }
+            next = next.WithSoleContributor(sole);
+        }
 
-            box.DistillLocked = true;
-            box.Blob = next;
+        ProsequorBlob committed = next;
+        ProsequorBlockPedigreeStation.Mutate(be, b =>
+        {
+            b.DistillLocked = true;
+            b.Blob = committed;
         });
+        return committed;
     }
 
     public static void Clear(BlockEntity? be)
@@ -118,8 +124,7 @@ public static class BoilerDistillBatch
         }
 
         ProsequorBlob rolled = Roll(world, spiritTemplate, qualityUid, mashBlob, mashBonus);
-        Store(boiler, rolled);
-        return rolled;
+        return Store(boiler, rolled);
     }
 
     /// <summary>
