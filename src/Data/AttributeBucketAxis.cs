@@ -1,20 +1,20 @@
 namespace Prosequor.Data;
 
 /// <summary>
-/// Median-centered 0..1 tick positions for the stats-panel attribute buckets.
+/// Median-centered 0..1 tick positions for attribute bucket fills.
 /// </summary>
 public static class AttributeBucketAxis
 {
     const float TieEpsilon = 1e-5f;
 
     /// <summary>
-    /// One fraction per <see cref="AttributeIds.All"/> entry, in that order.
+    /// One fraction per catalog entry, in the same order as <paramref name="scores"/>.
     /// Null means the attribute is at <see cref="AttributeGrowth.MaxScore"/> and out of the race.
     /// Center (0.5) is the median of eligible bucket fills; extremes are the current leader/lagger.
     /// </summary>
     public static float?[] TickFractions(ReadOnlySpan<int> scores, ReadOnlySpan<float> buckets)
     {
-        float?[] dest = new float?[AttributeIds.All.Length];
+        float?[] dest = new float?[scores.Length];
         WriteTickFractions(scores, buckets, dest);
         return dest;
     }
@@ -25,8 +25,8 @@ public static class AttributeBucketAxis
         float?[] dest)
     {
         ArgumentNullException.ThrowIfNull(dest);
-        int n = AttributeIds.All.Length;
-        if (scores.Length != n || buckets.Length != n || dest.Length < n)
+        int n = scores.Length;
+        if (buckets.Length != n || dest.Length < n)
         {
             throw new ArgumentException("[prosequor] Attribute bucket axis length mismatch.");
         }

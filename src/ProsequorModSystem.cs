@@ -197,7 +197,17 @@ public class ProsequorModSystem : ModSystem
         AttributeEffects = new AttributeEffectService(AttributeStats.EffectIndex, PhaseRefresh);
         Pipeline = new AbilityPipeline(Actions, Registry, AttributeStats);
         XpRules.LoadFromSkills(api, Registry);
-        TraitAttributes.RebuildClassSkillSets(Registry, api);
+        // Character classes may have loaded before stats: an empty catalog used to clear the
+        // score cache and abort mutate. Re-mutate only when that cache is still empty so we
+        // never rebuild scores from already-stripped leftover traits.
+        if (TraitAttributes.ClassStartingScores.Count == 0)
+        {
+            CharacterTraitAttributePatches.MutateAndRebuildSkillSets(api, this);
+        }
+        else
+        {
+            TraitAttributes.RebuildClassSkillSets(Registry, api);
+        }
 
         Fingerprint = ContentFingerprint.Compute(
             Registry,

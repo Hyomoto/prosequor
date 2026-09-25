@@ -15,6 +15,7 @@ public static class TraitAttributeFixtures
         VerifyVanillaClassTotals();
         VerifyClassTraitStrip();
         VerifyExtraTraitFoldMath();
+        VerifyEmptyStatCatalogFallsBackForMutate();
     }
 
     static void VerifyResolveScoresMath()
@@ -175,6 +176,30 @@ public static class TraitAttributeFixtures
                 "[prosequor] Hunter + soldier extras expected STR/PER 11/13, got {0}/{1}.",
                 withSoldier[AttributeIds.Strength],
                 withSoldier[AttributeIds.Perception]));
+        }
+    }
+
+    static void VerifyEmptyStatCatalogFallsBackForMutate()
+    {
+        if (!ReferenceEquals(AttributeIds.CatalogIds(new AttributeStatRegistry()), AttributeIds.All))
+        {
+            Assert.Fail("[prosequor] Empty attribute-stat registry must fall back to AttributeIds.All.");
+        }
+
+        TraitAttributeRegistry registry = BuildShippedRegistry();
+        CharacterSystem fake = new();
+        fake.characterClasses.Add(new CharacterClass
+        {
+            Code = "hunter",
+            Traits = ["focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"]
+        });
+
+        TraitAttributeConverter.MutateLoadedClasses(fake, registry, new AttributeStatRegistry());
+        if (!registry.ClassStartingScores.TryGetValue("hunter", out Dictionary<string, int>? scores)
+            || scores[AttributeIds.Perception] != 13
+            || scores[AttributeIds.Strength] != 9)
+        {
+            Assert.Fail("[prosequor] Mutate with unloaded attribute stats must still cache hunter trait scores.");
         }
     }
 

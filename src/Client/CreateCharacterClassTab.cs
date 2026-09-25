@@ -26,7 +26,6 @@ public sealed class CreateCharacterClassTab : IDisposable
     const double AttrRowGap = 4;
     const double AttrValueNudgeY = -5;
     const double AttrValueWidth = 40;
-    const double AttrValueRightPad = 10;
     const double ColGap = 12;
     const double ScrollbarWidth = 16;
     const double FlavorPad = 8;
@@ -144,61 +143,24 @@ public sealed class CreateCharacterClassTab : IDisposable
 
     void ComposeAttributeColumn(GuiComposer composer, double x, double y, double width)
     {
-        CairoFont nameFont = CairoFont.WhiteSmallText();
-        CairoFont valueFont = CairoFont.ButtonText()
-            .WithOrientation(EnumTextOrientation.Center);
-
-        double nameX = AttrIconSize + 10;
-        double valueColX = width - AttrValueWidth - AttrValueRightPad;
-        double nameWidth = Math.Max(40, valueColX - nameX - 4);
-        double rowY = y;
-        string defaultScore = AttributeGrowth.DefaultScore.ToString();
-
-        foreach (string attrId in AttributeIds.All)
-        {
-            ElementBounds rowBounds = ElementBounds.Fixed(x, rowY, width, AttrRowHeight);
-            composer.AddRoundedInset(rowBounds);
-
-            ElementBounds iconBounds = ElementBounds.Fixed(
-                x + 6,
-                rowY + (AttrRowHeight - AttrIconSize) / 2,
-                AttrIconSize,
-                AttrIconSize);
-            ElementBounds nameBounds = ElementBounds.Fixed(
-                x + nameX,
-                rowY + (AttrRowHeight - 18) / 2,
-                nameWidth,
-                18);
-            ElementBounds valueBounds = ElementBounds.Fixed(
-                x + valueColX,
-                rowY + (AttrRowHeight - 32) / 2 + AttrValueNudgeY,
-                AttrValueWidth,
-                32);
-
-            LoadedTexture? icon = icons.Get(attrId, AttrIconSize);
-            composer.AddStaticText(Lang.Get("prosequor:attribute-" + attrId), nameFont, nameBounds);
-            composer.AddDynamicText(
-                defaultScore,
-                valueFont,
-                valueBounds,
-                AttrValueKey(attrId));
-
-            if (icon != null && icon.TextureId > 0)
-            {
-                LoadedTexture tex = icon;
-                composer.AddCustomRender(iconBounds, (_, bounds) =>
-                {
-                    capi.Render.Render2DTexturePremultipliedAlpha(
-                        tex.TextureId,
-                        (float)bounds.renderX,
-                        (float)bounds.renderY,
-                        (float)bounds.OuterWidth,
-                        (float)bounds.OuterHeight);
-                });
-            }
-
-            rowY += AttrRowHeight + AttrRowGap;
-        }
+        IReadOnlyList<string> catalog = AttributeLayout.ResolveCatalog(capi);
+        AttributeLayout.ComposeList(
+            composer,
+            capi,
+            icons,
+            catalog,
+            x,
+            y,
+            width,
+            _ => AttributeGrowth.DefaultScore,
+            ticks: null,
+            showNames: true,
+            showTicks: false,
+            iconSize: AttrIconSize,
+            rowHeight: AttrRowHeight,
+            rowGap: AttrRowGap,
+            valueNudgeY: AttrValueNudgeY,
+            valueWidth: AttrValueWidth);
     }
 
     void ComposeTraitsColumn(
@@ -253,10 +215,10 @@ public sealed class CreateCharacterClassTab : IDisposable
         composer.GetRichtext(ClassBodyKey)?.SetNewText(body, CairoFont.WhiteDetailText());
 
         Dictionary<string, int> scores = ResolveScores(characterClass.Code);
-        foreach (string attrId in AttributeIds.All)
+        foreach (string attrId in AttributeLayout.ResolveCatalog(capi))
         {
             int score = scores.TryGetValue(attrId, out int s) ? s : AttributeGrowth.DefaultScore;
-            composer.GetDynamicText(AttrValueKey(attrId))?.SetNewText(score.ToString());
+            composer.GetDynamicText(AttributeLayout.ValueKey(attrId))?.SetNewText(score.ToString());
         }
 
         string traitsHtml = BuildTraitsHtml(characterClass, modSys);
@@ -293,7 +255,7 @@ public sealed class CreateCharacterClassTab : IDisposable
         }
 
         Dictionary<string, int> fallback = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string id in AttributeIds.All)
+        foreach (string id in AttributeLayout.ResolveCatalog(capi))
         {
             fallback[id] = AttributeGrowth.DefaultScore;
         }
@@ -425,8 +387,6 @@ public sealed class CreateCharacterClassTab : IDisposable
 
         return sb.Length > 0 ? sb.ToString() : Lang.Get("No positive or negative traits");
     }
-
-    static string AttrValueKey(string attrId) => "class-attr-value-" + attrId;
 
     public void Dispose() => icons.Dispose();
 }

@@ -69,21 +69,52 @@ public static class AttributeEffectDescription
     {
         foreach (AttributeStatDef def in registry.All)
         {
-            int score = progress?.GetAttribute(def.Id) ?? AttributeGrowth.DefaultScore;
-            foreach (AbilityRule rule in def.Rules)
+            foreach ((string text, bool positive) in EnumerateActiveLinesFor(
+                         def, progress, emittedBlendedStats))
             {
-                if (IsCoveredByEmittedBlendedStat(rule.RuleId, emittedBlendedStats))
-                {
-                    continue;
-                }
-
-                if (!TryDescribe(rule, score, out string? text, out bool positive) || text == null)
-                {
-                    continue;
-                }
-
                 yield return (text, positive);
             }
+        }
+    }
+
+    /// <summary>Active qualitative lines for a single attribute id.</summary>
+    public static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        IAttributeStatRegistry registry,
+        string attributeId,
+        IPlayerProgress? progress,
+        IReadOnlySet<string>? emittedBlendedStats = null)
+    {
+        if (!registry.TryGet(attributeId, out AttributeStatDef def))
+        {
+            yield break;
+        }
+
+        foreach ((string text, bool positive) in EnumerateActiveLinesFor(
+                     def, progress, emittedBlendedStats))
+        {
+            yield return (text, positive);
+        }
+    }
+
+    static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        AttributeStatDef def,
+        IPlayerProgress? progress,
+        IReadOnlySet<string>? emittedBlendedStats)
+    {
+        int score = progress?.GetAttribute(def.Id) ?? AttributeGrowth.DefaultScore;
+        foreach (AbilityRule rule in def.Rules)
+        {
+            if (IsCoveredByEmittedBlendedStat(rule.RuleId, emittedBlendedStats))
+            {
+                continue;
+            }
+
+            if (!TryDescribe(rule, score, out string? text, out bool positive) || text == null)
+            {
+                continue;
+            }
+
+            yield return (text, positive);
         }
     }
 

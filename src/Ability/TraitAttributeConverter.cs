@@ -413,7 +413,12 @@ public static class TraitAttributeConverter
 
             foreach (KeyValuePair<string, int> delta in mapping.Attributes)
             {
-                scores[delta.Key] = scores[delta.Key] + delta.Value;
+                if (!scores.TryGetValue(delta.Key, out int current))
+                {
+                    current = AttributeGrowth.DefaultScore;
+                }
+
+                scores[delta.Key] = current + delta.Value;
             }
         }
     }

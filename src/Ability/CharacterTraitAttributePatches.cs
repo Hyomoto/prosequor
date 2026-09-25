@@ -30,11 +30,32 @@ public static class CharacterTraitAttributePatches
 
         if (mod.TraitAttributes.ByCode.Count == 0)
         {
-            mod.TraitAttributes.LoadFromAssets(api);
+            mod.TraitAttributes.LoadFromAssets(api, mod.AttributeStats);
+        }
+
+        MutateAndRebuildSkillSets(api, mod, __instance);
+    }
+
+    /// <summary>
+    /// Strip mapped traits and rebuild class skill sets. Safe to call again after
+    /// <c>AssetsFinalize</c> when character classes loaded before attribute stats.
+    /// </summary>
+    public static void MutateAndRebuildSkillSets(
+        ICoreAPI api,
+        ProsequorModSystem mod,
+        CharacterSystem? characterSystem = null)
+    {
+        characterSystem ??= api.ModLoader.GetModSystem<CharacterSystem>();
+        if (characterSystem == null || mod == null)
+        {
+            return;
         }
 
         (int classesMutated, int traitsStripped, int retainCleared) =
-            TraitAttributeConverter.MutateLoadedClasses(__instance, mod.TraitAttributes, mod.AttributeStats);
+            TraitAttributeConverter.MutateLoadedClasses(
+                characterSystem,
+                mod.TraitAttributes,
+                mod.AttributeStats);
         if (mod.Registry.All.Count > 0)
         {
             mod.TraitAttributes.RebuildClassSkillSets(mod.Registry, api);
