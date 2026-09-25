@@ -20,6 +20,9 @@ local-mod-overrides/
 .vscode/
 .cursor/
 
+# Local mod-page Markdown→HTML experiment
+/modpage/
+
 # Test runners (dotnet test, VSTest, IDE explorers)
 TestResults/
 TestStore/

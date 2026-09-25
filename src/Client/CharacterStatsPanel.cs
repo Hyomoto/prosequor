@@ -20,10 +20,8 @@ namespace Prosequor.Client;
 public class CharacterStatsPanel
 {
     const double PanelInnerWidth = 250;
-    const double AttrIconSize = 30;
     const double AttrRowHeight = 32;
     const double AttrRowGap = 5;
-    const double AttrValueNudgeY = -5;
     const double ContentTop = 26;
     const double CardHeight = 60;
     const double TempCardHeight = 52;
@@ -67,6 +65,10 @@ public class CharacterStatsPanel
         ["protein"] = new("prosequor", "textures/icons/protein-nutrition.svg"),
         ["dairy"] = new("prosequor", "textures/icons/dairy-nutrition.svg")
     };
+
+    LoadedTexture? attributeWatermark;
+    LoadedTexture? attributeArcs;
+    IReadOnlyList<string> attributeCatalog = AttributeIds.All;
 
     static readonly FieldInfo? StaticElementsField =
         AccessTools.Field(typeof(GuiComposer), "staticElements");
@@ -135,6 +137,10 @@ public class CharacterStatsPanel
         UnregisterListeners();
         attributeIcons.Dispose();
         DisposeIcons();
+        attributeWatermark?.Dispose();
+        attributeWatermark = null;
+        attributeArcs?.Dispose();
+        attributeArcs = null;
 
         if (ReferenceEquals(live, this))
         {
@@ -235,8 +241,11 @@ public class CharacterStatsPanel
         IPlayerProgress? progress = entity.GetBehavior<EntityBehaviorProgress>();
 
         double envOffset = botDlgBounds.InnerHeight / RuntimeEnv.GUIScale + 10;
-        double attrsBlock =
-            AttributeIds.All.Length * (AttrRowHeight + AttrRowGap) - AttrRowGap;
+        attributeCatalog = AttributeLayout.ResolveCatalog(capi);
+        double attrsBlock = AttributeLayout.ListBlockHeight(
+            attributeCatalog.Count,
+            AttrRowHeight,
+            AttrRowGap);
         double nutritionBlock = NutritionHeaderHeight + NutritionRowGap
             + NutritionRows.Length * NutritionRowHeight
             + (NutritionRows.Length - 1) * NutritionRowGap;
@@ -263,9 +272,6 @@ public class CharacterStatsPanel
                 (leftDlgBounds.renderX + leftDlgBounds.OuterWidth + 10) / RuntimeEnv.GUIScale,
                 envOffset / 2);
 
-        CairoFont nameFont = CairoFont.WhiteSmallText();
-        CairoFont attrValueFont = CairoFont.ButtonText()
-            .WithOrientation(EnumTextOrientation.Center);
         CairoFont cardValueFont = new CairoFont()
         {
             Color = (double[])GuiStyle.DialogDefaultTextColor.Clone(),
@@ -304,68 +310,32 @@ public class CharacterStatsPanel
             .BeginChildElements(bgBounds);
 
         double y = ContentTop;
-        double valueColX = PanelInnerWidth - 44;
-        double nameX = AttrIconSize + CardGap + 4;
-        double nameWidth = valueColX - nameX - 4;
         float?[] ticks = ReadTickFractions(progress);
+        ElementBounds attrHost = ElementBounds
+            .Fixed(0, y, PanelInnerWidth, attrsBlock)
+            .WithParent(bgBounds);
+        IReadOnlyList<AttributeHoverRow> hoverRows = AttributeLayout.ComposeCircle(
+            composer,
+            capi,
+            attributeIcons,
+            attributeCatalog,
+            attrHost,
+            attrId => progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore,
+            ticks,
+            ref attributeWatermark,
+            ref attributeArcs);
 
-        for (int i = 0; i < AttributeIds.All.Length; i++)
-        {
-            string attrId = AttributeIds.All[i];
-            ElementBounds rowBounds = ElementBounds.Fixed(0, y, PanelInnerWidth, AttrRowHeight);
-            composer.AddRoundedInset(rowBounds);
-            composer.AddRoundedInsetTick(
-                ElementBounds.Fixed(nameX, y, nameWidth, AttrRowHeight),
-                AttrTickKey(attrId),
-                ticks[i]);
+        ElementBounds tipHost = ElementBounds
+            .Fixed(0, 0, PanelInnerWidth, attrsBlock)
+            .WithParent(bgBounds);
+        GuiElementAttributeTooltip attrTip = new(capi, tipHost, attributeIcons);
+        attrTip.SetClipBounds(attrHost);
+        attrTip.SetProgress(progress);
+        attrTip.SetStats(ProsequorModSystem.For(capi)?.AttributeStats);
+        attrTip.SetRows(hoverRows);
+        composer.AddAttributeTooltip(attrTip, "prosequor-attr-tooltip");
 
-            ElementBounds iconBounds = ElementBounds.Fixed(
-                6,
-                y + (AttrRowHeight - AttrIconSize) / 2,
-                AttrIconSize,
-                AttrIconSize);
-            ElementBounds nameBounds = ElementBounds.Fixed(
-                nameX,
-                y + (AttrRowHeight - 18) / 2,
-                nameWidth,
-                18);
-            ElementBounds valueBounds = ElementBounds.Fixed(
-                valueColX,
-                y + (AttrRowHeight - 32) / 2 + AttrValueNudgeY,
-                36,
-                32);
-
-            int score = progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore;
-            LoadedTexture? icon = EnsureAttributeIcon(attrId, AttrIconSize);
-
-            composer.AddDynamicText(
-                Lang.Get("prosequor:attribute-" + attrId),
-                nameFont,
-                nameBounds,
-                AttrNameKey(attrId));
-            composer.AddDynamicText(
-                score.ToString(),
-                attrValueFont,
-                valueBounds,
-                AttrValueKey(attrId));
-
-            if (icon != null && icon.TextureId > 0)
-            {
-                LoadedTexture tex = icon;
-                composer.AddCustomRender(iconBounds, (_, bounds) =>
-                {
-                    capi.Render.Render2DTexturePremultipliedAlpha(
-                        tex.TextureId,
-                        (float)bounds.renderX,
-                        (float)bounds.renderY,
-                        (float)bounds.OuterWidth,
-                        (float)bounds.OuterHeight);
-                });
-            }
-
-            y += AttrRowHeight + AttrRowGap;
-        }
-
+        y += attrsBlock + SectionGap;
         double halfW = (PanelInnerWidth - CardGap) / 2;
         ElementBounds healthCard = ElementBounds.Fixed(0, y, halfW, CardHeight);
         ElementBounds satietyCard = ElementBounds.Fixed(halfW + CardGap, y, halfW, CardHeight);
@@ -505,13 +475,20 @@ public class CharacterStatsPanel
         IPlayerProgress? progress = entity.GetBehavior<EntityBehaviorProgress>();
 
         float?[] ticks = ReadTickFractions(progress);
-        for (int i = 0; i < AttributeIds.All.Length; i++)
+        for (int i = 0; i < attributeCatalog.Count; i++)
         {
-            string attrId = AttributeIds.All[i];
+            string attrId = attributeCatalog[i];
             int score = progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore;
-            composer.GetDynamicText(AttrValueKey(attrId))?.SetNewText(score.ToString());
-            composer.GetRoundedInsetTick(AttrTickKey(attrId))?.SetTick(ticks[i]);
+            composer.GetDynamicText(AttributeLayout.ValueKey(attrId))
+                ?.SetNewText(score.ToString());
+            composer.GetRoundedInsetTick(AttributeLayout.TickKey(attrId))
+                ?.SetTick(i < ticks.Length ? ticks[i] : null);
         }
+
+        GuiElementAttributeTooltip? tip =
+            composer.GetElement("prosequor-attr-tooltip") as GuiElementAttributeTooltip;
+        tip?.SetProgress(progress);
+        tip?.SetStats(ProsequorModSystem.For(capi)?.AttributeStats);
 
         GetHealthSat(out float? health, out float? saturation);
         if (health != null)
@@ -662,19 +639,22 @@ public class CharacterStatsPanel
         return health.ToString("0.#");
     }
 
-    static float?[] ReadTickFractions(IPlayerProgress? progress)
+    static float?[] ReadTickFractions(IPlayerProgress? progress, IReadOnlyList<string> catalog)
     {
-        int[] scores = new int[AttributeIds.All.Length];
-        float[] buckets = new float[AttributeIds.All.Length];
-        for (int i = 0; i < AttributeIds.All.Length; i++)
+        int[] scores = new int[catalog.Count];
+        float[] buckets = new float[catalog.Count];
+        for (int i = 0; i < catalog.Count; i++)
         {
-            string id = AttributeIds.All[i];
+            string id = catalog[i];
             scores[i] = progress?.GetAttribute(id) ?? AttributeGrowth.DefaultScore;
             buckets[i] = progress?.GetAttributeBucket(id) ?? 0f;
         }
 
         return AttributeBucketAxis.TickFractions(scores, buckets);
     }
+
+    float?[] ReadTickFractions(IPlayerProgress? progress) =>
+        ReadTickFractions(progress, attributeCatalog);
 
     /// <summary>
     /// After later <c>ComposeExtraGuis</c> subscribers write extra nutrition bars
@@ -820,15 +800,6 @@ public class CharacterStatsPanel
     {
         return left.Bounds.fixedY.CompareTo(right.Bounds.fixedY);
     }
-
-    static string AttrValueKey(string attrId) => "attr-value-" + attrId;
-
-    static string AttrNameKey(string attrId) => "attr-name-" + attrId;
-
-    static string AttrTickKey(string attrId) => "attr-tick-" + attrId;
-
-    LoadedTexture? EnsureAttributeIcon(string attrId, double size) =>
-        attributeIcons.Get(attrId, size);
 
     LoadedTexture? EnsureNutritionIcon(string iconId, double size)
     {
