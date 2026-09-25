@@ -8,6 +8,7 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Wires the alert meter into TaskAI init, player sensing, flee/seek/melee/idle, and damage.
+/// Meter owns player-flee eligibility via CanSensePlayer; TaskAI runs flee naturally.
 /// </summary>
 [HarmonyPatch]
 public static class AnimalAlertTaskAiPatch
@@ -24,8 +25,8 @@ public static class AnimalAlertTaskAiPatch
 }
 
 /// <summary>
-/// Players are sensed by the alert meter. Vanilla tasks only see non-players,
-/// except the committed <see cref="AnimalAlertState.AlertTargetEntityId"/>.
+/// Fused eligibility: meter animals do not sense players until flee-committed.
+/// When committed, the alert target is sensed regardless of vanilla seekingRange/sneak.
 /// </summary>
 [HarmonyPatch(typeof(AiTaskBaseTargetable), nameof(AiTaskBaseTargetable.CanSensePlayer))]
 public static class AnimalAlertCanSensePlayerPatch
@@ -34,6 +35,7 @@ public static class AnimalAlertCanSensePlayerPatch
     public static bool Prefix(
         AiTaskBaseTargetable __instance,
         EntityPlayer eplr,
+        double range,
         ref bool __result)
     {
         if (__instance?.entity == null
@@ -48,47 +50,11 @@ public static class AnimalAlertCanSensePlayerPatch
             && eplr != null
             && eplr.EntityId == state.AlertTargetEntityId)
         {
-            return true;
+            __result = true;
+            return false;
         }
 
         __result = false;
-        return false;
-    }
-}
-
-[HarmonyPatch(typeof(AiTaskFleeEntity), nameof(AiTaskFleeEntity.ShouldExecute))]
-public static class AnimalAlertFleeShouldExecutePatch
-{
-    static readonly FieldInfo WhenInEmotionField =
-        AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
-    static readonly MethodInfo IsInEmotionStatesMethod =
-        AccessTools.Method(typeof(AiTaskBase), "IsInEmotionState", [typeof(string[])]);
-
-    [HarmonyPrefix]
-    [HarmonyPriority(Priority.High)]
-    public static bool Prefix(AiTaskFleeEntity __instance, ref bool __result)
-    {
-        if (__instance?.entity == null
-            || !AnimalAlertService.IsCommitted(__instance.entity)
-            || !AnimalAlertService.TryGetAlertTarget(__instance.entity, out Entity? target)
-            || target is not EntityPlayer
-            || !AnimalAlertService.TaskCanTargetPlayer(__instance))
-        {
-            return true;
-        }
-
-        // Chickens (and similar) have a high-priority fleeentity gated on fleeondamage.
-        // Forcing that task while calm leaves them "panicked" but motionless; let vanilla
-        // reject it so the unrestricted fleeentity (lower priority) can run.
-        if (WhenInEmotionField.GetValue(__instance) is string[] emotions
-            && emotions.Length > 0
-            && IsInEmotionStatesMethod?.Invoke(__instance, [emotions]) is not true)
-        {
-            return true;
-        }
-
-        __instance.InstaFleeFrom(target);
-        __result = true;
         return false;
     }
 }
@@ -135,6 +101,7 @@ public static class AnimalAlertSeekShouldExecutePatch
             return true;
         }
 
+        // Emotion-gated seek (e.g. rooster aggressiveondamage) only when in that emotion.
         if (WhenInEmotionField.GetValue(__instance) is string[] emotions
             && emotions.Length > 0
             && IsInEmotionStatesMethod?.Invoke(__instance, [emotions]) is not true)

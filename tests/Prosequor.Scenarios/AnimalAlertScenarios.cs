@@ -186,6 +186,49 @@ public class AnimalAlertScenarios : AtlasScenarioBase
         await World.Ticks(1);
     }
 
+    /// <summary>
+    /// Stalk gate: before panic, flee tasks must not sense the player; after panic,
+    /// fused CanSensePlayer accepts the alert target (eligibility, not vanilla range).
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task StalkGate_CanSensePlayer_OnlyWhenPanicked()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertStalkGate");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        Entity hare = SpawnPreyNear(joined, PreyHareCodes);
+        EnsureTracked(hare);
+        AssertSensesPlayers(hare);
+        Assert.True(player.Entity is EntityPlayer);
+
+        Assert.True(
+            AnimalAlertService.TryCanSensePlayer(hare, (EntityPlayer)player.Entity, out bool before),
+            "Expected ungated flee task for CanSensePlayer probe.");
+        Assert.False(before, "Before panic, meter animals must not sense the player.");
+        Assert.False(AnimalAlertService.IsCommitted(hare));
+
+        AnimalAlertService.ForcePanicForTests(hare, player.Entity);
+        Assert.True(AnimalAlertService.IsCommitted(hare));
+
+        Assert.True(
+            AnimalAlertService.TryCanSensePlayer(hare, (EntityPlayer)player.Entity, out bool after),
+            "Expected ungated flee after panic.");
+        Assert.True(after, "After panic, alert target must be sensed (fused eligibility).");
+
+        Assert.True(
+            AnimalAlertService.TryProbePanicFlee(hare, out int ungatedReady, out int gatedForced),
+            $"After panic flee ShouldExecute failed. ungatedReady={ungatedReady} gatedForced={gatedForced}.");
+
+        await World.Ticks(1);
+    }
+
     static readonly string[] PreyHareCodes =
     [
         "game:hare-european-adult-male",

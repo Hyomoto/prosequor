@@ -333,7 +333,8 @@ public static class AnimalAlertService
     }
 
     /// <summary>
-    /// Flee behavior triggered: double alert on first commit, optional herd broadcast.
+    /// Flee behavior triggered: double alert on first commit, one-shot flee seed,
+    /// optional herd broadcast.
     /// </summary>
     static void BeginFleeBolt(Entity entity, AnimalAlertState state, bool propagatedHerd)
     {
@@ -347,17 +348,58 @@ public static class AnimalAlertService
         state.Committed = true;
         state.PropagatedHerd = propagatedHerd;
 
-        if (AnimalAlertMath.MayBroadcastHerd(state.Committed, wasCommitted, state.PropagatedHerd)
-            && state.AlertTargetEntityId != 0)
+        if (state.AlertTargetEntityId != 0)
         {
             Entity? target = entity.World.GetEntityById(state.AlertTargetEntityId);
             if (target != null)
             {
-                BroadcastHerdAlarm(entity, state, target);
+                // Seed flee once so TaskAI can start outside vanilla seekingRange.
+                // Ongoing flee uses fused CanSensePlayer + vanilla ShouldExecute.
+                if (!wasCommitted)
+                {
+                    SeedUngatedFlee(entity, target);
+                }
+
+                if (AnimalAlertMath.MayBroadcastHerd(
+                        state.Committed,
+                        wasCommitted,
+                        state.PropagatedHerd))
+                {
+                    BroadcastHerdAlarm(entity, state, target);
+                }
             }
         }
 
         state.WasCommitted = state.Committed;
+    }
+
+    /// <summary>
+    /// One-shot InstaFleeFrom on an ungated player fleeentity (not emotion-gated).
+    /// </summary>
+    static void SeedUngatedFlee(Entity entity, Entity target)
+    {
+        EntityBehaviorTaskAI? taskAi = entity.GetBehavior<EntityBehaviorTaskAI>();
+        if (taskAi?.TaskManager == null)
+        {
+            return;
+        }
+
+        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is not AiTaskFleeEntity flee || !TaskCanTargetPlayer(flee))
+            {
+                continue;
+            }
+
+            if (whenField?.GetValue(flee) is string[] emotions && emotions.Length > 0)
+            {
+                continue;
+            }
+
+            flee.InstaFleeFrom(target);
+            return;
+        }
     }
 
     static void IntegrateEntity(Entity entity, AnimalAlertState state, float dt)
@@ -857,8 +899,9 @@ public static class AnimalAlertService
     }
 
     /// <summary>
-    /// Atlas: after <see cref="ForcePanicForTests"/>, probe flee ShouldExecute.
-    /// Meter must own ungated player-flee and must not force emotion-gated flee while calm.
+    /// Atlas: after <see cref="ForcePanicForTests"/>, probe flee arming via fused eligibility
+    /// and vanilla ShouldExecute. Emotion-gated flee must stay quiet while calm.
+    /// ShouldExecute may be false if the one-shot seed already started the task.
     /// </summary>
     public static bool TryProbePanicFlee(
         Entity animal,
@@ -905,7 +948,53 @@ public static class AnimalAlertService
             }
         }
 
+        // One-shot bolt seed may already be running the ungated flee (ShouldExecute false).
+        // Fused CanSensePlayer still proves eligibility is armed.
+        if (ungatedReady == 0
+            && gatedForcedWhileCalm == 0
+            && animal != null
+            && TryGetAlertTarget(animal, out Entity? target)
+            && target is EntityPlayer ep
+            && TryCanSensePlayer(animal, ep, out bool sensed)
+            && sensed)
+        {
+            ungatedReady = 1;
+        }
+
         return ungatedReady > 0 && gatedForcedWhileCalm == 0;
+    }
+
+    /// <summary>
+    /// Atlas: whether an ungated player fleeentity's CanSensePlayer accepts this player
+    /// (fused eligibility).
+    /// </summary>
+    public static bool TryCanSensePlayer(Entity animal, EntityPlayer player, out bool sensed)
+    {
+        sensed = false;
+        EntityBehaviorTaskAI? taskAi = animal?.GetBehavior<EntityBehaviorTaskAI>();
+        if (taskAi?.TaskManager == null || player == null)
+        {
+            return false;
+        }
+
+        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is not AiTaskFleeEntity flee || !TaskCanTargetPlayer(flee))
+            {
+                continue;
+            }
+
+            if (whenField?.GetValue(flee) is string[] emotions && emotions.Length > 0)
+            {
+                continue;
+            }
+
+            sensed = flee.CanSensePlayer(player, range: 64);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

@@ -565,7 +565,7 @@ Fact `target` = animal / mount / boat code.
 | | `last-stand` | number |
 | `bleed-out` | `rate` | number |
 
-`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat.
+`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. The meter owns player-flee eligibility (`CanSensePlayer` false until panic, then true for the alert target); creature TaskAI still runs `fleeentity` / seek / melee.
 
 `animal-sense-range`: sneak-only sense-range multiplier (seed 1). `animal-threat-sneak`: sneak-only threat-emission multiplier (seed 1). `arrow-break`: arrow break chance 0–1 (seed = current break chance).
 
