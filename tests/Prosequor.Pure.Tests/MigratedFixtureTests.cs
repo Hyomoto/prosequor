@@ -119,6 +119,9 @@ public class MigratedFixtureTests
     public void AttributeBucketAxisFixtures_Should_Pass() => AttributeBucketAxisFixtures.VerifyAll();
 
     [Fact]
+    public void AttributeRingRelaxFixtures_Should_Pass() => AttributeRingRelaxFixtures.VerifyAll();
+
+    [Fact]
     public void LevelUpRuleFixtures_Should_Pass() => LevelUpRuleFixtures.VerifyAll();
 
     [Fact]
