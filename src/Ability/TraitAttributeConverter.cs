@@ -146,11 +146,62 @@ public static class TraitAttributeConverter
     }
 
     /// <summary>
-    /// Once per character: set attributes from cached class scores, then fold extraTraits deltas.
-    /// Used on first confirmed selection and again for mid-save joins that already have a class
-    /// (those players never send <c>DidSelect</c>).
-    /// Vanilla and Player Model Lib both assign a default class before the dialog confirms, so
-    /// skip until <c>createCharacter</c> is true.
+    /// Live class + extraTraits baseline scores (DefaultScore + trait map deltas, clamped).
+    /// </summary>
+    public static Dictionary<string, int> ResolveBaseline(
+        string? classCode,
+        IEnumerable<string>? extraTraits,
+        ITraitAttributeRegistry registry,
+        IReadOnlyList<string>? catalog = null)
+    {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        Dictionary<string, int> scores = NewBaseScores(ids);
+        if (registry == null)
+        {
+            return scores;
+        }
+
+        if (!string.IsNullOrWhiteSpace(classCode)
+            && registry.ClassStartingScores.TryGetValue(classCode, out Dictionary<string, int>? cached)
+            && cached != null)
+        {
+            foreach (KeyValuePair<string, int> pair in cached)
+            {
+                scores[pair.Key] = pair.Value;
+            }
+        }
+
+        if (extraTraits != null)
+        {
+            ApplyDeltas(scores, registry, extraTraits);
+            ClampScores(scores, ids);
+        }
+
+        return scores;
+    }
+
+    /// <summary>
+    /// Baseline for an entity's current characterClass + extraTraits.
+    /// </summary>
+    public static Dictionary<string, int> ResolveBaseline(
+        Entity? entity,
+        ITraitAttributeRegistry? registry,
+        IReadOnlyList<string>? catalog = null)
+    {
+        IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        if (entity == null || registry == null)
+        {
+            return NewBaseScores(ids);
+        }
+
+        string? classCode = entity.WatchedAttributes?.GetString("characterClass");
+        string[]? extras = entity.WatchedAttributes?.GetStringArray("extraTraits");
+        return ResolveBaseline(classCode, extras, registry, ids);
+    }
+
+    /// <summary>
+    /// Once per character: mark applied and remember extras. Growth deltas stay 0;
+    /// effective scores come from the live baseline.
     /// </summary>
     public static void TryApplyOnSelection(
         IServerPlayer player,
@@ -174,7 +225,6 @@ public static class TraitAttributeConverter
         }
 
         EntityPlayer entityPlayer = player.Entity;
-        // Entity.GetBehavior NREs when SidedProperties is null (Properties / Server unset).
         if (entityPlayer.SidedProperties?.Behaviors == null)
         {
             return;
@@ -186,30 +236,6 @@ public static class TraitAttributeConverter
             return;
         }
 
-        IReadOnlyList<string> catalog = CatalogFor(player);
-        Dictionary<string, int> scores = NewBaseScores(catalog);
-        if (registry.ClassStartingScores.TryGetValue(classCode, out Dictionary<string, int>? cached)
-            && cached != null)
-        {
-            foreach (KeyValuePair<string, int> pair in cached)
-            {
-                scores[pair.Key] = pair.Value;
-            }
-        }
-        else if (characterSystem.characterClassesByCode.TryGetValue(classCode, out CharacterClass? characterClass)
-            && characterClass != null)
-        {
-            // Cache miss: leftover traits only (stripped list) — prefer warm cache from mutate.
-            scores = ResolveScores(registry, characterClass.Traits, catalog);
-        }
-
-        string[]? extra = entityPlayer.WatchedAttributes.GetStringArray("extraTraits");
-        if (extra != null && extra.Length > 0)
-        {
-            ApplyDeltas(scores, registry, extra);
-            ClampScores(scores, catalog);
-        }
-
         EntityBehaviorProgress? progress = entityPlayer.GetBehavior<EntityBehaviorProgress>();
         if (progress == null)
         {
@@ -217,19 +243,19 @@ public static class TraitAttributeConverter
         }
 
         progress.EnsureLoaded(player, skills);
-        foreach (string id in catalog)
-        {
-            progress.SetAttribute(id, scores[id]);
-        }
+        progress.RemirrorAttributeScores();
+        progress.BindClassSkillAccess(player, skills);
+        progress.RebuildAbilityCachePublic();
+        progress.BumpProgressRevision();
 
         player.SetModData(AppliedModDataKey, true);
+        string[]? extra = entityPlayer.WatchedAttributes.GetStringArray("extraTraits");
         RememberFoldedExtras(player, extra);
     }
 
     /// <summary>
     /// Player Model Lib writes model <c>ExtraTraits</c> onto <c>extraTraits</c> after the
-    /// class-selection packet. Fold any codes that were not part of the first apply.
-    /// Does not reset grown scores.
+    /// class-selection packet. Track new codes for skill access; attribute baseline is live.
     /// </summary>
     public static void FoldNewExtraTraits(
         IServerPlayer player,
@@ -262,22 +288,10 @@ public static class TraitAttributeConverter
         }
 
         progress.EnsureLoaded(player, skills);
-        IReadOnlyList<string> catalog = CatalogFor(player);
-        Dictionary<string, int> scores = NewBaseScores(catalog);
-        foreach (string id in catalog)
-        {
-            scores[id] = progress.GetAttribute(id);
-        }
-
-        ApplyDeltas(scores, registry, fresh);
-        ClampScores(scores, catalog);
-        foreach (string id in catalog)
-        {
-            progress.SetAttribute(id, scores[id]);
-        }
-
         progress.BindClassSkillAccess(player, skills);
+        progress.RemirrorAttributeScores();
         progress.RebuildAbilityCachePublic();
+        progress.BumpProgressRevision();
 
         RememberFoldedExtras(player, folded.Concat(fresh));
     }

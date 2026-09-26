@@ -194,7 +194,11 @@ public sealed class ContentFingerprint
 
         foreach (AttributeStatDef stat in stats.All.OrderBy(s => s.Id, StringComparer.OrdinalIgnoreCase))
         {
-            sb.Append(stat.Id).Append('\n');
+            sb.Append(stat.Id)
+                .Append(" name=").Append(stat.NameLang)
+                .Append(" desc=").Append(stat.DescriptionLang)
+                .Append(" icon=").Append(stat.Icon)
+                .Append('\n');
             foreach (AbilityRule rule in stat.Rules.OrderBy(r => r.SourceOrder).ThenBy(r => r.RuleId, StringComparer.Ordinal))
             {
                 AppendRule(sb, rule);

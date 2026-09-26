@@ -94,6 +94,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         TryLoadFromPlayer();
+        entity.WatchedAttributes.RegisterModifiedListener("characterClass", OnClassProfileChanged);
+        entity.WatchedAttributes.RegisterModifiedListener("extraTraits", OnClassProfileChanged);
     }
 
     public override void AfterInitialized(bool onFirstSpawn)
@@ -119,6 +121,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
         else
         {
+            entity.WatchedAttributes.UnregisterListener(OnClassProfileChanged);
             FlushPendingWire(forceChannelSnapshot: false);
             FlushSave();
             if (entity is EntityPlayer eplr && !string.IsNullOrEmpty(eplr.PlayerUID))
@@ -128,6 +131,29 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         base.OnEntityDespawn(despawn);
+    }
+
+    /// <summary>
+    /// Class / extras changed: rebind skill access and remirror effective scores; deltas stay.
+    /// </summary>
+    void OnClassProfileChanged()
+    {
+        if (entity.World.Side != EnumAppSide.Server || !loaded)
+        {
+            return;
+        }
+
+        ISkillRegistry? registry = ProsequorModSystem.For(entity.Api)?.Registry;
+        IServerPlayer? player = entity is EntityPlayer eplr ? eplr.Player as IServerPlayer : null;
+        if (registry != null)
+        {
+            BindClassSkillAccess(player, registry);
+        }
+
+        RemirrorAttributeScores();
+        RebuildAbilityCache();
+        NotifyAttributeEffectsApplied();
+        BumpProgressRevision();
     }
 
     void OnMirrorChanged()
@@ -227,7 +253,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         Dictionary<string, int> snapshot = new(StringComparer.OrdinalIgnoreCase);
         foreach (string id in catalog)
         {
-            snapshot[id] = progress.GetAttribute(id, catalog);
+            // Client mirror stores effective scores in Attributes.
+            snapshot[id] = progress.Attributes.TryGetValue(id, out int score)
+                ? score
+                : AttributeGrowth.DefaultScore;
         }
 
         return snapshot;
@@ -241,7 +270,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         foreach (string id in catalog)
         {
             before.TryGetValue(id, out int previous);
-            if (previous != after.GetAttribute(id, catalog))
+            int next = after.Attributes.TryGetValue(id, out int score)
+                ? score
+                : AttributeGrowth.DefaultScore;
+            if (previous != next)
             {
                 return true;
             }
@@ -321,8 +353,9 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         {
             PlayerProgressState.EnsureSkillEntries(state, registry);
             RefreshAllSkillCaps();
+            ConvertAttributeDeltasIfNeeded();
             BindClassSkillAccess(player, registry);
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            ProgressStore.MirrorUnlocks(entity, state);
             RebuildAbilityCache();
             NotifyAttributeEffectsApplied();
             SendOwnerSnapshot();
@@ -333,12 +366,45 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         loaded = true;
         dirty = false;
         RefreshAllSkillCaps();
+        ConvertAttributeDeltasIfNeeded();
         BindClassSkillAccess(player, registry);
-        ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+        ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
         RebuildAbilityCache();
         BumpProgressRevision();
         NotifyAttributeEffectsApplied();
         SendOwnerSnapshot();
+    }
+
+    /// <summary>Rewrite public WA attribute scores from live baselines + stored deltas.</summary>
+    public void RemirrorAttributeScores()
+    {
+        if (entity.World.Side != EnumAppSide.Server || !loaded)
+        {
+            return;
+        }
+
+        ProgressStore.MirrorAttributeScores(entity, state, AttributeCatalog(), GetAttribute);
+    }
+
+    void ConvertAttributeDeltasIfNeeded()
+    {
+        if (!AttributeScoreMath.NeedsAbsoluteToDeltaMigration(state))
+        {
+            return;
+        }
+
+        IReadOnlyList<string> catalog = AttributeCatalog();
+        Dictionary<string, int> baselines = CurrentAttributeBaselines(catalog);
+        AttributeScoreMath.ConvertAbsoluteToDeltas(state, baselines, catalog);
+        MarkPersistDirty();
+        RemirrorAttributeScores();
+    }
+
+    Dictionary<string, int> CurrentAttributeBaselines(IReadOnlyList<string>? catalog = null)
+    {
+        IReadOnlyList<string> ids = catalog ?? AttributeCatalog();
+        ITraitAttributeRegistry? traits = ProsequorModSystem.For(entity.Api)?.TraitAttributes;
+        return TraitAttributeConverter.ResolveBaseline(entity, traits, ids);
     }
 
     /// <summary>
@@ -378,6 +444,12 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             });
             BumpProgressRevision();
         }
+
+        // Skill set changed with class/extras; remirror when WA listener did not already.
+        RemirrorAttributeScores();
+        RebuildAbilityCache();
+        NotifyAttributeEffectsApplied();
+        BumpProgressRevision();
     }
 
     void NotifyAttributeScoreChanged(string attributeId)
@@ -507,11 +579,16 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         {
             if (pending.Unlocks.Count > 1 || (pending.AttributeScores && pending.Unlocks.Count > 0))
             {
-                ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+                ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
             }
             else
             {
-                ProgressStore.ApplyVisibleMirror(entity, state, pending.ToPublicChange(), AttributeCatalog());
+                ProgressStore.ApplyVisibleMirror(
+                    entity,
+                    state,
+                    pending.ToPublicChange(),
+                    AttributeCatalog(),
+                    GetAttribute);
             }
         }
 
@@ -665,14 +742,14 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         if (entity is EntityPlayer eplr && eplr.Player is IServerPlayer splr)
         {
             pending.Clear();
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
             ProgressStore.WriteModData(splr, state);
             dirty = false;
             SendOwnerSnapshot();
         }
         else
         {
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
         }
 
         Changed?.Invoke();
@@ -710,7 +787,37 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         return s.GetTier(nodeId);
     }
 
-    public int GetAttribute(string id) => state.GetAttribute(id, AttributeCatalog());
+    public int GetAttribute(string id)
+    {
+        IReadOnlyList<string> catalog = AttributeCatalog();
+        string? canonical = CanonicalAttribute(id);
+        if (canonical == null)
+        {
+            return AttributeGrowth.DefaultScore;
+        }
+
+        // Client: WA merge stores effective scores in Attributes (not deltas).
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return state.Attributes.TryGetValue(canonical, out int effective)
+                ? effective
+                : AttributeGrowth.DefaultScore;
+        }
+
+        // Server pre-migration: still absolute until ConvertAttributeDeltasIfNeeded.
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            return state.Attributes.TryGetValue(canonical, out int abs)
+                ? abs
+                : AttributeGrowth.DefaultScore;
+        }
+
+        int baseline = CurrentAttributeBaselines(catalog).TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = state.GetAttributeDelta(canonical, catalog);
+        return AttributeScoreMath.Effective(baseline, delta);
+    }
 
     public float GetAttributeBucket(string id) => state.GetAttributeBucket(id, AttributeCatalog());
 
@@ -1035,7 +1142,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 beforeLevel,
                 state.PlayerLevel,
                 entity.World.Rand,
-                AttributeCatalog());
+                AttributeCatalog(),
+                CurrentAttributeBaselines());
             attributeGains = winners;
             foreach (string winner in winners)
             {
@@ -1080,7 +1188,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 before,
                 state.PlayerLevel,
                 entity.World.Rand,
-                AttributeCatalog());
+                AttributeCatalog(),
+                CurrentAttributeBaselines());
             foreach (string winner in attributeGains)
             {
                 NotifyAttributeScoreChanged(winner);
@@ -1138,14 +1247,19 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         IReadOnlyList<string> catalog = AttributeCatalog();
+        ConvertAttributeDeltasIfNeeded();
         PlayerProgressState.EnsureAttributeEntries(state, catalog);
         score = Math.Clamp(score, 0, AttributeGrowth.MaxScore);
-        if (state.Attributes[canonical] == score)
+        int baseline = CurrentAttributeBaselines(catalog).TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = AttributeScoreMath.DeltaFromEffective(baseline, score);
+        if (state.Attributes[canonical] == delta)
         {
             return;
         }
 
-        state.Attributes[canonical] = score;
+        state.Attributes[canonical] = delta;
         NotifyVisibleProgress(VisibleProgressChange.AttributeScores());
         NotifyAttributeScoreChanged(canonical);
     }

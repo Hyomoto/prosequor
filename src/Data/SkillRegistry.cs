@@ -279,8 +279,12 @@ public class SkillRegistry : ISkillRegistry
             NameLang = string.IsNullOrWhiteSpace(row.nameLang)
                 ? SkillTreeCompiler.DefaultSkillNameLang(skillId)
                 : row.nameLang,
-            DescriptionLang = row.descriptionLang?.Trim() ?? "",
-            Icon = row.icon?.Trim() ?? "",
+            DescriptionLang = string.IsNullOrWhiteSpace(row.descriptionLang)
+                ? SkillTreeCompiler.DefaultSkillDescriptionLang(skillId)
+                : row.descriptionLang.Trim(),
+            Icon = string.IsNullOrWhiteSpace(row.icon)
+                ? SkillTreeCompiler.DefaultSkillIcon(skillId)
+                : row.icon.Trim(),
             Kind = kind,
             MaxLevel = maxLevel,
             IsOptional = row.optional,

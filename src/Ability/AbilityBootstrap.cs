@@ -545,13 +545,18 @@ public static class AbilityBootstrap
                      VerbIds.BasicSlots,
                      VerbIds.RangedSpeed,
                      VerbIds.RangedAcc,
+                     VerbIds.RangedDamage,
+                     VerbIds.RangedDistance,
                      VerbIds.FallDamageFactor,
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
+                     VerbIds.WalkSpeed,
+                     VerbIds.HungerRate,
                      VerbIds.AnimalThreat,
                      VerbIds.CritChance,
-                     VerbIds.WholeVesselLootChance
+                     VerbIds.WholeVesselLootChance,
+                     VerbIds.MechanicalsDamage
                  })
         {
             hooks.RegisterPhase(
@@ -790,13 +795,18 @@ public static class AbilityBootstrap
                      VerbIds.BasicSlots,
                      VerbIds.RangedSpeed,
                      VerbIds.RangedAcc,
+                     VerbIds.RangedDamage,
+                     VerbIds.RangedDistance,
                      VerbIds.FallDamageFactor,
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
+                     VerbIds.WalkSpeed,
+                     VerbIds.HungerRate,
                      VerbIds.AnimalThreat,
                      VerbIds.CritChance,
-                     VerbIds.WholeVesselLootChance
+                     VerbIds.WholeVesselLootChance,
+                     VerbIds.MechanicalsDamage
                  })
         {
             actions.Register(new AddMappedNumberIntAction(mapped));
@@ -821,6 +831,7 @@ public static class AbilityBootstrap
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Threshold));
 
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
+        actions.Register(new AddMappedNumberInteractionSpeedAction());
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.Amount));
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.LastStand));
     }

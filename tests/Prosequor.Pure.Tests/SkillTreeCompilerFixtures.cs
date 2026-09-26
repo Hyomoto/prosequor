@@ -58,7 +58,11 @@ public static class SkillTreeCompilerFixtures
             || SkillTreeCompiler.DefaultUnlockNameLang("mymod:alchemy", "transmutation")
                 != "mymod:unlock-alchemy-transmutation"
             || SkillTreeCompiler.DefaultSkillNameLang("digging") != "skill-digging"
-            || SkillTreeCompiler.DefaultSkillNameLang("mymod:alchemy") != "mymod:skill-alchemy")
+            || SkillTreeCompiler.DefaultSkillNameLang("mymod:alchemy") != "mymod:skill-alchemy"
+            || SkillTreeCompiler.DefaultSkillDescriptionLang("digging") != "skilldesc-digging"
+            || SkillTreeCompiler.DefaultSkillDescriptionLang("mymod:alchemy") != "mymod:skilldesc-alchemy"
+            || SkillTreeCompiler.DefaultSkillIcon("digging") != "textures/icons/digging-skill.svg"
+            || SkillTreeCompiler.DefaultSkillIcon("mymod:alchemy") != "textures/icons/alchemy-skill.svg")
         {
             Assert.Fail("[prosequor] Skill-tree compiler fixture failed (namespaced default nameLang).");
         }

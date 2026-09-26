@@ -1785,6 +1785,27 @@ public static class SkillTreeCompiler
         return domain == null ? path : domain + ":" + path;
     }
 
+    /// <summary>
+    /// Omitted skill <c>descriptionLang</c>: <c>skilldesc-{local}</c>, same domain rules as
+    /// <see cref="DefaultSkillNameLang"/>.
+    /// </summary>
+    internal static string DefaultSkillDescriptionLang(string skillId)
+    {
+        SplitId(skillId, out string? domain, out string local);
+        string path = "skilldesc-" + local;
+        return domain == null ? path : domain + ":" + path;
+    }
+
+    /// <summary>
+    /// Omitted skill <c>icon</c>: <c>textures/icons/{local}-skill.svg</c> (bare path →
+    /// <c>prosequor</c> domain at resolve time).
+    /// </summary>
+    internal static string DefaultSkillIcon(string skillId)
+    {
+        SplitId(skillId, out _, out string local);
+        return "textures/icons/" + local + "-skill.svg";
+    }
+
     static void SplitId(string id, out string? domain, out string local)
     {
         int colon = id.IndexOf(':');

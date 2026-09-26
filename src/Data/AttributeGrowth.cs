@@ -3,6 +3,7 @@ namespace Prosequor.Data;
 /// <summary>
 /// Attribute score defaults and soft-reset bucket grant logic.
 /// Pure helpers for runtime and in-process fixtures.
+/// Schema ≥ 6: <see cref="PlayerProgressState.Attributes"/> holds growth deltas.
 /// </summary>
 public static class AttributeGrowth
 {
@@ -50,24 +51,39 @@ public static class AttributeGrowth
     }
 
     /// <summary>
-    /// Among attributes below <see cref="MaxScore"/>, pick the winner (max bucket, then max score,
-    /// then RNG), increment its score by 1, and reset only that bucket to 0.
+    /// Among attributes below <see cref="MaxScore"/> effective, pick the winner (max bucket,
+    /// then max effective, then RNG), increment its <b>delta</b> by 1, and reset only that bucket.
     /// </summary>
+    /// <param name="baselines">
+    /// Per-attribute class/trait baseline. Null → <see cref="DefaultScore"/> for every id.
+    /// </param>
     /// <returns>The attribute id that received the point, or null if none can grow.</returns>
     public static string? TryGrow(
         PlayerProgressState state,
         Random random,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        IReadOnlyDictionary<string, int>? baselines = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(random);
         IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            state.Schema = PlayerProgressState.AttributeDeltaSchema;
+        }
+
         PlayerProgressState.EnsureAttributeEntries(state, ids);
+
+        int Baseline(string id) =>
+            baselines != null && baselines.TryGetValue(id, out int b) ? b : DefaultScore;
+
+        int EffectiveOf(string id) =>
+            AttributeScoreMath.Effective(Baseline(id), state.Attributes[id]);
 
         List<string> eligible = new(ids.Count);
         foreach (string id in ids)
         {
-            if (state.Attributes[id] < MaxScore)
+            if (EffectiveOf(id) < MaxScore)
             {
                 eligible.Add(id);
             }
@@ -100,7 +116,7 @@ public static class AttributeGrowth
         int maxScore = int.MinValue;
         foreach (string id in byBucket)
         {
-            int score = state.Attributes[id];
+            int score = EffectiveOf(id);
             if (score > maxScore)
             {
                 maxScore = score;
@@ -110,7 +126,7 @@ public static class AttributeGrowth
         List<string> candidates = new(byBucket.Count);
         foreach (string id in byBucket)
         {
-            if (state.Attributes[id] == maxScore)
+            if (EffectiveOf(id) == maxScore)
             {
                 candidates.Add(id);
             }

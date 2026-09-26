@@ -70,9 +70,9 @@ Path: `skills/<id>.json` (one object per file).
 | --- | --- |
 | `id` | Stable skill id (required) |
 | `nameLang` | List title lang key (default `skill-{id}`) |
-| `descriptionLang` | Optional C-menu list-hover blurb |
+| `descriptionLang` | C-menu list-hover blurb (default `skilldesc-{id}`) |
 | `descriptionParams` | Optional `{0}`… args for `descriptionLang` (same grammar as [nodes](#description-params)) |
-| `icon` | Texture path (bare paths resolve under `prosequor:`) |
+| `icon` | Texture path (default `textures/icons/{id}-skill.svg`; bare paths resolve under `prosequor:`) |
 | `hobby` | `true` = hobby skill (see [kind](#kind--level-caps)) |
 | `optional` | `true` = omitted from the shared class skill set (trait `skills` can still grant it). Default `false` |
 | `maxLevel` | Ignored if present; caps are derived |
@@ -557,7 +557,7 @@ Fact `target` = animal / mount / boat code.
 
 | Verb | Phase | Contract |
 | --- | --- | --- |
-| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` | `default` | number |
+| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `ranged-damage` / `ranged-distance` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `walk-speed` / `hunger-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` / `mechanicals-damage` | `default` | number |
 | `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` | `default` | number |
 | `unaware-damage` | `amount` | number |
 | | `threshold` | number |
@@ -567,6 +567,8 @@ Fact `target` = animal / mount / boat code.
 | `bleed-out` | `rate` | number |
 
 `animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. The meter owns player-flee eligibility (`CanSensePlayer` false until panic, then true for the alert target); creature TaskAI still runs `fleeentity` / seek / melee.
+
+`ranged-damage` / `ranged-distance` / `walk-speed` / `hunger-rate` / `mechanicals-damage`: signed percent folds written onto vanilla entity stats as `pct/100` additives (`rangedWeaponsDamage`, `bowDrawingStrength`, `walkspeed`, `hungerrate`, `mechanicalsDamage`). Neutral mid is `0` except walk-speed (no mid; score 10 is the display neutral).
 
 `animal-sense-range`: sneak-only sense-range multiplier (seed 1). `animal-threat-sneak`: sneak-only threat-emission multiplier (seed 1). `arrow-break`: arrow break chance 0–1 (seed = current break chance).
 
@@ -623,12 +625,15 @@ NumberSpec. Surface: block / plant-crop / `default`.
 
 | Param | |
 | --- | --- |
-| `fromScore` / `fromValue` / `toScore` / `toValue` | Linear map endpoints |
-| `midScore` / `midValue` | Optional hinge |
+| `from` | Two-number score span `[low, high]` |
+| `to` | Value list (≥ 2 numbers) across that span |
+| `curve` | Optional `linear` (default) or `ease` |
 | `op` | `add` (default) or `scale` (`value * mapped`) |
 | `round` | Optional `ceil` \| `floor` \| `round`; omit for fractional |
 
-Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`.
+`linear` spaces `to` evenly across `from` (value passes through every entry). `ease` repeats the first and last `to` values, then evaluates one Bernstein polynomial (two entries → smoothstep ease-in/out). A score below `from[0]` maps to `0`; a score above `from[1]` maps to the last `to` entry.
+
+Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`; block-interaction interaction-speed/`default`.
 
 ### Contract: bool / none / refund
 
@@ -942,10 +947,8 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
       "verb": "prosequor:health",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": -5,
-        "toScore": 18,
-        "toValue": 5,
+        "from": [0, 18],
+        "to": [-5, 5],
         "round": "ceil"
       }
     }
@@ -956,6 +959,9 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 | Field | Meaning |
 | --- | --- |
 | `id` | Attribute id (the file defines this attribute; last-win across mods) |
+| `nameLang` | Display name lang key (default `attribute-{id}`) |
+| `descriptionLang` | Tooltip flavor quote lang key (default `attribute-flavor-{id}`) |
+| `icon` | Texture path (default `textures/icons/{id}-attribute.svg`; bare paths resolve under `prosequor:`) |
 | `rules[].id` | Optional rule id |
 | `rules[].minScore` | Inactive below this score (default `0`) |
 | `rules[].maxScore` | Optional inclusive upper gate |
@@ -966,6 +972,9 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 ## Trait attributes
 
 Path: `trait-attributes.json` (JSON array). Maps vanilla class traits to attribute score deltas.
+Those deltas form the live **baseline** for a class (plus `extraTraits`). Player growth is stored
+separately; effective score is baseline + growth (clamped 0–18). Changing class reevaluates the
+baseline without wiping growth.
 
 ```json
 [
@@ -1017,7 +1026,7 @@ Path: `level-ups.json` or `level-ups/*.json`.
 | --- | --- |
 | `prosequor:earn-skill-point` | Optional `value` (default 1) — add unlock points |
 | `prosequor:earn-specialization-point` | Optional `value` (default 1) — specialization slot capacity |
-| `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to score (cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
+| `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to growth (effective = class/trait baseline + growth, cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
 
 ---
 

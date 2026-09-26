@@ -8,15 +8,17 @@ using Vintagestory.API.MathTools;
 namespace Prosequor.Client;
 
 /// <summary>
-/// Follow-mouse attribute card: icon, name, and active effect lines. Clamped on-screen.
+/// Follow-mouse attribute card: icon, name, flavor quote, and active effect lines.
 /// </summary>
 public class GuiElementAttributeTooltip : GuiElement
 {
-    public const double MinCardWidth = 200;
+    public const double MinCardWidth = 220;
     public const double IconSize = 48;
     public const double Pad = 10;
     public const double Gap = 6;
     public const double MouseOffset = 18;
+    public const int QuoteWrapChars = 34;
+    public const string QuoteColorHex = "#99c9f9";
 
     readonly ICoreClientAPI capi;
     readonly AttributeIcons icons;
@@ -24,10 +26,12 @@ public class GuiElementAttributeTooltip : GuiElement
     ElementBounds? clipBounds;
     IPlayerProgress? progress;
     IAttributeStatRegistry? stats;
+    System.Func<string, int>? scoreOf;
 
     string? hoveredId;
     int hoveredScore = int.MinValue;
     LoadedTexture? nameTexture;
+    LoadedTexture? quoteTexture;
     readonly List<LoadedTexture> lineTextures = new();
     LoadedTexture? cardBackground;
     int cardBgW;
@@ -50,6 +54,9 @@ public class GuiElementAttributeTooltip : GuiElement
     public void SetProgress(IPlayerProgress? next) => progress = next;
 
     public void SetStats(IAttributeStatRegistry? next) => stats = next;
+
+    /// <summary>Optional score override (create-character class preview).</summary>
+    public void SetScoreOf(System.Func<string, int>? next) => scoreOf = next;
 
     public void SetRows(IReadOnlyList<AttributeHoverRow> next)
     {
@@ -145,6 +152,18 @@ public class GuiElementAttributeTooltip : GuiElement
             textY += nameTexture.Height + 4;
         }
 
+        if (quoteTexture != null && quoteTexture.TextureId > 0)
+        {
+            api.Render.Render2DTexturePremultipliedAlpha(
+                quoteTexture.TextureId,
+                x + (width - quoteTexture.Width) / 2,
+                textY,
+                quoteTexture.Width,
+                quoteTexture.Height,
+                92);
+            textY += quoteTexture.Height + Gap;
+        }
+
         foreach (LoadedTexture line in lineTextures)
         {
             if (line.TextureId <= 0)
@@ -169,8 +188,7 @@ public class GuiElementAttributeTooltip : GuiElement
         int my = capi.Input.MouseY;
         if (clipBounds != null)
         {
-            clipBounds.CalcWorldBounds();
-            if (!clipBounds.PointInside(mx, my))
+            if (!TryPointInside(clipBounds, mx, my))
             {
                 ClearHover();
                 return;
@@ -180,8 +198,7 @@ public class GuiElementAttributeTooltip : GuiElement
         string? next = null;
         foreach (AttributeHoverRow row in rows)
         {
-            row.Bounds.CalcWorldBounds();
-            if (row.Bounds.PointInside(mx, my))
+            if (TryPointInside(row.Bounds, mx, my))
             {
                 next = row.AttributeId;
                 break;
@@ -194,7 +211,7 @@ public class GuiElementAttributeTooltip : GuiElement
             return;
         }
 
-        int score = progress?.GetAttribute(next) ?? AttributeGrowth.DefaultScore;
+        int score = ScoreOf(next);
         if (!string.Equals(hoveredId, next, StringComparison.OrdinalIgnoreCase)
             || hoveredScore != score)
         {
@@ -208,6 +225,45 @@ public class GuiElementAttributeTooltip : GuiElement
         }
     }
 
+    static bool TryPointInside(ElementBounds bounds, int mx, int my)
+    {
+        try
+        {
+            bounds.CalcWorldBounds();
+            return bounds.PointInside(mx, my);
+        }
+        catch (NullReferenceException)
+        {
+            // Bounds not yet in a laid-out parent chain (compose / tab swap).
+            return false;
+        }
+    }
+
+    int ScoreOf(string attrId) =>
+        scoreOf?.Invoke(attrId)
+        ?? progress?.GetAttribute(attrId)
+        ?? AttributeGrowth.DefaultScore;
+
+    string ResolveName(string attrId)
+    {
+        if (stats != null && stats.TryGet(attrId, out AttributeStatDef def))
+        {
+            return AttributeStatRegistry.DisplayName(def);
+        }
+
+        return Lang.Get("prosequor:attribute-" + attrId);
+    }
+
+    string ResolveFlavor(string attrId)
+    {
+        if (stats != null && stats.TryGet(attrId, out AttributeStatDef def))
+        {
+            return AttributeStatRegistry.Description(def);
+        }
+
+        return Lang.GetIfExists("prosequor:attribute-flavor-" + attrId) ?? "";
+    }
+
     void EnsureTextures(string attrId)
     {
         if (nameTexture != null)
@@ -219,16 +275,33 @@ public class GuiElementAttributeTooltip : GuiElement
             .WithFontSize(16)
             .WithOrientation(EnumTextOrientation.Center);
         nameTexture = capi.Gui.TextTexture.GenTextTexture(
-            Lang.Get("prosequor:attribute-" + attrId),
+            ResolveName(attrId),
             nameFont);
 
         double textW = nameTexture?.Width ?? 0;
+
+        string quote = ResolveFlavor(attrId);
+        if (!string.IsNullOrWhiteSpace(quote))
+        {
+            CairoFont quoteFont = CairoFont.WhiteDetailText()
+                .WithColor(ColorUtil.Hex2Doubles(QuoteColorHex))
+                .WithSlant(FontSlant.Italic)
+                .WithOrientation(EnumTextOrientation.Center);
+            quoteTexture = capi.Gui.TextTexture.GenTextTexture(
+                WrapText(quote.Trim(), QuoteWrapChars),
+                quoteFont);
+            if (quoteTexture != null)
+            {
+                textW = Math.Max(textW, quoteTexture.Width);
+            }
+        }
+
         if (stats != null)
         {
             CairoFont lineFont = CairoFont.WhiteDetailText()
                 .WithOrientation(EnumTextOrientation.Left);
             foreach ((string text, bool positive) in AttributeEffectDescription.EnumerateActiveLinesFor(
-                         stats, attrId, progress))
+                         stats, attrId, ScoreOf(attrId)))
             {
                 double[] color = positive
                     ? [0.52, 1, 0.52, 1]
@@ -246,6 +319,11 @@ public class GuiElementAttributeTooltip : GuiElement
         if (nameTexture != null)
         {
             h += nameTexture.Height + 4;
+        }
+
+        if (quoteTexture != null)
+        {
+            h += quoteTexture.Height + Gap;
         }
 
         foreach (LoadedTexture line in lineTextures)
@@ -310,6 +388,8 @@ public class GuiElementAttributeTooltip : GuiElement
     {
         nameTexture?.Dispose();
         nameTexture = null;
+        quoteTexture?.Dispose();
+        quoteTexture = null;
         foreach (LoadedTexture line in lineTextures)
         {
             line.Dispose();
@@ -326,6 +406,43 @@ public class GuiElementAttributeTooltip : GuiElement
         cardBackground?.Dispose();
         cardBackground = null;
         base.Dispose();
+    }
+
+    static string WrapText(string text, int maxChars)
+    {
+        if (text.Length <= maxChars)
+        {
+            return text;
+        }
+
+        List<string> lines = new();
+        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string line = "";
+        foreach (string word in words)
+        {
+            if (line.Length == 0)
+            {
+                line = word;
+                continue;
+            }
+
+            if (line.Length + 1 + word.Length <= maxChars)
+            {
+                line += " " + word;
+            }
+            else
+            {
+                lines.Add(line);
+                line = word;
+            }
+        }
+
+        if (line.Length > 0)
+        {
+            lines.Add(line);
+        }
+
+        return string.Join("\n", lines);
     }
 }
 

@@ -17,6 +17,7 @@ sealed class ProgressSyncInspect
     public const string Farming = "farming";
     public const string Mining = "mining";
 
+    public required EntityBehaviorProgress LiveBehavior { get; init; }
     public required PlayerProgressState Live { get; init; }
     public required PlayerProgressState PublicMirror { get; init; }
     public PlayerProgressState? Stored { get; init; }
@@ -46,6 +47,7 @@ sealed class ProgressSyncInspect
 
         return new ProgressSyncInspect
         {
+            LiveBehavior = live,
             Live = live.State,
             PublicMirror = publicMirror,
             Stored = stored,
@@ -79,10 +81,21 @@ sealed class ProgressSyncInspect
         return (IServerPlayer)player;
     }
 
-    /// <summary>Public WA carries unlocks + attribute scores only.</summary>
+    /// <summary>Public WA carries unlocks + effective attribute scores only.</summary>
     public void AssertPublicParity(string because)
     {
-        AssertPublicFields(Live, PublicMirror, because + " (public WA)");
+        foreach (string id in AttributeIds.All)
+        {
+            int liveEffective = LiveBehavior.GetAttribute(id);
+            int publicEffective = PublicMirror.Attributes.TryGetValue(id, out int mirrored)
+                ? mirrored
+                : AttributeGrowth.DefaultScore;
+            Assert.True(
+                liveEffective == publicEffective,
+                $"{because} (public WA): attribute score {id} live={liveEffective} actual={publicEffective}.");
+        }
+
+        AssertUnlockParity(Live, PublicMirror, because + " (public WA)");
     }
 
     public void AssertStoredParity(string because)
@@ -102,35 +115,6 @@ sealed class ProgressSyncInspect
             $"{because}: stored fill={storedSkill.Fill} accrued={storedSkill.Accrued} live fill={liveSkill.Fill} accrued={liveSkill.Accrued}.");
     }
 
-    public static void AssertPublicFields(
-        PlayerProgressState expected,
-        PlayerProgressState actual,
-        string because)
-    {
-        foreach (string id in AttributeIds.All)
-        {
-            Assert.True(
-                expected.GetAttribute(id) == actual.GetAttribute(id),
-                $"{because}: attribute score {id} live={expected.GetAttribute(id)} actual={actual.GetAttribute(id)}.");
-        }
-
-        HashSet<string> ids = new(expected.Skills.Keys, StringComparer.OrdinalIgnoreCase);
-        ids.UnionWith(actual.Skills.Keys);
-        foreach (string skillId in ids)
-        {
-            SkillProgressState expectedSkill = expected.GetOrCreateSkill(skillId);
-            SkillProgressState actualSkill = actual.GetOrCreateSkill(skillId);
-            HashSet<string> nodes = new(expectedSkill.UnlockTiers.Keys, StringComparer.OrdinalIgnoreCase);
-            nodes.UnionWith(actualSkill.UnlockTiers.Keys);
-            foreach (string nodeId in nodes)
-            {
-                Assert.True(
-                    expectedSkill.GetTier(nodeId) == actualSkill.GetTier(nodeId),
-                    $"{because}: {skillId}/{nodeId} live tier={expectedSkill.GetTier(nodeId)} actual={actualSkill.GetTier(nodeId)}.");
-            }
-        }
-    }
-
     public static void AssertFullParity(
         PlayerProgressState expected,
         PlayerProgressState actual,
@@ -144,10 +128,12 @@ sealed class ProgressSyncInspect
 
         foreach (string id in AttributeIds.All)
         {
+            int expectedDelta = expected.GetAttributeDelta(id);
+            int actualDelta = actual.GetAttributeDelta(id);
             Assert.True(
-                expected.GetAttribute(id) == actual.GetAttribute(id)
+                expectedDelta == actualDelta
                 && NearlyEqual(expected.GetAttributeBucket(id), actual.GetAttributeBucket(id)),
-                $"{because}: attribute {id} live={expected.GetAttribute(id)}/{expected.GetAttributeBucket(id)} actual={actual.GetAttribute(id)}/{actual.GetAttributeBucket(id)}.");
+                $"{because}: attribute {id} live delta={expectedDelta}/{expected.GetAttributeBucket(id)} actual={actualDelta}/{actual.GetAttributeBucket(id)}.");
         }
 
         HashSet<string> ids = new(expected.Skills.Keys, StringComparer.OrdinalIgnoreCase);
@@ -161,6 +147,28 @@ sealed class ProgressSyncInspect
                 && NearlyEqual(expectedSkill.Xp, actualSkill.Xp),
                 $"{because}: {skillId} live lv={expectedSkill.Level} xp={expectedSkill.Xp} actual lv={actualSkill.Level} xp={actualSkill.Xp}.");
 
+            HashSet<string> nodes = new(expectedSkill.UnlockTiers.Keys, StringComparer.OrdinalIgnoreCase);
+            nodes.UnionWith(actualSkill.UnlockTiers.Keys);
+            foreach (string nodeId in nodes)
+            {
+                Assert.True(
+                    expectedSkill.GetTier(nodeId) == actualSkill.GetTier(nodeId),
+                    $"{because}: {skillId}/{nodeId} live tier={expectedSkill.GetTier(nodeId)} actual={actualSkill.GetTier(nodeId)}.");
+            }
+        }
+    }
+
+    static void AssertUnlockParity(
+        PlayerProgressState expected,
+        PlayerProgressState actual,
+        string because)
+    {
+        HashSet<string> ids = new(expected.Skills.Keys, StringComparer.OrdinalIgnoreCase);
+        ids.UnionWith(actual.Skills.Keys);
+        foreach (string skillId in ids)
+        {
+            SkillProgressState expectedSkill = expected.GetOrCreateSkill(skillId);
+            SkillProgressState actualSkill = actual.GetOrCreateSkill(skillId);
             HashSet<string> nodes = new(expectedSkill.UnlockTiers.Keys, StringComparer.OrdinalIgnoreCase);
             nodes.UnionWith(actualSkill.UnlockTiers.Keys);
             foreach (string nodeId in nodes)

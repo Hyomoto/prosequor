@@ -101,6 +101,66 @@ public sealed class PhaseRefreshRegistry
             });
 
         PlayerVerb(
+            VerbIds.RangedDamage,
+            entity =>
+            {
+                if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
+                {
+                    return;
+                }
+
+                PlayerInteractionStation.ApplyRangedDamage(entity);
+            });
+
+        PlayerVerb(
+            VerbIds.RangedDistance,
+            entity =>
+            {
+                if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
+                {
+                    return;
+                }
+
+                PlayerInteractionStation.ApplyRangedDistance(entity);
+            });
+
+        PlayerVerb(
+            VerbIds.WalkSpeed,
+            entity =>
+            {
+                if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
+                {
+                    return;
+                }
+
+                PlayerInteractionStation.ApplyWalkSpeed(entity);
+            });
+
+        PlayerVerb(
+            VerbIds.HungerRate,
+            entity =>
+            {
+                if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
+                {
+                    return;
+                }
+
+                PlayerInteractionStation.ApplyHungerRate(entity);
+            });
+
+        PlayerVerb(
+            VerbIds.MechanicalsDamage,
+            entity =>
+            {
+                if (entity.World.Side != Vintagestory.API.Common.EnumAppSide.Server)
+                {
+                    return;
+                }
+
+                PlayerInteractionStation.ApplyMechanicalsDamage(entity);
+            });
+
+        PlayerVerb(
             VerbIds.FallDamageFactor,
             entity =>
             {

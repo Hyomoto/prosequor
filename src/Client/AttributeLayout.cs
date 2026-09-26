@@ -81,6 +81,19 @@ public static class AttributeLayout
             : AttributeIds.All;
     }
 
+    public static string ResolveAttributeName(ICoreClientAPI? capi, string attrId)
+    {
+        IAttributeStatRegistry? stats = capi != null
+            ? ProsequorModSystem.For(capi)?.AttributeStats
+            : null;
+        if (stats != null && stats.TryGet(attrId, out AttributeStatDef def))
+        {
+            return AttributeStatRegistry.DisplayName(def);
+        }
+
+        return Lang.Get("prosequor:attribute-" + attrId);
+    }
+
     /// <summary>Vertical rows: icon, name, value inset, optional tick on the name band.</summary>
     public static void ComposeList(
         GuiComposer composer,
@@ -142,8 +155,9 @@ public static class AttributeLayout
             LoadedTexture? icon = icons.Get(attrId, iconSize);
             if (showNames)
             {
+                string name = ResolveAttributeName(capi, attrId);
                 composer.AddDynamicText(
-                    Lang.Get("prosequor:attribute-" + attrId),
+                    name,
                     nameFont,
                     nameBounds,
                     NameKey(attrId));

@@ -109,7 +109,7 @@ public static class ProgressParkFixtures
         }
 
         SkillProgressState mapped = once.Skills["forestry"];
-        if (once.Schema != PlayerProgressState.CurrentSchema
+        if (once.Schema != PlayerProgressState.UnlockRemapSchema
             || mapped.GetTier("seasoned-logger") != 3
             || mapped.GetTier("lumberjack") != 1
             || mapped.GetTier("forester") != 0

@@ -7,6 +7,15 @@ public sealed class AttributeStatDef
 {
     public string Id { get; set; } = "";
 
+    /// <summary>Lang key for the display name (default <c>attribute-{id}</c>).</summary>
+    public string NameLang { get; set; } = "";
+
+    /// <summary>Lang key for the tooltip flavor quote (default <c>attribute-flavor-{id}</c>).</summary>
+    public string DescriptionLang { get; set; } = "";
+
+    /// <summary>Texture path (default <c>textures/icons/{id}-attribute.svg</c>).</summary>
+    public string Icon { get; set; } = "";
+
     /// <summary>Flattened compiled rules for this attribute.</summary>
     public List<AbilityRule> Rules { get; set; } = new();
 }
@@ -15,6 +24,9 @@ public sealed class AttributeStatDef
 public sealed class AttributeStatDefJson
 {
     public string? id { get; set; }
+    public string? nameLang { get; set; }
+    public string? descriptionLang { get; set; }
+    public string? icon { get; set; }
     public AttributeStatRuleJson[]? rules { get; set; }
 }
 

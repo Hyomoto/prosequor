@@ -39,6 +39,12 @@ public static class PlayerInteractionStation
     public static int ResolveRangedAccPercent(IPlayer player) =>
         RunInt(player, VerbIds.RangedAcc);
 
+    public static int ResolveRangedDamagePercent(IPlayer player) =>
+        RunInt(player, VerbIds.RangedDamage);
+
+    public static int ResolveRangedDistancePercent(IPlayer player) =>
+        RunInt(player, VerbIds.RangedDistance);
+
     public static int ResolveFallDamageFactorPercent(IPlayer player) =>
         RunInt(player, VerbIds.FallDamageFactor);
 
@@ -50,6 +56,12 @@ public static class PlayerInteractionStation
 
     public static int ResolveTemporalDrainRatePercent(IPlayer player) =>
         RunInt(player, VerbIds.TemporalDrainRate);
+
+    public static int ResolveWalkSpeedPercent(IPlayer player) =>
+        RunInt(player, VerbIds.WalkSpeed);
+
+    public static int ResolveHungerRatePercent(IPlayer player) =>
+        RunInt(player, VerbIds.HungerRate);
 
     /// <summary>Sprint speed bonus fraction (0 = no change). Applied only while sprinting on foot.</summary>
     public static float ResolveSprintSpeedBonus(IPlayer player) =>
@@ -155,6 +167,9 @@ public static class PlayerInteractionStation
 
     public static int ResolveWholeVesselLootChancePercent(IPlayer player) =>
         RunInt(player, VerbIds.WholeVesselLootChance);
+
+    public static int ResolveMechanicalsDamagePercent(IPlayer player) =>
+        RunInt(player, VerbIds.MechanicalsDamage);
 
     /// <summary>
     /// Per-hit roll for Inconspicuity crits. Runs after Strength/ranged stat multipliers
@@ -384,11 +399,16 @@ public static class PlayerInteractionStation
     public const string StatMeleeDamageKey = "prosequor-attr-str-melee";
     public const string StatRangedSpeedKey = "prosequor-attr-per-ranged-speed";
     public const string StatRangedAccKey = "prosequor-attr-per-ranged-acc";
+    public const string StatRangedDamageKey = "prosequor-attr-per-ranged-damage";
+    public const string StatRangedDistanceKey = "prosequor-attr-per-ranged-distance";
     public const string StatBowQualityAccKey = "prosequor-bow-quality-acc";
     public const string StatFallDamageFactorKey = "prosequor-attr-res-fall-factor";
     public const string StatFallDamageThresholdKey = "prosequor-attr-res-fall-threshold";
+    public const string StatWalkSpeedKey = "prosequor-attr-con-walk-speed";
+    public const string StatHungerRateKey = "prosequor-attr-res-hunger-rate";
     public const string StatAnimalSeekingRangeKey = "prosequor-attr-inc-animal-seek";
     public const string StatWholeVesselLootChanceKey = "prosequor-attr-inc-vessel-loot";
+    public const string StatMechanicalsDamageKey = "prosequor-attr-inc-mechanicals";
 
     /// <summary>
     /// Writes absolute pipeline percent onto <c>armorWalkSpeedAffectedness</c>
@@ -520,6 +540,69 @@ public static class PlayerInteractionStation
         else
         {
             entity.Stats.Set("rangedWeaponsAcc", StatBowQualityAccKey, bowBonus, false);
+        }
+    }
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>rangedWeaponsDamage</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyRangedDamage(Entity entity) =>
+        ApplySignedPercentStat(entity, "rangedWeaponsDamage", StatRangedDamageKey, ResolveRangedDamagePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>bowDrawingStrength</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyRangedDistance(Entity entity) =>
+        ApplySignedPercentStat(entity, "bowDrawingStrength", StatRangedDistanceKey, ResolveRangedDistancePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>walkspeed</c>
+    /// as an additive offset (<c>pct/100</c>). Stacks under sprint/swim/sneak multipliers.
+    /// </summary>
+    public static void ApplyWalkSpeed(Entity entity) =>
+        ApplySignedPercentStat(entity, "walkspeed", StatWalkSpeedKey, ResolveWalkSpeedPercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>hungerrate</c>
+    /// as an additive offset (<c>pct/100</c>). Stacks with riding hunger reduction.
+    /// </summary>
+    public static void ApplyHungerRate(Entity entity) =>
+        ApplySignedPercentStat(entity, "hungerrate", StatHungerRateKey, ResolveHungerRatePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>mechanicalsDamage</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyMechanicalsDamage(Entity entity) =>
+        ApplySignedPercentStat(entity, "mechanicalsDamage", StatMechanicalsDamageKey, ResolveMechanicalsDamagePercent);
+
+    static void ApplySignedPercentStat(
+        Entity entity,
+        string entityStat,
+        string key,
+        System.Func<IPlayer, int> resolvePercent)
+    {
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        if (entity is not EntityPlayer entityPlayer || entityPlayer.Player == null || entity.Stats == null)
+        {
+            return;
+        }
+
+        int pct = resolvePercent(entityPlayer.Player);
+        float offset = pct / 100f;
+        if (Math.Abs(offset) < 0.0001f)
+        {
+            entity.Stats.Remove(entityStat, key);
+        }
+        else
+        {
+            entity.Stats.Set(entityStat, key, offset, false);
         }
     }
 

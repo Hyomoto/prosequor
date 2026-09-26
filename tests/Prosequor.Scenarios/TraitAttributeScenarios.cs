@@ -66,7 +66,8 @@ public class TraitAttributeScenarios : AtlasScenarioBase
         TraitAttributeConverter.TryApplyOnSelection(player, characters, mod.TraitAttributes, mod.Registry);
 
         Assert.False(player.GetModData(TraitAttributeConverter.AppliedModDataKey, false));
-        Assert.Equal(AttributeGrowth.DefaultScore, progress.GetAttribute(AttributeIds.Perception));
+        // Class WA is set but apply did not run; effective still follows the live baseline.
+        Assert.Equal(13, progress.GetAttribute(AttributeIds.Perception));
     }
 
     [AtlasScenario]
