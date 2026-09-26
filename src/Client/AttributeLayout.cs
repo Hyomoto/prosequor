@@ -24,7 +24,7 @@ public static class AttributeLayout
     const double PlateCircleCx = 180 / PlateVb;
     const double PlateCircleCy = 137 / PlateVb;
     const double PlateCircleR = 122 / PlateVb;
-    const double PlateIconFill = 0.78;
+    const double PlateIconFill = 0.82;
     const double PlateTextLeft = 49 / PlateVb;
     const double PlateTextTop = 248 / PlateVb;
     const double PlateTextWidth = 262 / PlateVb;
@@ -250,6 +250,7 @@ public static class AttributeLayout
 
         EnsureBackplate(capi, cluster, ref backplate);
         LoadedTexture? plate = backplate != null && backplate.TextureId > 0 ? backplate : null;
+        double iconSize = cluster * PlateCircleR * 2 * PlateIconFill;
 
         for (int i = 0; i < catalog.Count; i++)
         {
@@ -274,7 +275,6 @@ public static class AttributeLayout
                     });
             }
 
-            double iconSize = cluster * PlateCircleR * 2 * PlateIconFill;
             ElementBounds iconBounds = ElementBounds.Fixed(
                 left + cluster * PlateCircleCx - iconSize / 2,
                 top + cluster * PlateCircleCy - iconSize / 2,
