@@ -107,7 +107,7 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 
 Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
-**Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `optional`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`.
+**Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `optional`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`. Omitted presentation uses defaults: `skill-{id}`, `skilldesc-{id}`, `textures/icons/{id}-skill.svg`.
 
 `optional: true` keeps the skill out of the shared class base set. Trait-attribute `skills` can still grant a registered id onto a class. Player skill membership is the `"class"` slot on `SkillAccess` (union of contributor sets). Menu, XP, effects, and purchases read that union. Later contributors call `SkillAccess.Update(key, set)`.
 
@@ -125,7 +125,7 @@ Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
 **Affix list** — `id` (`domain:localId`), `entries[]` of `{ code, lang, color? }`. Gameplay is a separate effect; the list is presentation metadata resolved at **skill compile** when an effect uses `{ "list", "item" }`.
 
-**Stat file** — `id` is the attribute (loaded from `config/prosequor/stats/`; last-win by id). `rules[]` use the effect envelope plus score gates (`minScore` / `maxScore`). Failed compile → skipped (id does not exist).
+**Stat file** — `id` is the attribute (loaded from `config/prosequor/stats/`; last-win by id). Optional presentation (`nameLang`, `descriptionLang`, `icon`) defaults to `attribute-{id}`, `attribute-flavor-{id}`, `textures/icons/{id}-attribute.svg`. `rules[]` use the effect envelope plus score gates (`minScore` / `maxScore`). Failed compile → skipped (id does not exist).
 
 **Level of caps and curves** — authored `maxLevel` is **ignored**. Kind and cap come from `src/Data/SkillKind.cs` (`SkillKindPolicy`) and `src/Data/XpCurves.cs`. Classification: `hobby: true` wins; else a tree with any `specialization` node; else a non-empty tree; else no/empty tree. Read those types; do not hardcode caps. Hobby specialization flags are stripped at compile. Hobbies spend **local** unlock points derived from skill level vs tree cost, not global points — formula in [docs/reference.md](../../../docs/reference.md).
 

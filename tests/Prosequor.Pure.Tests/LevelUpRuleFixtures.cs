@@ -88,13 +88,11 @@ public static class LevelUpRuleFixtures
         PlayerProgressState state = FreshState();
         foreach (string id in AttributeIds.All)
         {
-            if (id != AttributeIds.Resilience)
-            {
-                state.Attributes[id] = 0;
-            }
+            state.Attributes[id] = 0;
         }
 
-        state.Attributes[AttributeIds.Resilience] = AttributeGrowth.DefaultScore;
+        // Lead by one growth point so Resilience always wins the bucket grant.
+        state.Attributes[AttributeIds.Resilience] = 1;
         IReadOnlyList<string> winners = LevelUpRules.Apply(
             state,
             DefaultRules(),
@@ -103,7 +101,7 @@ public static class LevelUpRuleFixtures
             new Random(1));
         if (winners.Count != 1
             || winners[0] != AttributeIds.Resilience
-            || state.Attributes[AttributeIds.Resilience] != AttributeGrowth.DefaultScore + 1
+            || state.Attributes[AttributeIds.Resilience] != 2
             || state.UnlockPoints != 1)
         {
             Assert.Fail("[prosequor] Level-up fixture failed (explicit attribute at level 10).");
@@ -115,13 +113,12 @@ public static class LevelUpRuleFixtures
         PlayerProgressState state = FreshState();
         foreach (string id in AttributeIds.All)
         {
-            if (id != AttributeIds.Resilience)
-            {
-                state.Attributes[id] = 0;
-            }
+            // Keep others below Resilience so every bucket grant sticks on Resilience
+            // without hitting MaxScore before all 8 schedule levels fire.
+            state.Attributes[id] = -1;
         }
 
-        state.Attributes[AttributeIds.Resilience] = AttributeGrowth.DefaultScore;
+        state.Attributes[AttributeIds.Resilience] = 0;
         state.UnlockPoints = 0;
         IReadOnlyList<string> winners = LevelUpRules.Apply(
             state,
@@ -130,9 +127,8 @@ public static class LevelUpRuleFixtures
             afterLevel: 50,
             new Random(11));
         const int attributeGrants = 8;
-        int expectedScore = AttributeGrowth.DefaultScore + attributeGrants;
         if (winners.Count != attributeGrants
-            || state.Attributes[AttributeIds.Resilience] != expectedScore
+            || state.Attributes[AttributeIds.Resilience] != attributeGrants
             || state.UnlockPoints != 49)
         {
             Assert.Fail(string.Format(
@@ -163,7 +159,7 @@ public static class LevelUpRuleFixtures
         IReadOnlyList<LevelUpRuleDef> rules = LevelUpRegistry.CompileDrafts(drafts, _ => { });
         PlayerProgressState state = FreshState();
         LevelUpRules.Apply(state, rules, beforeLevel: 4, afterLevel: 5, new Random(1));
-        if (state.Attributes[AttributeIds.Strength] != AttributeGrowth.DefaultScore + 2
+        if (state.Attributes[AttributeIds.Strength] != 2
             || state.AttributeBuckets[AttributeIds.Strength] != 0f)
         {
             Assert.Fail("[prosequor] Level-up fixture failed (named attribute grant).");
@@ -252,7 +248,7 @@ public static class LevelUpRuleFixtures
         LevelUpRules.Apply(state, rules, beforeLevel: 1, afterLevel: 5, new Random(1));
         // Levels 2 and 4 fire every-2 with value 2 → +4 points; level 5 grants strength.
         if (state.UnlockPoints != 4
-            || state.Attributes[AttributeIds.Strength] != AttributeGrowth.DefaultScore + 1)
+            || state.Attributes[AttributeIds.Strength] != 1)
         {
             Assert.Fail(string.Format(
                 "[prosequor] Level-up fixture failed (contrib replace/add; points={0} strength={1}).",

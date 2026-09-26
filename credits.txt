@@ -258,11 +258,11 @@ Game-icons.net (CC BY 3.0)
   textures/icons/panning/very-patient.svg            Gold nuggets — Delapouite
   textures/icons/metalworking/bit-parts.svg
     https://game-icons.net/1x1/delapouite/gold-nuggets.html
-  textures/icons/perception-attribute.svg            Bullseye — Skoll
-    https://game-icons.net/1x1/skoll/bullseye.html
+  textures/icons/perception-attribute.svg            Eyeball icon — Skoll
+    https://game-icons.net/1x1/lorc/eyeball.html
   textures/icons/protein-nutrition.svg               Meat — Lorc
     https://game-icons.net/1x1/lorc/meat.html
-  textures/icons/resiliance-attribute.svg            Knockout — Skoll
+  textures/icons/resilience-attribute.svg            Knockout — Skoll
     https://game-icons.net/1x1/skoll/knockout.html
   textures/icons/riding-skill.svg                    Horseshoe — Delapouite
     https://game-icons.net/1x1/delapouite/horseshoe.html

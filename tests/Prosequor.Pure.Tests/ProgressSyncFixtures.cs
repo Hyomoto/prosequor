@@ -85,7 +85,8 @@ public static class ProgressSyncFixtures
         if (into.GetOrCreateSkill("farming").Xp != 12f
             || into.GetOrCreateSkill("farming").Level != 2
             || into.AttributeBuckets[AttributeIds.Strength] != 1.5f
-            || into.GetAttribute(AttributeIds.Strength) != 14)
+            // Public mirror stores effective scores in Attributes (client-side merge shape).
+            || into.Attributes[AttributeIds.Strength] != 14)
         {
             Assert.Fail("[prosequor] ProgressSync fixture failed (merge must keep private XP/buckets).");
         }

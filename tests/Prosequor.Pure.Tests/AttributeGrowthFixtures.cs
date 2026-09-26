@@ -8,6 +8,13 @@ namespace Prosequor.Progress;
 /// <summary>Attribute growth grant / soft-reset checks (no world required).</summary>
 public static class AttributeGrowthFixtures
 {
+    /// <summary>Delta that yields <paramref name="effective"/> under the default baseline.</summary>
+    static int DeltaForEffective(int effective) =>
+        AttributeScoreMath.DeltaFromEffective(AttributeGrowth.DefaultScore, effective);
+
+    /// <summary>Delta that sits at MaxScore under the default baseline.</summary>
+    static int MaxDelta() => DeltaForEffective(AttributeGrowth.MaxScore);
+
     public static void VerifyAll()
     {
         VerifyUniqueMaxBucketWins();
@@ -21,6 +28,9 @@ public static class AttributeGrowthFixtures
         VerifyAddScoresMultiLevel();
         VerifyAddScoresBeforeGrantWins();
         VerifyAttributeScoreCompiler();
+        VerifyTryGrowIncrementsDelta();
+        VerifyAbsoluteToDeltaMigration();
+        VerifyClassChangeKeepsDelta();
     }
 
     static PlayerProgressState FreshState()
@@ -36,7 +46,7 @@ public static class AttributeGrowthFixtures
         state.AttributeBuckets[AttributeIds.Perception] = 12f;
         state.AttributeBuckets[AttributeIds.Strength] = 3f;
         string? winner = AttributeGrowth.TryGrow(state, new Random(1));
-        if (winner != AttributeIds.Perception || state.Attributes[AttributeIds.Perception] != 11)
+        if (winner != AttributeIds.Perception || state.Attributes[AttributeIds.Perception] != 1)
         {
             Assert.Fail("[prosequor] Attribute growth fixture failed (unique max bucket).");
         }
@@ -45,9 +55,10 @@ public static class AttributeGrowthFixtures
     static void VerifyAllZeroBucketsUniqueHighScore()
     {
         PlayerProgressState state = FreshState();
-        state.Attributes[AttributeIds.Strength] = 14;
+        state.Attributes[AttributeIds.Strength] = DeltaForEffective(14);
         string? winner = AttributeGrowth.TryGrow(state, new Random(2));
-        if (winner != AttributeIds.Strength || state.Attributes[AttributeIds.Strength] != 15)
+        if (winner != AttributeIds.Strength
+            || state.Attributes[AttributeIds.Strength] != DeltaForEffective(15))
         {
             Assert.Fail("[prosequor] Attribute growth fixture failed (all-zero buckets + unique high score).");
         }
@@ -59,8 +70,8 @@ public static class AttributeGrowthFixtures
         for (int seed = 0; seed < 40; seed++)
         {
             PlayerProgressState trial = FreshState();
-            trial.Attributes[AttributeIds.Strength] = 14;
-            trial.Attributes[AttributeIds.Perception] = 14;
+            trial.Attributes[AttributeIds.Strength] = DeltaForEffective(14);
+            trial.Attributes[AttributeIds.Perception] = DeltaForEffective(14);
             string? winner = AttributeGrowth.TryGrow(trial, new Random(seed));
             if (winner != AttributeIds.Strength && winner != AttributeIds.Perception)
             {
@@ -74,8 +85,8 @@ public static class AttributeGrowthFixtures
         for (int seed = 0; seed < 80; seed++)
         {
             PlayerProgressState trial = FreshState();
-            trial.Attributes[AttributeIds.Strength] = 14;
-            trial.Attributes[AttributeIds.Perception] = 14;
+            trial.Attributes[AttributeIds.Strength] = DeltaForEffective(14);
+            trial.Attributes[AttributeIds.Perception] = DeltaForEffective(14);
             string? winner = AttributeGrowth.TryGrow(trial, new Random(seed));
             sawStrength |= winner == AttributeIds.Strength;
             sawPerception |= winner == AttributeIds.Perception;
@@ -135,13 +146,13 @@ public static class AttributeGrowthFixtures
     static void VerifyMaxedBucketSkipped()
     {
         PlayerProgressState state = FreshState();
-        state.Attributes[AttributeIds.Perception] = AttributeGrowth.MaxScore;
+        state.Attributes[AttributeIds.Perception] = MaxDelta();
         state.AttributeBuckets[AttributeIds.Perception] = 12f;
         state.AttributeBuckets[AttributeIds.Strength] = 3f;
         string? winner = AttributeGrowth.TryGrow(state, new Random(1));
         if (winner != AttributeIds.Strength
-            || state.Attributes[AttributeIds.Strength] != AttributeGrowth.DefaultScore + 1
-            || state.Attributes[AttributeIds.Perception] != AttributeGrowth.MaxScore
+            || state.Attributes[AttributeIds.Strength] != 1
+            || state.Attributes[AttributeIds.Perception] != MaxDelta()
             || state.AttributeBuckets[AttributeIds.Perception] != 12f)
         {
             Assert.Fail("[prosequor] Attribute growth fixture failed (maxed bucket skipped).");
@@ -153,7 +164,7 @@ public static class AttributeGrowthFixtures
         PlayerProgressState state = FreshState();
         foreach (string id in AttributeIds.All)
         {
-            state.Attributes[id] = AttributeGrowth.MaxScore;
+            state.Attributes[id] = MaxDelta();
             state.AttributeBuckets[id] = 5f;
         }
 
@@ -166,7 +177,7 @@ public static class AttributeGrowthFixtures
 
         foreach (string id in AttributeIds.All)
         {
-            if (state.Attributes[id] != AttributeGrowth.MaxScore || state.AttributeBuckets[id] != 5f)
+            if (state.Attributes[id] != MaxDelta() || state.AttributeBuckets[id] != 5f)
             {
                 Assert.Fail("[prosequor] Attribute growth fixture failed (all-maxed mutated state).");
                 return;
@@ -218,12 +229,89 @@ public static class AttributeGrowthFixtures
             new Random(1));
         if (winners.Count != 1
             || winners[0] != AttributeIds.Strength
-            || state.Attributes[AttributeIds.Strength] != AttributeGrowth.DefaultScore + 1
+            || state.Attributes[AttributeIds.Strength] != 1
             || state.AttributeBuckets[AttributeIds.Strength] != 0f
             || state.AttributeBuckets[AttributeIds.Perception] != 0.3f)
         {
             Assert.Fail(
-                $"[prosequor] Attribute growth fixture failed (fill-before-grant; winners=[{string.Join(',', winners)}] strengthScore={state.Attributes[AttributeIds.Strength]} strengthBucket={state.AttributeBuckets[AttributeIds.Strength]}).");
+                $"[prosequor] Attribute growth fixture failed (fill-before-grant; winners=[{string.Join(',', winners)}] strengthDelta={state.Attributes[AttributeIds.Strength]} strengthBucket={state.AttributeBuckets[AttributeIds.Strength]}).");
+        }
+    }
+
+    static void VerifyTryGrowIncrementsDelta()
+    {
+        PlayerProgressState state = FreshState();
+        state.Attributes[AttributeIds.Strength] = 2;
+        state.AttributeBuckets[AttributeIds.Strength] = 1f;
+        string? winner = AttributeGrowth.TryGrow(state, new Random(1));
+        if (winner != AttributeIds.Strength || state.Attributes[AttributeIds.Strength] != 3)
+        {
+            Assert.Fail(
+                $"[prosequor] Attribute growth fixture failed (TryGrow delta; winner={winner} delta={state.Attributes[AttributeIds.Strength]}).");
+        }
+    }
+
+    static void VerifyAbsoluteToDeltaMigration()
+    {
+        PlayerProgressState state = new() { Schema = 5 };
+        foreach (string id in AttributeIds.All)
+        {
+            state.Attributes[id] = AttributeGrowth.DefaultScore;
+        }
+
+        state.Attributes[AttributeIds.Strength] = 14;
+        Dictionary<string, int> baselines = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in AttributeIds.All)
+        {
+            baselines[id] = AttributeGrowth.DefaultScore;
+        }
+
+        baselines[AttributeIds.Strength] = 12;
+        AttributeScoreMath.ConvertAbsoluteToDeltas(state, baselines);
+        if (state.Schema != PlayerProgressState.AttributeDeltaSchema
+            || state.Attributes[AttributeIds.Strength] != 2
+            || state.Attributes[AttributeIds.Perception] != 0)
+        {
+            Assert.Fail(
+                $"[prosequor] Attribute growth fixture failed (absolute→delta; schema={state.Schema} str={state.Attributes[AttributeIds.Strength]} per={state.Attributes[AttributeIds.Perception]}).");
+        }
+    }
+
+    /// <summary>
+    /// Smoke: fixed growth delta under two class baselines → two effectives; delta unchanged.
+    /// </summary>
+    static void VerifyClassChangeKeepsDelta()
+    {
+        const int growthDelta = 2;
+        Dictionary<string, int> classA = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> classB = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in AttributeIds.All)
+        {
+            classA[id] = AttributeGrowth.DefaultScore;
+            classB[id] = AttributeGrowth.DefaultScore;
+        }
+
+        classA[AttributeIds.Strength] = 10;
+        classB[AttributeIds.Strength] = 12;
+
+        PlayerProgressState state = FreshState();
+        state.Attributes[AttributeIds.Strength] = growthDelta;
+
+        int effectiveA = AttributeScoreMath.Effective(classA[AttributeIds.Strength], growthDelta);
+        int effectiveB = AttributeScoreMath.Effective(classB[AttributeIds.Strength], growthDelta);
+        if (effectiveA != 12
+            || effectiveB != 14
+            || state.Attributes[AttributeIds.Strength] != growthDelta)
+        {
+            Assert.Fail(
+                $"[prosequor] Attribute growth fixture failed (class-change smoke; a={effectiveA} b={effectiveB} delta={state.Attributes[AttributeIds.Strength]}).");
+        }
+
+        // Simulate reevaluation after "class change": delta must stay put.
+        int afterSwitch = AttributeScoreMath.Effective(classB[AttributeIds.Strength], state.Attributes[AttributeIds.Strength]);
+        if (afterSwitch != 14 || state.Attributes[AttributeIds.Strength] != growthDelta)
+        {
+            Assert.Fail("[prosequor] Attribute growth fixture failed (class-change smoke; delta mutated).");
         }
     }
 

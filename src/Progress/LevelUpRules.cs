@@ -18,7 +18,8 @@ public static class LevelUpRules
         int beforeLevel,
         int afterLevel,
         Random random,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        IReadOnlyDictionary<string, int>? attributeBaselines = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(rules);
@@ -44,7 +45,7 @@ public static class LevelUpRules
                     continue;
                 }
 
-                ApplyOne(state, rule, random, winners, catalog);
+                ApplyOne(state, rule, random, winners, catalog, attributeBaselines);
             }
         }
 
@@ -88,7 +89,8 @@ public static class LevelUpRules
         LevelUpRuleDef rule,
         Random random,
         List<string> winners,
-        IReadOnlyList<string>? catalog)
+        IReadOnlyList<string>? catalog,
+        IReadOnlyDictionary<string, int>? attributeBaselines)
     {
         switch (rule.Action)
         {
@@ -101,7 +103,7 @@ public static class LevelUpRules
                 break;
 
             case LevelUpActionKind.EarnAttribute:
-                ApplyAttribute(state, rule, random, winners, catalog);
+                ApplyAttribute(state, rule, random, winners, catalog, attributeBaselines);
                 break;
         }
     }
@@ -111,15 +113,21 @@ public static class LevelUpRules
         LevelUpRuleDef rule,
         Random random,
         List<string> winners,
-        IReadOnlyList<string>? catalog)
+        IReadOnlyList<string>? catalog,
+        IReadOnlyDictionary<string, int>? attributeBaselines)
     {
         IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            state.Schema = PlayerProgressState.AttributeDeltaSchema;
+        }
+
         PlayerProgressState.EnsureAttributeEntries(state, ids);
         if (string.Equals(rule.AttributeKey, LevelUpRuleDef.BucketsKey, StringComparison.OrdinalIgnoreCase))
         {
             for (int i = 0; i < rule.Value; i++)
             {
-                string? winner = AttributeGrowth.TryGrow(state, random, ids);
+                string? winner = AttributeGrowth.TryGrow(state, random, ids, attributeBaselines);
                 if (winner != null)
                 {
                     winners.Add(winner);
@@ -130,21 +138,28 @@ public static class LevelUpRules
         }
 
         string attrId = rule.AttributeKey!;
-        if (!state.Attributes.TryGetValue(attrId, out int current))
+        string? canonical = AttributeIds.Canonicalize(attrId, ids);
+        if (canonical == null)
         {
-            current = AttributeGrowth.DefaultScore;
+            return;
         }
 
+        int baseline = attributeBaselines != null
+            && attributeBaselines.TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = state.Attributes.TryGetValue(canonical, out int d) ? d : 0;
+        int current = AttributeScoreMath.Effective(baseline, delta);
         int next = Math.Min(AttributeGrowth.MaxScore, current + rule.Value);
         if (next == current)
         {
             return;
         }
 
-        state.Attributes[attrId] = next;
+        state.Attributes[canonical] = AttributeScoreMath.DeltaFromEffective(baseline, next);
         for (int i = current; i < next; i++)
         {
-            winners.Add(attrId);
+            winners.Add(canonical);
         }
     }
 }

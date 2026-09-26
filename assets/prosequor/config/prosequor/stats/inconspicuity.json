@@ -8,10 +8,8 @@
       "verb": "prosequor:animal-threat",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": 180,
-        "toScore": 18,
-        "toValue": 80,
+        "from": [0, 18],
+        "to": [180, 80],
         "round": "ceil"
       }
     },
@@ -22,10 +20,8 @@
       "verb": "prosequor:whole-vessel-loot-chance",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 11,
-        "fromValue": 3,
-        "toScore": 18,
-        "toValue": 24,
+        "from": [11, 18],
+        "to": [3, 24],
         "round": "ceil"
       }
     },
@@ -36,10 +32,20 @@
       "verb": "prosequor:crit-chance",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 14,
-        "fromValue": 3,
-        "toScore": 18,
-        "toValue": 15,
+        "from": [14, 18],
+        "to": [3, 15],
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:inc-mechanicals-damage",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:mechanicals-damage",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "from": [0, 18],
+        "to": [0, 0, 25],
         "round": "ceil"
       }
     }

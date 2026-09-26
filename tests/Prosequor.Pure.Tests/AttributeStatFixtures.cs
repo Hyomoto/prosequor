@@ -17,6 +17,7 @@ public static class AttributeStatFixtures
     {
         VerifyCompilerAndIndex();
         VerifyCatalogDefinesAttributes();
+        VerifyPresentationDefaults();
         VerifyPipelineDeltas();
         VerifySatietyAndHungerDelay();
         VerifyMappedIntRegisteredForAllPlayerStatPhases();
@@ -26,6 +27,7 @@ public static class AttributeStatFixtures
         VerifyAttributeMappedIntFormulaMechanism();
         VerifyAttributeMappedIntHingeFormulaMechanism();
         VerifyAttributeMappedFloatFormulaMechanism();
+        VerifyAttributeCurveFormulaMechanism();
         VerifyShippedMappedIntRulesMatchPipeline();
         VerifyCatEyesCapacityPipeline();
     }
@@ -111,6 +113,19 @@ public static class AttributeStatFixtures
         {
             Assert.Fail(
                 $"[prosequor] Stat registry catalog fixture failed (trait delta; luck={resolved["luck"]}).");
+        }
+    }
+
+    static void VerifyPresentationDefaults()
+    {
+        if (AttributeStatRegistry.DefaultNameLang("magical") != "attribute-magical"
+            || AttributeStatRegistry.DefaultNameLang("mymod:arcane") != "mymod:attribute-arcane"
+            || AttributeStatRegistry.DefaultDescriptionLang("magical") != "attribute-flavor-magical"
+            || AttributeStatRegistry.DefaultDescriptionLang("mymod:arcane") != "mymod:attribute-flavor-arcane"
+            || AttributeStatRegistry.DefaultIcon("magical") != "textures/icons/magical-attribute.svg"
+            || AttributeStatRegistry.DefaultIcon("mymod:arcane") != "textures/icons/arcane-attribute.svg")
+        {
+            Assert.Fail("[prosequor] Attribute presentation default fixture failed.");
         }
     }
 
@@ -243,6 +258,142 @@ public static class AttributeStatFixtures
                 midValue,
                 toValue));
         }
+
+        // Legacy parse path still accepts hinge keys and clamps below the span to fromValue.
+        Assert.True(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["fromScore"] = fromScore,
+                    ["fromValue"] = fromValue,
+                    ["midScore"] = midScore,
+                    ["midValue"] = midValue,
+                    ["toScore"] = toScore,
+                    ["toValue"] = toValue,
+                    ["round"] = "ceil"
+                },
+                out MappedNumberParams? legacy,
+                out string legacyError),
+            legacyError);
+        Assert.NotNull(legacy);
+        Assert.False(legacy!.UsesCurve);
+        Assert.Equal(fromValue, legacy.Evaluate(fromScore - 5));
+        Assert.Equal(midValue, legacy.Evaluate(midScore));
+    }
+
+    /// <summary>
+    /// from/to curve: linear (default) through knots; ease smoothstep; outside-span rules.
+    /// </summary>
+    static void VerifyAttributeCurveFormulaMechanism()
+    {
+        float[] to = [-10f, 10f];
+        const int fromLow = 0;
+        const int fromHigh = 20;
+
+        float linearQuarter = AbilityFormulas.AttributeCurveFloat(5, fromLow, fromHigh, to, "linear");
+        float easeQuarter = AbilityFormulas.AttributeCurveFloat(5, fromLow, fromHigh, to, "ease");
+        float atStart = AbilityFormulas.AttributeCurveFloat(fromLow, fromLow, fromHigh, to, "ease");
+        float atEnd = AbilityFormulas.AttributeCurveFloat(fromHigh, fromLow, fromHigh, to, "ease");
+        float atMid = AbilityFormulas.AttributeCurveFloat(10, fromLow, fromHigh, to, "ease");
+
+        if (Math.Abs(atStart - (-10f)) > 1e-5f
+            || Math.Abs(atEnd - 10f) > 1e-5f
+            || Math.Abs(atMid - 0f) > 1e-5f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Ease two-point ends/mid failed. got {0}/{1}/{2}.",
+                atStart,
+                atMid,
+                atEnd));
+        }
+
+        // smoothstep(0.25) = 0.15625 → -10 + 20*0.15625 = -6.875; linear = -5
+        if (Math.Abs(easeQuarter - (-6.875f)) > 1e-4f || Math.Abs(linearQuarter - (-5f)) > 1e-4f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Ease vs linear quarter failed. ease={0} linear={1}.",
+                easeQuarter,
+                linearQuarter));
+        }
+
+        float below = AbilityFormulas.AttributeCurveFloat(fromLow - 1, fromLow, fromHigh, to, "linear");
+        float above = AbilityFormulas.AttributeCurveFloat(fromHigh + 1, fromLow, fromHigh, to, "linear");
+        if (below != 0f || Math.Abs(above - 10f) > 1e-5f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Curve outside-span failed. below={0} above={1}.",
+                below,
+                above));
+        }
+
+        Assert.True(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["from"] = new JArray(fromLow, fromHigh),
+                    ["to"] = new JArray(-10, 10)
+                },
+                out MappedNumberParams? linearDefault,
+                out string parseError),
+            parseError);
+        Assert.NotNull(linearDefault);
+        Assert.True(linearDefault!.UsesCurve);
+        Assert.Equal("linear", linearDefault.Curve);
+        Assert.Equal(-5f, linearDefault.Evaluate(5), precision: 4);
+        Assert.Equal(0f, linearDefault.Evaluate(10), precision: 4);
+
+        Assert.True(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["from"] = new JArray(fromLow, fromHigh),
+                    ["to"] = new JArray(-10, 10),
+                    ["curve"] = "ease"
+                },
+                out MappedNumberParams? ease,
+                out string easeError),
+            easeError);
+        Assert.Equal("ease", ease!.Curve);
+        Assert.Equal(-6.875f, ease.Evaluate(5), precision: 4);
+
+        Assert.True(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["from"] = new JArray(fromLow, fromHigh),
+                    ["to"] = new JArray(-10, 10),
+                    ["curve"] = "bezier"
+                },
+                out MappedNumberParams? bezierAlias,
+                out string bezierError),
+            bezierError);
+        Assert.Equal("ease", bezierAlias!.Curve);
+
+        Assert.False(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["from"] = new JArray(0, 18),
+                    ["to"] = new JArray(5)
+                },
+                out _,
+                out string singleError));
+        Assert.Contains("at least two", singleError, StringComparison.OrdinalIgnoreCase);
+
+        Assert.False(
+            MappedNumberParams.TryParse(
+                new JObject
+                {
+                    ["from"] = new JArray(0, 18),
+                    ["to"] = new JArray(-5, 5),
+                    ["fromScore"] = 0,
+                    ["fromValue"] = -5,
+                    ["toScore"] = 18,
+                    ["toValue"] = 5
+                },
+                out _,
+                out string mixError));
+        Assert.Contains("mix", mixError, StringComparison.OrdinalIgnoreCase);
     }
 
     static void VerifyAttributeMappedFloatFormulaMechanism()
@@ -276,7 +427,7 @@ public static class AttributeStatFixtures
 
     /// <summary>
     /// Inferred: for every shipped stats/*.json mapped-int player-stats rule, the live pipeline
-    /// at a score must equal AbilityFormulas evaluated with that rule's own params.
+    /// at a score must equal MappedNumberParams.Evaluate for that rule's params.
     /// Changing balance JSON updates the expected values automatically.
     /// </summary>
     static void VerifyShippedMappedIntRulesMatchPipeline()
@@ -325,16 +476,8 @@ public static class AttributeStatFixtures
                     continue;
                 }
 
-                if (!TryReadMappedIntParams(
-                        rule.@params,
-                        out int fromScore,
-                        out float fromValue,
-                        out int toScore,
-                        out float toValue,
-                        out string round,
-                        out int? midScore,
-                        out float? midValue,
-                        out string? paramError))
+                if (!MappedNumberParams.TryParse(rule.@params, out MappedNumberParams? mapped, out string paramError)
+                    || mapped == null)
                 {
                     Assert.Fail(string.Format(
                         "[prosequor] Bad mapped-number params in {0} rule '{1}': {2}",
@@ -391,6 +534,8 @@ public static class AttributeStatFixtures
                 AttributeFixtureProgress progress = new();
 
                 int minScore = rule.minScore ?? int.MinValue;
+                int fromScore = mapped.SpanStart;
+                int toScore = mapped.SpanEnd;
                 int[] probeScores =
                 [
                     fromScore - 1,
@@ -407,26 +552,16 @@ public static class AttributeStatFixtures
                     int actual = RunPhase(pipeline, progress, attributeId, verb, score, phase);
                     int expected = score < minScore
                         ? 0
-                        : AbilityFormulas.AttributeMappedInt(
-                            score,
-                            fromScore,
-                            fromValue,
-                            toScore,
-                            toValue,
-                            round,
-                            midScore,
-                            midValue);
+                        : (int)mapped.Evaluate(score);
                     if (actual != expected)
                     {
                         Assert.Fail(string.Format(
-                            "[prosequor] Shipped rule {0}/{1} at score {2}: pipeline={3} formula={4} (params {5}→{6} over {7}→{8}).",
+                            "[prosequor] Shipped rule {0}/{1} at score {2}: pipeline={3} formula={4} (span {5}→{6}).",
                             attributeId,
                             rule.id,
                             score,
                             actual,
                             expected,
-                            fromValue,
-                            toValue,
                             fromScore,
                             toScore));
                         return;
@@ -441,46 +576,6 @@ public static class AttributeStatFixtures
         {
             Assert.Fail("[prosequor] No player-interaction rounded mapped-number rules found in shipped stats fixtures.");
         }
-    }
-
-    static bool TryReadMappedIntParams(
-        Newtonsoft.Json.Linq.JObject raw,
-        out int fromScore,
-        out float fromValue,
-        out int toScore,
-        out float toValue,
-        out string round,
-        out int? midScore,
-        out float? midValue,
-        out string? error)
-    {
-        fromScore = 0;
-        fromValue = 0f;
-        toScore = 0;
-        toValue = 0f;
-        round = "ceil";
-        midScore = null;
-        midValue = null;
-        error = null;
-
-        int? fs = raw.Value<int?>("fromScore");
-        float? fv = raw.Value<float?>("fromValue");
-        int? ts = raw.Value<int?>("toScore");
-        float? tv = raw.Value<float?>("toValue");
-        if (fs is null || fv is null || ts is null || tv is null)
-        {
-            error = "fromScore/fromValue/toScore/toValue required.";
-            return false;
-        }
-
-        fromScore = fs.Value;
-        fromValue = fv.Value;
-        toScore = ts.Value;
-        toValue = tv.Value;
-        round = raw.Value<string>("round") ?? "ceil";
-        midScore = raw.Value<int?>("midScore");
-        midValue = raw.Value<float?>("midValue");
-        return true;
     }
 
     static void VerifyMappedIntRegisteredForAllPlayerStatPhases()
@@ -499,13 +594,18 @@ public static class AttributeStatFixtures
             VerbIds.BasicSlots,
             VerbIds.RangedSpeed,
             VerbIds.RangedAcc,
+            VerbIds.RangedDamage,
+            VerbIds.RangedDistance,
             VerbIds.FallDamageFactor,
             VerbIds.FallDamageThreshold,
             VerbIds.TemporalRecoverRate,
             VerbIds.TemporalDrainRate,
+            VerbIds.WalkSpeed,
+            VerbIds.HungerRate,
             VerbIds.AnimalThreat,
             VerbIds.CritChance,
-            VerbIds.WholeVesselLootChance
+            VerbIds.WholeVesselLootChance,
+            VerbIds.MechanicalsDamage
         ];
         foreach (VerbId verb in verbs)
         {

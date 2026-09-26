@@ -337,9 +337,14 @@ public class CharacterStatsPanel
         composer.AddAttributeTooltip(attrTip, "prosequor-attr-tooltip");
 
         y += attrsBlock + AttrsToCardsGap;
+        double cardsTop = y;
         double halfW = (PanelInnerWidth - CardGap) / 2;
-        ElementBounds healthCard = ElementBounds.Fixed(0, y, halfW, CardHeight);
-        ElementBounds satietyCard = ElementBounds.Fixed(halfW + CardGap, y, halfW, CardHeight);
+        ElementBounds healthCard = ElementBounds
+            .Fixed(0, y, halfW, CardHeight)
+            .WithParent(bgBounds);
+        ElementBounds satietyCard = ElementBounds
+            .Fixed(halfW + CardGap, y, halfW, CardHeight)
+            .WithParent(bgBounds);
         composer.AddRoundedInset(healthCard);
         composer.AddRoundedInset(satietyCard);
 
@@ -366,7 +371,9 @@ public class CharacterStatsPanel
                 ElementBounds.Fixed(halfW + CardGap + CardPadX, labelTop, halfW - CardPadX * 2, 18));
 
         y += CardHeight + SectionGap;
-        ElementBounds tempCard = ElementBounds.Fixed(0, y, PanelInnerWidth, TempCardHeight);
+        ElementBounds tempCard = ElementBounds
+            .Fixed(0, y, PanelInnerWidth, TempCardHeight)
+            .WithParent(bgBounds);
         composer.AddRoundedInset(tempCard);
 
         double sideW = 60;
@@ -390,6 +397,20 @@ public class CharacterStatsPanel
                 Lang.Get("prosequor:stats-temperature"),
                 cardLabelFont,
                 ElementBounds.Fixed(0, y + CardLabelOffsetY - 10, PanelInnerWidth, 18));
+
+        double cardsBlock = CardHeight + SectionGap + TempCardHeight;
+        ElementBounds vitalTipHost = ElementBounds
+            .Fixed(0, cardsTop, PanelInnerWidth, cardsBlock)
+            .WithParent(bgBounds);
+        GuiElementVitalTooltip vitalTip = new(capi, vitalTipHost);
+        vitalTip.SetClipBounds(bgBounds);
+        vitalTip.SetRows(
+        [
+            new VitalHoverRow(StatsVitalHover.Health, healthCard),
+            new VitalHoverRow(StatsVitalHover.Satiety, satietyCard),
+            new VitalHoverRow(StatsVitalHover.Temperature, tempCard)
+        ]);
+        composer.AddVitalTooltip(vitalTip, "prosequor-vital-tooltip");
 
         y += TempCardHeight + SectionGap;
         nutritionSectionPresent = false;

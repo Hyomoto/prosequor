@@ -74,6 +74,7 @@ public static class ProgressStore
         }
 
         bool remapUnlocks = stored.Schema < UnlockIdRemap.Schema;
+        int originalSchema = stored.Schema;
         foreach (KeyValuePair<string, SkillProgressState> kv in stored.Skills)
         {
             if (remapUnlocks)
@@ -84,7 +85,17 @@ public static class ProgressStore
             kv.Value.MigrateLegacyUnlocks();
         }
 
-        stored.Schema = PlayerProgressState.CurrentSchema;
+        // Keep schema < AttributeDeltaSchema until ConvertAbsoluteToDeltas runs with a baseline.
+        // Still advance past UnlockRemapSchema so unlock id remaps do not re-run on next load.
+        if (originalSchema >= PlayerProgressState.AttributeDeltaSchema)
+        {
+            stored.Schema = PlayerProgressState.CurrentSchema;
+        }
+        else if (originalSchema < PlayerProgressState.UnlockRemapSchema)
+        {
+            stored.Schema = PlayerProgressState.UnlockRemapSchema;
+        }
+
         PlayerProgressState.EnsureSkillEntries(stored, registry);
         IReadOnlyList<string> catalog = stats != null
             ? AttributeIds.CatalogIds(stats)
@@ -119,7 +130,8 @@ public static class ProgressStore
     public static void MirrorToEntity(
         Entity? entity,
         PlayerProgressState state,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        System.Func<string, int>? attributeEffectiveOf = null)
     {
         if (entity == null)
         {
@@ -128,20 +140,28 @@ public static class ProgressStore
 
         RemoveLegacyTree(entity);
         MirrorUnlocks(entity, state);
-        MirrorAttributeScores(entity, state, catalog);
+        MirrorAttributeScores(entity, state, catalog, attributeEffectiveOf);
     }
 
     public static void MirrorAttributeScores(
         Entity entity,
         PlayerProgressState state,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        System.Func<string, int>? effectiveOf = null)
     {
         IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
         PlayerProgressState.EnsureAttributeEntries(state, ids);
         TreeAttribute scores = new();
         foreach (string id in ids)
         {
-            scores.SetInt(id, state.Attributes[id]);
+            int value = effectiveOf != null
+                ? effectiveOf(id)
+                : state.Schema >= PlayerProgressState.AttributeDeltaSchema
+                    ? AttributeScoreMath.Effective(
+                        AttributeGrowth.DefaultScore,
+                        state.GetAttributeDelta(id, ids))
+                    : state.GetAttribute(id, ids);
+            scores.SetInt(id, value);
         }
 
         entity.WatchedAttributes.SetAttribute(AttrScores, scores);
@@ -227,13 +247,14 @@ public static class ProgressStore
         Entity entity,
         PlayerProgressState state,
         VisibleProgressChange change,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        System.Func<string, int>? attributeEffectiveOf = null)
     {
         RemoveLegacyTree(entity);
 
         if (change.MirrorAttributeScores)
         {
-            MirrorAttributeScores(entity, state, catalog);
+            MirrorAttributeScores(entity, state, catalog, attributeEffectiveOf);
         }
 
         if (change.MirrorUnlockTiers)

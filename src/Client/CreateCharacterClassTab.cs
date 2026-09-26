@@ -21,14 +21,10 @@ public sealed class CreateCharacterClassTab : IDisposable
     public const string ClassBodyKey = "classBody";
     public const string TraitsScrollKey = "classTraitsScroll";
 
-    const double AttrIconSize = 24;
-    const double AttrRowHeight = 30;
-    const double AttrRowGap = 4;
-    const double AttrValueNudgeY = -5;
-    const double AttrValueWidth = 40;
     const double ColGap = 12;
     const double ScrollbarWidth = 16;
     const double FlavorPad = 8;
+    const string AttrTooltipKey = "prosequor-class-attr-tooltip";
 
     static readonly double[] SectionHeaderColor = [0.91, 0.84, 0.64, 1];
 
@@ -38,6 +34,9 @@ public sealed class CreateCharacterClassTab : IDisposable
     ElementBounds? traitsContentBounds;
     float traitsScrollY;
     double traitsContentHeight = 80;
+    LoadedTexture? attributeWatermark;
+    LoadedTexture? attributeBackplate;
+    Dictionary<string, int> previewScores = new(StringComparer.OrdinalIgnoreCase);
 
     public CreateCharacterClassTab(ICoreClientAPI capi)
     {
@@ -50,6 +49,7 @@ public sealed class CreateCharacterClassTab : IDisposable
     /// </summary>
     public void Compose(
         GuiComposer composer,
+        ElementBounds parent,
         double rightX,
         double topY,
         double rightWidth,
@@ -127,7 +127,7 @@ public sealed class CreateCharacterClassTab : IDisposable
         double columnsTop = y;
         double columnsH = midHeight - 22;
 
-        ComposeAttributeColumn(composer, rightX, columnsTop, attrColW);
+        ComposeAttributeColumn(composer, parent, rightX, columnsTop, attrColW, columnsH);
         ComposeTraitsColumn(
             composer,
             rightX + attrColW + ColGap,
@@ -141,26 +141,50 @@ public sealed class CreateCharacterClassTab : IDisposable
         composer.AddRichtext("", CairoFont.WhiteDetailText(), bodyBounds, ClassBodyKey);
     }
 
-    void ComposeAttributeColumn(GuiComposer composer, double x, double y, double width)
+    void ComposeAttributeColumn(
+        GuiComposer composer,
+        ElementBounds parent,
+        double x,
+        double y,
+        double width,
+        double height)
     {
         IReadOnlyList<string> catalog = AttributeLayout.ResolveCatalog(capi);
-        AttributeLayout.ComposeList(
+        double ringH = Math.Min(height, AttributeLayout.CircleBlockHeight(width));
+        double ringY = y + Math.Max(0, (height - ringH) / 2);
+        ElementBounds attrHost = ElementBounds
+            .Fixed(x, ringY, width, ringH)
+            .WithParent(parent);
+        previewScores = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in catalog)
+        {
+            previewScores[id] = AttributeGrowth.DefaultScore;
+        }
+
+        IReadOnlyList<AttributeHoverRow> hoverRows = AttributeLayout.ComposeCircle(
             composer,
             capi,
             icons,
             catalog,
-            x,
-            y,
-            width,
-            _ => AttributeGrowth.DefaultScore,
-            ticks: null,
-            showNames: true,
-            showTicks: false,
-            iconSize: AttrIconSize,
-            rowHeight: AttrRowHeight,
-            rowGap: AttrRowGap,
-            valueNudgeY: AttrValueNudgeY,
-            valueWidth: AttrValueWidth);
+            attrHost,
+            attrId => previewScores.TryGetValue(attrId, out int s)
+                ? s
+                : AttributeGrowth.DefaultScore,
+            ticks: [],
+            ref attributeWatermark,
+            ref attributeBackplate);
+
+        ElementBounds tipHost = ElementBounds
+            .Fixed(x, ringY, width, ringH)
+            .WithParent(parent);
+        GuiElementAttributeTooltip tip = new(capi, tipHost, icons);
+        tip.SetClipBounds(attrHost);
+        tip.SetStats(ProsequorModSystem.For(capi)?.AttributeStats);
+        tip.SetScoreOf(attrId => previewScores.TryGetValue(attrId, out int s)
+            ? s
+            : AttributeGrowth.DefaultScore);
+        tip.SetRows(hoverRows);
+        composer.AddAttributeTooltip(tip, AttrTooltipKey);
     }
 
     void ComposeTraitsColumn(
@@ -215,10 +239,19 @@ public sealed class CreateCharacterClassTab : IDisposable
         composer.GetRichtext(ClassBodyKey)?.SetNewText(body, CairoFont.WhiteDetailText());
 
         Dictionary<string, int> scores = ResolveScores(characterClass.Code);
+        previewScores = new Dictionary<string, int>(scores, StringComparer.OrdinalIgnoreCase);
         foreach (string attrId in AttributeLayout.ResolveCatalog(capi))
         {
             int score = scores.TryGetValue(attrId, out int s) ? s : AttributeGrowth.DefaultScore;
             composer.GetDynamicText(AttributeLayout.ValueKey(attrId))?.SetNewText(score.ToString());
+        }
+
+        if (composer.GetElement(AttrTooltipKey) is GuiElementAttributeTooltip tip)
+        {
+            tip.SetScoreOf(attrId => previewScores.TryGetValue(attrId, out int s)
+                ? s
+                : AttributeGrowth.DefaultScore);
+            tip.SetStats(ProsequorModSystem.For(capi)?.AttributeStats);
         }
 
         string traitsHtml = BuildTraitsHtml(characterClass, modSys);
@@ -388,5 +421,12 @@ public sealed class CreateCharacterClassTab : IDisposable
         return sb.Length > 0 ? sb.ToString() : Lang.Get("No positive or negative traits");
     }
 
-    public void Dispose() => icons.Dispose();
+    public void Dispose()
+    {
+        icons.Dispose();
+        attributeWatermark?.Dispose();
+        attributeWatermark = null;
+        attributeBackplate?.Dispose();
+        attributeBackplate = null;
+    }
 }

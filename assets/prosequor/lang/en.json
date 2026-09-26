@@ -51,6 +51,11 @@
   "attribute-constitution": "Constitution",
   "attribute-inconspicuity": "Inconspicuity",
   "attribute-resilience": "Resilience",
+  "attribute-flavor-strength": "“When the world bears down, bear something heavier.”",
+  "attribute-flavor-constitution": "“The flesh remembers every winter it survives.”",
+  "attribute-flavor-perception": "“Some eyes adjust. Others learn to see.”",
+  "attribute-flavor-inconspicuity": "“A scavenger survives first by escaping notice.”",
+  "attribute-flavor-resilience": "“The storm may take much. Leave it nothing freely.”",
 
   // --- Attribute descriptions — Strength ---
   "attrdesc-str-armor-walk-neg-great": "Armor greatly slows your movement.",
@@ -68,6 +73,12 @@
   "attrdesc-str-melee-damage-pos-great": "Melee damage greatly increased.",
   "attrdesc-str-melee-damage-pos-moderate": "Melee damage increased.",
   "attrdesc-str-melee-damage-pos-slight": "Melee damage slightly increased.",
+  "attrdesc-str-break-speed-neg-great": "You break blocks much more slowly.",
+  "attrdesc-str-break-speed-neg-moderate": "You break blocks more slowly.",
+  "attrdesc-str-break-speed-neg-slight": "You break blocks slightly more slowly.",
+  "attrdesc-str-break-speed-pos-great": "You break blocks much faster.",
+  "attrdesc-str-break-speed-pos-moderate": "You break blocks faster.",
+  "attrdesc-str-break-speed-pos-slight": "You break blocks slightly faster.",
 
   // --- Attribute descriptions — Perception ---
   "attrdesc-per-cat-eyes-capacity-pos": "Improved low-light vision.",
@@ -83,6 +94,18 @@
   "attrdesc-per-ranged-speed-pos-great": "Ranged weapons draw much faster.",
   "attrdesc-per-ranged-speed-pos-moderate": "Ranged weapons draw faster.",
   "attrdesc-per-ranged-speed-pos-slight": "Ranged weapons draw slightly faster.",
+  "attrdesc-per-ranged-damage-neg-great": "Ranged damage greatly reduced.",
+  "attrdesc-per-ranged-damage-neg-moderate": "Ranged damage reduced.",
+  "attrdesc-per-ranged-damage-neg-slight": "Ranged damage slightly reduced.",
+  "attrdesc-per-ranged-damage-pos-great": "Ranged damage greatly increased.",
+  "attrdesc-per-ranged-damage-pos-moderate": "Ranged damage increased.",
+  "attrdesc-per-ranged-damage-pos-slight": "Ranged damage slightly increased.",
+  "attrdesc-per-ranged-distance-neg-great": "Ranged distance greatly reduced.",
+  "attrdesc-per-ranged-distance-neg-moderate": "Ranged distance reduced.",
+  "attrdesc-per-ranged-distance-neg-slight": "Ranged distance slightly reduced.",
+  "attrdesc-per-ranged-distance-pos-great": "Ranged distance greatly increased.",
+  "attrdesc-per-ranged-distance-pos-moderate": "Ranged distance increased.",
+  "attrdesc-per-ranged-distance-pos-slight": "Ranged distance slightly increased.",
 
   // --- Attribute descriptions — Constitution ---
   "attrdesc-con-health-neg-great": "Maximum health greatly reduced.",
@@ -100,6 +123,12 @@
   "attrdesc-con-satiety-pos-great": "Stomach capacity greatly increased.",
   "attrdesc-con-satiety-pos-moderate": "Stomach capacity increased.",
   "attrdesc-con-satiety-pos-slight": "Stomach capacity slightly increased.",
+  "attrdesc-con-walk-speed-neg-great": "You move much slower.",
+  "attrdesc-con-walk-speed-neg-moderate": "You move slower.",
+  "attrdesc-con-walk-speed-neg-slight": "You move slightly slower.",
+  "attrdesc-con-walk-speed-pos-great": "You move much faster.",
+  "attrdesc-con-walk-speed-pos-moderate": "You move faster.",
+  "attrdesc-con-walk-speed-pos-slight": "You move slightly faster.",
 
   // --- Attribute descriptions — Inconspicuity ---
   "attrdesc-inc-animal-response-rate-neg-great": "Animals react to you much more quickly.",
@@ -120,6 +149,9 @@
   "attrdesc-inc-crit-chance-pos-great": "Critical hits land frequently.",
   "attrdesc-inc-crit-chance-pos-moderate": "Critical hits land more often.",
   "attrdesc-inc-crit-chance-pos-slight": "Critical hits land occasionally.",
+  "attrdesc-inc-mechanicals-damage-pos-great": "Damage against mechanicals greatly increased.",
+  "attrdesc-inc-mechanicals-damage-pos-moderate": "Damage against mechanicals increased.",
+  "attrdesc-inc-mechanicals-damage-pos-slight": "Damage against mechanicals slightly increased.",
 
   // --- Attribute descriptions — Resilience ---
   "attrdesc-res-fall-factor-neg-great": "Fall damage greatly increased.",
@@ -138,6 +170,12 @@
   "attrdesc-res-frost-damage-pos-moderate": "Frost and weather hurt you less.",
   "attrdesc-res-frost-damage-pos-slight": "Frost and weather hurt you slightly less.",
   "attrdesc-res-last-stand-pos": "You can survive a fatal blow.",
+  "attrdesc-res-hunger-rate-neg-great": "You get hungry much more quickly.",
+  "attrdesc-res-hunger-rate-neg-moderate": "You get hungry more quickly.",
+  "attrdesc-res-hunger-rate-neg-slight": "You get hungry slightly more quickly.",
+  "attrdesc-res-hunger-rate-pos-great": "You get hungry much more slowly.",
+  "attrdesc-res-hunger-rate-pos-moderate": "You get hungry more slowly.",
+  "attrdesc-res-hunger-rate-pos-slight": "You get hungry slightly more slowly.",
   "attrdesc-res-temporal-drain-neg-great": "Temporal stability drains much more quickly.",
   "attrdesc-res-temporal-drain-neg-moderate": "Temporal stability drains more quickly.",
   "attrdesc-res-temporal-drain-neg-slight": "Temporal stability drains slightly more quickly.",

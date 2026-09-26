@@ -183,6 +183,10 @@ public static class VerbIds
     public static readonly VerbId BasicSlots = new("prosequor:basic-slots");
     public static readonly VerbId RangedSpeed = new("prosequor:ranged-speed");
     public static readonly VerbId RangedAcc = new("prosequor:ranged-acc");
+    /// <summary>Signed ranged damage percent (vanilla <c>rangedWeaponsDamage</c>).</summary>
+    public static readonly VerbId RangedDamage = new("prosequor:ranged-damage");
+    /// <summary>Signed ranged distance percent (vanilla <c>bowDrawingStrength</c>).</summary>
+    public static readonly VerbId RangedDistance = new("prosequor:ranged-distance");
     public static readonly VerbId FallDamageFactor = new("prosequor:fall-damage-factor");
     public static readonly VerbId FallDamageThreshold = new("prosequor:fall-damage-threshold");
     public static readonly VerbId TemporalRecoverRate = new("prosequor:temporal-recover-rate");
@@ -193,6 +197,10 @@ public static class VerbIds
     public static readonly VerbId SwimSpeed = new("prosequor:swim-speed");
     /// <summary>On-foot sneak speed bonus fraction (seed 0).</summary>
     public static readonly VerbId SneakSpeed = new("prosequor:sneak-speed");
+    /// <summary>Signed base walk-speed percent (vanilla <c>walkspeed</c>).</summary>
+    public static readonly VerbId WalkSpeed = new("prosequor:walk-speed");
+    /// <summary>Signed hunger-rate percent (vanilla <c>hungerrate</c>; higher is worse).</summary>
+    public static readonly VerbId HungerRate = new("prosequor:hunger-rate");
     public static readonly VerbId AnimalThreat = new("prosequor:animal-threat");
     /// <summary>Sneak-only animal sense-range multiplier (seed 1).</summary>
     public static readonly VerbId AnimalSenseRange = new("prosequor:animal-sense-range");
@@ -205,6 +213,8 @@ public static class VerbIds
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
+    /// <summary>Signed damage vs mechanicals percent (vanilla <c>mechanicalsDamage</c>).</summary>
+    public static readonly VerbId MechanicalsDamage = new("prosequor:mechanicals-damage");
     public static readonly VerbId VoxelCopy = new("prosequor:voxel-copy");
     public static readonly VerbId VoxelRefill = new("prosequor:voxel-refill");
 
