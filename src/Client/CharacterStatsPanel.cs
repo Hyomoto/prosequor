@@ -22,7 +22,8 @@ public class CharacterStatsPanel
     const double PanelInnerWidth = 250;
     const double AttrRowHeight = 32;
     const double AttrRowGap = 5;
-    const double ContentTop = 26;
+    const double ContentTop = 14;
+    const double AttrsToCardsGap = 2;
     const double CardHeight = 60;
     const double TempCardHeight = 52;
     const double CardGap = 8;
@@ -67,7 +68,7 @@ public class CharacterStatsPanel
     };
 
     LoadedTexture? attributeWatermark;
-    LoadedTexture? attributeArcs;
+    LoadedTexture? attributeBackplate;
     IReadOnlyList<string> attributeCatalog = AttributeIds.All;
 
     static readonly FieldInfo? StaticElementsField =
@@ -139,8 +140,8 @@ public class CharacterStatsPanel
         DisposeIcons();
         attributeWatermark?.Dispose();
         attributeWatermark = null;
-        attributeArcs?.Dispose();
-        attributeArcs = null;
+        attributeBackplate?.Dispose();
+        attributeBackplate = null;
 
         if (ReferenceEquals(live, this))
         {
@@ -242,25 +243,25 @@ public class CharacterStatsPanel
 
         double envOffset = botDlgBounds.InnerHeight / RuntimeEnv.GUIScale + 10;
         attributeCatalog = AttributeLayout.ResolveCatalog(capi);
-        double attrsBlock = AttributeLayout.ListBlockHeight(
-            attributeCatalog.Count,
-            AttrRowHeight,
-            AttrRowGap);
         double nutritionBlock = NutritionHeaderHeight + NutritionRowGap
             + NutritionRows.Length * NutritionRowHeight
             + (NutritionRows.Length - 1) * NutritionRowGap;
-        double contentHeight =
-            ContentTop
-            + attrsBlock
-            + SectionGap
+        double belowAttrs =
+            AttrsToCardsGap
             + CardHeight
             + SectionGap
             + TempCardHeight
             + SectionGap
             + nutritionBlock;
-        double panelHeight = Math.Max(
-            contentHeight,
-            leftDlgBounds.InnerHeight / RuntimeEnv.GUIScale - GuiStyle.ElementToDialogPadding - 20 + envOffset);
+        double targetPanel = leftDlgBounds.InnerHeight / RuntimeEnv.GUIScale
+            - GuiStyle.ElementToDialogPadding - 20 + envOffset;
+        double attrsBudget = targetPanel - ContentTop - belowAttrs;
+        double attrsBlock = Math.Clamp(
+            attrsBudget,
+            AttributeLayout.CircleBlockMinHeight(),
+            AttributeLayout.CircleBlockHeight(PanelInnerWidth));
+        double contentHeight = ContentTop + attrsBlock + belowAttrs;
+        double panelHeight = Math.Max(contentHeight, targetPanel);
         ElementBounds bgBounds = ElementBounds
             .Fixed(0, 0, PanelInnerWidth, panelHeight)
             .WithFixedPadding(GuiStyle.ElementToDialogPadding);
@@ -323,7 +324,7 @@ public class CharacterStatsPanel
             attrId => progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore,
             ticks,
             ref attributeWatermark,
-            ref attributeArcs);
+            ref attributeBackplate);
 
         ElementBounds tipHost = ElementBounds
             .Fixed(0, 0, PanelInnerWidth, attrsBlock)
@@ -335,7 +336,7 @@ public class CharacterStatsPanel
         attrTip.SetRows(hoverRows);
         composer.AddAttributeTooltip(attrTip, "prosequor-attr-tooltip");
 
-        y += attrsBlock + SectionGap;
+        y += attrsBlock + AttrsToCardsGap;
         double halfW = (PanelInnerWidth - CardGap) / 2;
         ElementBounds healthCard = ElementBounds.Fixed(0, y, halfW, CardHeight);
         ElementBounds satietyCard = ElementBounds.Fixed(halfW + CardGap, y, halfW, CardHeight);
