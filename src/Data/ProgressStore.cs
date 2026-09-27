@@ -28,9 +28,10 @@ public static class ProgressStore
     public static PlayerProgressState Load(
         IServerPlayer player,
         ISkillRegistry registry,
-        IAttributeStatRegistry? stats = null)
+        IAttributeStatRegistry? stats = null,
+        int maxPlayerLevel = XpCurves.PlayerMaxLevel)
     {
-        if (TryHydrateStored(ReadModData(player), registry, out PlayerProgressState stored, stats))
+        if (TryHydrateStored(ReadModData(player), registry, out PlayerProgressState stored, stats, maxPlayerLevel))
         {
             return stored;
         }
@@ -58,7 +59,8 @@ public static class ProgressStore
         byte[]? bytes,
         ISkillRegistry registry,
         out PlayerProgressState state,
-        IAttributeStatRegistry? stats = null)
+        IAttributeStatRegistry? stats = null,
+        int maxPlayerLevel = XpCurves.PlayerMaxLevel)
     {
         state = null!;
         if (bytes == null || bytes.Length == 0)
@@ -101,7 +103,7 @@ public static class ProgressStore
             ? AttributeIds.CatalogIds(stats)
             : AttributeIds.All;
         PlayerProgressState.EnsureAttributeEntries(stored, catalog);
-        stored.ReconcileLevelsFromXp();
+        stored.ReconcileLevelsFromXp(maxPlayerLevel);
         XpBucketFormulas.RefreshAllCaps(stored);
         state = stored;
         return true;

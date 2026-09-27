@@ -137,6 +137,9 @@ public class MigratedFixtureTests
     public void LevelUpAudioFixtures_Should_Pass() => LevelUpAudioFixtures.VerifyAll();
 
     [Fact]
+    public void ServerLevelingFixtures_Should_Pass() => ServerLevelingFixtures.VerifyAll();
+
+    [Fact]
     public void SkillWaitingHintFixtures_Should_Pass() => SkillWaitingHintFixtures.VerifyAll();
 
     [Fact]
@@ -180,4 +183,7 @@ public class MigratedFixtureTests
 
     [Fact]
     public void TrackMarkFixtures_Should_Pass() => TrackMarkFixtures.VerifyAll();
+
+    [Fact]
+    public void FocusShotFixtures_Should_Pass() => FocusShotFixtures.VerifyAll();
 }

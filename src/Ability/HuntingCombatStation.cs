@@ -11,7 +11,7 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Bow / thrown-spear projectile folds: Nice Shot break chance and Fletcher flight speed.
+/// Bow / thrown-spear projectile folds: Nice Shot break chance, Fletcher flight speed, and Focus Shot damage.
 /// </summary>
 public static class HuntingProjectileStation
 {
@@ -40,7 +40,68 @@ public static class HuntingProjectileStation
             float nextBreak = PlayerInteractionStation.ResolveArrowBreakChance(ep.Player, breakChance);
             projectile.DropOnImpactChance = 1f - Math.Clamp(nextBreak, 0f, 1f);
         }
+
+        if (ItemBowFocusShotPatch.TryRead(out float drawnSeconds))
+        {
+            projectile.Damage = FocusShot.ScaleDamage(
+                projectile.Damage,
+                drawnSeconds,
+                PlayerInteractionStation.ResolveFocusShotHoldSeconds(ep.Player),
+                PlayerInteractionStation.ResolveFocusShotDamageFactor(ep.Player));
+        }
     }
+}
+
+/// <summary>
+/// Focus Shot: a bow draw that lasts at least the owned hold multiplies that arrow's damage.
+/// </summary>
+public static class FocusShot
+{
+    public static float ScaleDamage(float damage, float secondsUsed, float holdSeconds, float factor)
+    {
+        if (holdSeconds <= 0f || secondsUsed < holdSeconds)
+        {
+            return damage;
+        }
+
+        return damage * factor;
+    }
+}
+
+/// <summary>
+/// Stashes the bow draw length for the launch fold on the same call, then clears it.
+/// </summary>
+public static class ItemBowFocusShotPatch
+{
+    [ThreadStatic]
+    static float? drawSeconds;
+
+    internal static bool TryRead(out float secondsUsed)
+    {
+        if (drawSeconds is float value)
+        {
+            secondsUsed = value;
+            return true;
+        }
+
+        secondsUsed = 0f;
+        return false;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(ItemBow), nameof(ItemBow.OnHeldInteractStop))]
+    public static void Prefix(float secondsUsed, EntityAgent byEntity)
+    {
+        drawSeconds = null;
+        if (byEntity?.World?.Side == EnumAppSide.Server)
+        {
+            drawSeconds = secondsUsed;
+        }
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(ItemBow), nameof(ItemBow.OnHeldInteractStop))]
+    public static void Postfix() => drawSeconds = null;
 }
 
 /// <summary>Harmony adapters for projectile launch folds.</summary>

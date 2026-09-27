@@ -17,16 +17,21 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     readonly ActiveAbilityRuleCache? abilityCache;
     readonly ISkillRegistry? registry;
     readonly SkillAccess skillAccess;
+    readonly int maxPlayerLevel;
 
     public ParkedPlayerProgress(
         PlayerProgressState state,
         AbilityRuleIndex? ruleIndex = null,
         ISkillRegistry? registry = null,
-        SkillAccess? skillAccess = null)
+        SkillAccess? skillAccess = null,
+        int maxPlayerLevel = XpCurves.PlayerMaxLevel)
     {
         this.state = state ?? throw new ArgumentNullException(nameof(state));
         this.registry = registry;
         this.skillAccess = skillAccess ?? new SkillAccess();
+        this.maxPlayerLevel = maxPlayerLevel < XpCurves.PlayerMinLevel
+            ? XpCurves.PlayerMaxLevel
+            : maxPlayerLevel;
         if (ruleIndex != null)
         {
             abilityCache = ActiveAbilityRuleCache.Rebuild(ruleIndex, this);
@@ -50,7 +55,7 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     public int UnlockPoints => state.UnlockPoints;
 
     public float PlayerXpUntilNext =>
-        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
+        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel, maxPlayerLevel);
 
     public bool HasSkillAccess(string skillId) =>
         skillAccess.IsUnbound || skillAccess.Contains(skillId);
@@ -117,8 +122,8 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
     {
         level = state.PlayerLevel;
-        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level);
-        needForNext = XpCurves.XpToNextPlayerLevel(level);
+        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level, maxPlayerLevel);
+        needForNext = XpCurves.XpToNextPlayerLevel(level, maxPlayerLevel);
         if (needForNext <= 0)
         {
             intoLevel = 1f;

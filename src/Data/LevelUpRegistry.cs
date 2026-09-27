@@ -18,6 +18,14 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
 
     public IReadOnlyList<LevelUpRuleDef> Rules => rules;
 
+    /// <summary>Replace the compiled list. Used after the content fingerprint is stored.</summary>
+    internal void Install(IReadOnlyList<LevelUpRuleDef> next)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        rules.Clear();
+        rules.AddRange(next);
+    }
+
     /// <summary>
     /// Compiles a draft rule map (last-win by id preserves the later row's source order).
     /// </summary>

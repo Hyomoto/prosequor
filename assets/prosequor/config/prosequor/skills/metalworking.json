@@ -341,6 +341,10 @@
         "cost": 1,
         "minSkillLevel": 40,
         "descriptionLang": "unlockdesc-metalworking-weaponsmith",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -389,6 +393,10 @@
         "cost": 1,
         "minSkillLevel": 40,
         "descriptionLang": "unlockdesc-metalworking-craftsmanship",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -437,6 +445,10 @@
         "cost": 1,
         "minSkillLevel": 40,
         "descriptionLang": "unlockdesc-metalworking-toolsmith",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [

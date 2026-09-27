@@ -224,6 +224,7 @@ Array of positional args for `descriptionLang` (`{0}`, `{1}`, …).
 | `"prev.0.base"` | Previous tier (nodes only; missing treated as 0 in sums) |
 | `"axeexpert.0.perLevel"` | Skill hover only: owned tier of node `axeexpert` (0 if unowned) |
 | `{ "sum": ["0.base", "prev.0.base"], "format": "percent" }` | Sum selectors; `format` optional: `percent` \| `fractionPercent`. A negative value prints as its magnitude in red |
+| `{ "table": "0.table", "end": "max", "format": "qualityPercent" }` | One knot from a number-array param. `end` is `min` (first entry) or `max` (last entry); omit `end` for `max`. Prints as `fractionPercent`. Does not use `sum`. A missing array, an empty array, or a non-number entry is a compile error |
 
 Bare `"base"` resolves across all current-tier effects (ambiguous if several share the key) — prefer scoped `index.param`.
 
@@ -564,6 +565,8 @@ Fact `target` = animal / mount / boat code.
 | `track-mark` | `range` | number |
 | | `focus` | number |
 | | `angle` | number |
+| `focus-shot` | `hold` | number |
+| | `amount` | number |
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
@@ -578,6 +581,8 @@ Fact `target` = animal / mount / boat code.
 `unaware-damage` / `amount`: outgoing damage multiplier (seed 1) when the victim's alert-meter threat is below `unaware-damage` / `threshold` (seed 0, percent).
 
 `track-mark` / `range`: meters (seed 0). `track-mark` / `focus`: seconds the animal closest to the cursor must stay there before it is marked (seed 0). A nearby animal does not replace it until that animal is clearly more centered. A gap shorter than 0.4s holds that progress; after that it drains at 2 seconds of progress per second away. `track-mark` / `angle`: the mark drops when the body is further than this many degrees from the look direction (seed 0). One mark. It remains through death while the body is still loaded, inside `range`, and within `angle`, and drops when the body is gone or another animal is marked.
+
+`focus-shot` / `hold`: seconds a bow must stay drawn (seed 0). `focus-shot` / `amount`: damage multiplier (seed 1) on that arrow when the draw lasts at least `hold` seconds. A shorter draw keeps the vanilla power. Thrown spears are unchanged.
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 

@@ -13,7 +13,14 @@ public static class TrackAim
 
     public const float StickyAdvantageDegrees = 3f;
 
-    public readonly record struct AimSample(long Id, float AngleDegrees, float SeparationDegrees);
+    /// <param name="AngleDegrees">How near the look passes the body. Above <see cref="ConeDegrees"/> is ignored.</param>
+    /// <param name="SeparationDegrees">Angle at the eye between this animal and the current candidate.</param>
+    /// <param name="CenterDegrees">Angle from the look to the body center. Smaller means the cursor is more on that animal.</param>
+    public readonly record struct AimSample(
+        long Id,
+        float AngleDegrees,
+        float SeparationDegrees,
+        float CenterDegrees);
 
     public static long? Select(long? heldId, ReadOnlySpan<AimSample> samples)
     {
@@ -26,10 +33,10 @@ public static class TrackAim
                 continue;
             }
 
-            bool closer = best < 0 || samples[i].AngleDegrees < samples[best].AngleDegrees;
+            bool closer = best < 0 || samples[i].CenterDegrees < samples[best].CenterDegrees;
             bool tiedWithHeld = heldId is long id
                 && samples[i].Id == id
-                && (best < 0 || samples[i].AngleDegrees <= samples[best].AngleDegrees);
+                && (best < 0 || samples[i].CenterDegrees <= samples[best].CenterDegrees);
             if (closer || tiedWithHeld)
             {
                 best = i;
@@ -55,7 +62,7 @@ public static class TrackAim
         float advantage = separation >= StickySeparationDegrees
             ? 0f
             : StickyAdvantageDegrees * (1f - (separation / StickySeparationDegrees));
-        if (samples[best].AngleDegrees + advantage <= samples[held].AngleDegrees)
+        if (samples[best].CenterDegrees + advantage <= samples[held].CenterDegrees)
         {
             return samples[best].Id;
         }

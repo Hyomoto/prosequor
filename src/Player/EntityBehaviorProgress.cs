@@ -74,7 +74,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             StringComparison.Ordinal);
 
     public float PlayerXpUntilNext =>
-        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
+        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel, PlayerLevelCap);
 
     public bool HasSkillAccess(string skillId) =>
         skillAccess.IsUnbound || skillAccess.Contains(skillId);
@@ -362,7 +362,11 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             return;
         }
 
-        state = ProgressStore.Load(player, registry, ProsequorModSystem.For(entity.Api)?.AttributeStats);
+        state = ProgressStore.Load(
+            player,
+            registry,
+            ProsequorModSystem.For(entity.Api)?.AttributeStats,
+            PlayerLevelCap);
         loaded = true;
         dirty = false;
         RefreshAllSkillCaps();
@@ -824,8 +828,9 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
     {
         level = state.PlayerLevel;
-        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level);
-        needForNext = XpCurves.XpToNextPlayerLevel(level);
+        int cap = PlayerLevelCap;
+        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level, cap);
+        needForNext = XpCurves.XpToNextPlayerLevel(level, cap);
         if (needForNext <= 0)
         {
             intoLevel = 1f;
@@ -906,6 +911,13 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 MarkPersistDirty();
                 return;
             }
+
+            toCommit = ServerLevelingConfig.ScaleEarned(toCommit, CurrentLeveling().XpScale);
+            if (toCommit <= 0f)
+            {
+                MarkPersistDirty();
+                return;
+            }
         }
         else if (mode == XpAwardMode.GrantAndFill)
         {
@@ -920,7 +932,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     {
         float playerXpBefore = state.PlayerXp;
         int playerLevelBefore = state.PlayerLevel;
-        float barFillBefore = LevelUpHudMath.PlayerBarFill(playerXpBefore, playerLevelBefore);
+        float barFillBefore = PlayerBarFill(playerXpBefore, playerLevelBefore);
         if (!TryApplyPlayerXp(amount, out int beforeLevel, out float applied, out IReadOnlyList<string> attributeGains))
         {
             MarkPersistDirty();
@@ -951,7 +963,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             playerLevelBefore: beforeLevel,
             playerLevelAfter: state.PlayerLevel,
             playerBarFillBefore: barFillBefore,
-            playerBarFillAfter: LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+            playerBarFillAfter: PlayerBarFill(state.PlayerXp, state.PlayerLevel),
             attributeGains: attributeGains);
     }
 
@@ -1028,7 +1040,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         float skillBeforeXp = skill.Xp;
         float playerXpBefore = state.PlayerXp;
         int playerLevelBeforeCommit = state.PlayerLevel;
-        float playerBarFillBefore = LevelUpHudMath.PlayerBarFill(playerXpBefore, playerLevelBeforeCommit);
+        float playerBarFillBefore = PlayerBarFill(playerXpBefore, playerLevelBeforeCommit);
         skill.Xp += amount;
         skill.Level = Math.Min(max, XpCurves.SkillLevelFromLifetimeXp(skill.Xp));
         float skillCapFloor = XpCurves.LifetimeXpForSkillLevel(max);
@@ -1061,7 +1073,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         IReadOnlyList<string> attributeGains = Array.Empty<string>();
         if (skillLeveled)
         {
-            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(skillBefore, skill.Level);
+            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(
+                skillBefore,
+                skill.Level,
+                CurrentLeveling().SkillLevelsPerPoint);
             if (milestonePoints > 0)
             {
                 state.UnlockPoints += milestonePoints;
@@ -1106,7 +1121,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 playerLevelBeforeCommit,
                 state.PlayerLevel,
                 playerBarFillBefore,
-                LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+                PlayerBarFill(state.PlayerXp, state.PlayerLevel),
                 attributeGains);
         }
     }
@@ -1121,15 +1136,16 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         beforeLevel = state.PlayerLevel;
         applied = 0f;
         attributeGains = Array.Empty<string>();
-        if (amount <= 0f || state.PlayerLevel >= XpCurves.PlayerMaxLevel)
+        int cap = PlayerLevelCap;
+        if (amount <= 0f || state.PlayerLevel >= cap)
         {
             return false;
         }
 
         float beforeXp = state.PlayerXp;
-        float capFloor = XpCurves.LifetimeXpForPlayerLevel(XpCurves.PlayerMaxLevel);
+        float capFloor = XpCurves.LifetimeXpForPlayerLevel(cap, cap);
         state.PlayerXp = Math.Min(capFloor, state.PlayerXp + amount);
-        state.PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(state.PlayerXp);
+        state.PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(state.PlayerXp, cap);
         int gained = state.PlayerLevel - beforeLevel;
         if (gained > 0)
         {
@@ -1170,11 +1186,12 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     public void SetPlayerLevel(int level)
     {
         EnsureServer();
-        level = Math.Clamp(level, XpCurves.PlayerMinLevel, XpCurves.PlayerMaxLevel);
+        int cap = PlayerLevelCap;
+        level = Math.Clamp(level, XpCurves.PlayerMinLevel, cap);
         int before = state.PlayerLevel;
-        float barFillBefore = LevelUpHudMath.PlayerBarFill(state.PlayerXp, before);
+        float barFillBefore = PlayerBarFill(state.PlayerXp, before);
         state.PlayerLevel = level;
-        state.PlayerXp = XpCurves.LifetimeXpForPlayerLevel(level);
+        state.PlayerXp = XpCurves.LifetimeXpForPlayerLevel(level, cap);
         int gained = level - before;
         IReadOnlyList<string> attributeGains = Array.Empty<string>();
         if (gained > 0)
@@ -1218,7 +1235,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             playerLevelBefore: before,
             playerLevelAfter: state.PlayerLevel,
             playerBarFillBefore: barFillBefore,
-            playerBarFillAfter: LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+            playerBarFillAfter: PlayerBarFill(state.PlayerXp, state.PlayerLevel),
             attributeGains: attributeGains);
     }
 
@@ -1303,14 +1320,17 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         level = Math.Clamp(level, XpCurves.SkillMinLevel, max);
         SkillProgressState skill = state.GetOrCreateSkill(skillId);
         int before = skill.Level;
-        float playerBarFill = LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel);
+        float playerBarFill = PlayerBarFill(state.PlayerXp, state.PlayerLevel);
         skill.Level = level;
         skill.Xp = XpCurves.LifetimeXpForSkillLevel(level);
         RefreshSkillCap(skillId);
         int milestonePoints = 0;
         if (level > before)
         {
-            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(before, level);
+            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(
+                before,
+                level,
+                CurrentLeveling().SkillLevelsPerPoint);
             if (milestonePoints > 0)
             {
                 state.UnlockPoints += milestonePoints;
@@ -1504,6 +1524,14 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
         throw new ArgumentException($"Unknown Prosequor skill '{skillId}'.", nameof(skillId));
     }
+
+    ServerLevelingConfig CurrentLeveling() =>
+        ProsequorModSystem.For(entity.Api)?.Leveling ?? ServerLevelingConfig.CreateDefault();
+
+    int PlayerLevelCap => CurrentLeveling().MaxPlayerLevel;
+
+    float PlayerBarFill(float lifetimeXp, int level) =>
+        LevelUpHudMath.PlayerBarFill(lifetimeXp, level, PlayerLevelCap);
 
     int ResolveSkillMaxLevel(string skillId)
     {
