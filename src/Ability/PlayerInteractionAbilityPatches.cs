@@ -127,7 +127,7 @@ public static class PlayerInteractionAbilityPatches
         TakeDamageStation.Run(__instance, damageSource, ref damage);
 
     /// <summary>
-    /// Before damage behaviors run: Inconspicuity crit ×2 on player weapon hits
+    /// Before damage behaviors run: Inconspicuity crit on player weapon hits
     /// (after melee/ranged Entity.Stats multipliers already applied at the attack site),
     /// then Heartseeker unaware damage.
     /// </summary>

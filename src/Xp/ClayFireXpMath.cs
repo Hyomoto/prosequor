@@ -14,7 +14,6 @@ public static class ClayFireXpMath
     public const string TokenKilnFired = DeedTokenTags.KilnFired;
     public const string TokenPitKiln = DeedTokenTags.PitKiln;
     public const string TokenBeehiveKiln = DeedTokenTags.BeehiveKiln;
-    public const string SkillId = "clayforming";
 
     /// <summary>Deed tokens for kiln settle.</summary>
     public static List<string> BuildTokens() => [TokenKilnFired];

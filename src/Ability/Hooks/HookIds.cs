@@ -53,8 +53,6 @@ public static class HookIds
     public static readonly PhaseId Default = new("default");
     public static readonly PhaseId Quantity = new("quantity");
     public static readonly PhaseId Output = new("output");
-    /// <summary>Legacy list-pre phase id; mutate-drops no longer registers it.</summary>
-    public static readonly PhaseId DropList = new("drops");
     /// <summary>Per-stack ItemStack fold under mutate-drops (after quantity).</summary>
     public static readonly PhaseId Stack = new("stack");
     public static readonly PhaseId Stacks = new("stacks");
@@ -83,11 +81,6 @@ public static class HookIds
     public static readonly PhaseId MeleeDamage = new("melee-damage");
     public static readonly PhaseId TurnSpeed = new("turn-speed");
     public static readonly PhaseId RatlineStamina = new("ratline-stamina");
-    /// <summary>
-    /// Response-rate fold under animal-flee / animal-seek (seed = vanilla ExecutionChance).
-    /// Distinct from <see cref="HookIds.Chance"/> so husbandry flee-reduction can keep seed 0.
-    /// </summary>
-    public static readonly PhaseId Response = new("response");
     public static readonly PhaseId Chance = new("chance");
     public static readonly PhaseId Multiplier = new("multiplier");
     public static readonly PhaseId AddDurability = new("add-durability");
@@ -223,6 +216,8 @@ public static class VerbIds
     /// <summary>Bow draw damage fold (hold / amount phases).</summary>
     public static readonly VerbId FocusShot = new("prosequor:focus-shot");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
+    /// <summary>Outgoing crit damage multiplier (seed 2).</summary>
+    public static readonly VerbId CritDamage = new("prosequor:crit-damage");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
     /// <summary>Signed damage vs mechanicals percent (vanilla <c>mechanicalsDamage</c>).</summary>

@@ -14,18 +14,9 @@ public class FishingCatchXpAdapter
 
     readonly ICoreServerAPI sapi;
 
-    public FishingCatchXpAdapter(ICoreServerAPI sapi, XpActionDispatcher dispatcher)
+    public FishingCatchXpAdapter(ICoreServerAPI sapi)
     {
         this.sapi = sapi;
-        _ = dispatcher;
-    }
-
-    public void Start()
-    {
-    }
-
-    public void Dispose()
-    {
     }
 
     public void NotifyCatch(IPlayer byPlayer, ItemStack caught)

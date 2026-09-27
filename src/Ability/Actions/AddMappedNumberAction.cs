@@ -8,7 +8,7 @@ namespace Prosequor.Ability.Actions;
 /// Preferred params: <c>from</c> (score pair) + <c>to</c> (value list ≥ 2); optional
 /// <c>curve</c> <c>linear</c> (default) or <c>ease</c> (<c>bezier</c> accepted as ease).
 /// Legacy: <c>fromScore</c>/<c>fromValue</c>/<c>toScore</c>/<c>toValue</c> (+ optional mid hinge).
-/// <c>op</c>: <c>add</c> (default) or <c>scale</c>. Optional <c>round</c>.
+/// <c>op</c>: <c>add</c> (default) or <c>multiply</c> (<c>value * mapped</c>). Optional <c>round</c>.
 /// </summary>
 public sealed class MappedNumberParams
 {
@@ -45,9 +45,9 @@ public sealed class MappedNumberParams
         }
 
         string op = (raw.Value<string>("op") ?? "add").Trim().ToLowerInvariant();
-        if (op is not ("add" or "scale"))
+        if (op is not ("add" or "multiply"))
         {
-            error = "op must be 'add' or 'scale' (or omit for add).";
+            error = "op must be 'add' or 'multiply' (or omit for add).";
             return false;
         }
 
@@ -318,12 +318,12 @@ public sealed class MappedNumberParams
     public float ApplyTo(float value, int score)
     {
         float mapped = Evaluate(score);
-        return Op == "scale" ? value * mapped : value + mapped;
+        return Op == "multiply" ? value * mapped : value + mapped;
     }
 
     public int ApplyTo(int value, int score)
     {
-        if (Op == "scale")
+        if (Op == "multiply")
         {
             return (int)(value * Evaluate(score));
         }
@@ -448,38 +448,6 @@ public sealed class AddMappedNumberOnDamageAction
 
     protected override float Apply(
         TakeDamageContext context,
-        float value,
-        MappedNumberParams parameters,
-        AbilityRuleSource source)
-    {
-        if (string.IsNullOrWhiteSpace(source.AttributeId))
-        {
-            return value;
-        }
-
-        int score = context.Progress?.GetAttribute(source.AttributeId) ?? 0;
-        return parameters.ApplyTo(value, score);
-    }
-}
-
-/// <summary>Mapped number on animal-flee|seek / response (Inconspicuity).</summary>
-public sealed class AddMappedNumberAnimalResponseAction
-    : AbilityActionHandler<AnimalBehaviorContext, float, MappedNumberParams>
-{
-    readonly VerbId verb;
-
-    public AddMappedNumberAnimalResponseAction(VerbId verb) => this.verb = verb;
-
-    public override ActionId Id => ActionIds.AddMappedNumber;
-    public override HookId Hook => HookIds.EntityInteraction;
-    public override VerbId Verb => verb;
-    public override PhaseId Phase => HookIds.Response;
-
-    protected override bool TryParse(JObject? raw, out MappedNumberParams? parameters, out string error) =>
-        MappedNumberParams.TryParse(raw, out parameters, out error);
-
-    protected override float Apply(
-        AnimalBehaviorContext context,
         float value,
         MappedNumberParams parameters,
         AbilityRuleSource source)

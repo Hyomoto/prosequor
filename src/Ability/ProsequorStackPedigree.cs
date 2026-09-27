@@ -1033,8 +1033,8 @@ public static class ProsequorStackPedigree
     /// <summary>
     /// Pedigree must not block vanilla stack merges or recipe equality. Cooking matches
     /// exact stacks with <see cref="GlobalConstants.IgnoredStackAttributes"/>, so a Grown By
-    /// lang key on harvested fennel would otherwise reject the stack.
-    /// Appends Live/Frozen, craft surface trees, and that lang key once.
+    /// lang key or a collect-XP bool on harvested fennel would otherwise reject the stack.
+    /// Appends Live/Frozen, craft surface trees, that lang key, and the collect-XP bool once.
     /// </summary>
     public static void EnsurePedigreeIgnoredForMerge()
     {
@@ -1043,7 +1043,8 @@ public static class ProsequorStackPedigree
             FrozenAttr,
             ItemAffixes.TreeAttr,
             CraftAttributeMods.TreeAttr,
-            OwnerCredit.CreditLangAttr);
+            OwnerCredit.CreditLangAttr,
+            CollectXpStamp.AttrKey);
     }
 
     static void AppendIgnoredStackAttributes(params string[] keys)

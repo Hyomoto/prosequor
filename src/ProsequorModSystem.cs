@@ -44,7 +44,6 @@ public class ProsequorModSystem : ModSystem
     public AttributeEffectService? AttributeEffects { get; private set; }
     public ProgressEventBus ProgressEvents { get; } = new();
     public XpRuleRegistry XpRules { get; } = new();
-    public ActivityWrapperRegistry ActivityWrappers { get; } = new();
     public HookRegistry Hooks { get; } = new();
     public AbilityActionRegistry Actions { get; }
     public CollectionRegistry Collections { get; } = new();
@@ -52,7 +51,6 @@ public class ProsequorModSystem : ModSystem
     public OutputPoolRegistry OutputPools { get; } = new();
     public AffixListRegistry AffixLists { get; } = new();
     public AbilityPipeline? Pipeline { get; private set; }
-    public XpActionDispatcher? XpDispatcher { get; private set; }
     public CraftXpAdapter? CraftXp { get; private set; }
     public ClayFormXpAdapter? ClayFormXp { get; private set; }
     public ActivityWatchService? ActivityWatch { get; private set; }
@@ -255,16 +253,11 @@ public class ProsequorModSystem : ModSystem
         Leveling = ServerLevelingConfig.Load(api);
         Leveling.ApplyTo(LevelUps, msg => api.Logger.Warning(msg));
         Network.StartServer(api);
-        XpDispatcher = new XpActionDispatcher(api, XpRules);
-        blockBreakXpAdapter = new BlockBreakXpAdapter(api, XpDispatcher);
-        blockBreakXpAdapter.Start();
-        fishingCatchXpAdapter = new FishingCatchXpAdapter(api, XpDispatcher);
-        fishingCatchXpAdapter.Start();
-        craftXpAdapter = new CraftXpAdapter(api, XpDispatcher);
-        craftXpAdapter.Start();
+        blockBreakXpAdapter = new BlockBreakXpAdapter(api);
+        fishingCatchXpAdapter = new FishingCatchXpAdapter(api);
+        craftXpAdapter = new CraftXpAdapter(api);
         CraftXp = craftXpAdapter;
-        clayFormXpAdapter = new ClayFormXpAdapter(api, XpDispatcher);
-        clayFormXpAdapter.Start();
+        clayFormXpAdapter = new ClayFormXpAdapter(api);
         ClayFormXp = clayFormXpAdapter;
 
         Effort.RegisterPoll(Effort.PollIdMount, EffortMountEmitter.TryPoll);
@@ -361,7 +354,7 @@ public class ProsequorModSystem : ModSystem
         api.Event.PlayerJoin += OnPlayerJoin;
         api.Event.PlayerNowPlaying += OnPlayerNowPlaying;
         api.Event.PlayerDisconnect += OnPlayerDisconnect;
-        ActivityWatch = new ActivityWatchService(api, ActivityWrappers, XpRules);
+        ActivityWatch = new ActivityWatchService(api, XpRules);
         // Host (and anyone already spawned) inited before this listener existed.
         foreach (IServerPlayer player in api.World.AllOnlinePlayers.OfType<IServerPlayer>())
         {
@@ -492,18 +485,13 @@ public class ProsequorModSystem : ModSystem
             Effort.UnregisterPoll(Effort.PollIdTemporalDrain);
         }
 
-        blockBreakXpAdapter?.Dispose();
         blockBreakXpAdapter = null;
-        fishingCatchXpAdapter?.Dispose();
         fishingCatchXpAdapter = null;
-        craftXpAdapter?.Dispose();
         craftXpAdapter = null;
         CraftXp = null;
-        clayFormXpAdapter?.Dispose();
         clayFormXpAdapter = null;
         ClayFormXp = null;
         ActivityWatch = null;
-        XpDispatcher = null;
         Pipeline = null;
 
         catEyes?.Dispose();
@@ -611,7 +599,8 @@ public class ProsequorModSystem : ModSystem
             Registry,
             Pipeline?.RuleIndex,
             TraitAttributes.BaseSkillSet,
-            AttributeStats);
+            AttributeStats,
+            TraitAttributes);
         if (loaded > 0)
         {
             sapi.Logger.Notification("[{0}] Parked progress for {1} player(s).", ModId, loaded);
@@ -663,7 +652,12 @@ public class ProsequorModSystem : ModSystem
         ActivityWatch?.ForgetPlayer(byPlayer.PlayerUID);
         EntityBehaviorProgress? progress = TryGetLiveProgress(byPlayer);
         progress?.FlushSave();
-        ProgressPark?.ParkLive(byPlayer.PlayerUID, progress, Pipeline?.RuleIndex, Registry);
+        ProgressPark?.ParkLive(
+            byPlayer.PlayerUID,
+            progress,
+            Pipeline?.RuleIndex,
+            Registry,
+            TraitAttributes);
     }
 
     /// <summary>
@@ -722,12 +716,6 @@ public class ProsequorModSystem : ModSystem
             }
         }
     }
-
-    /// <summary>Register a thin activity wrapper (other mods). Last register for the same id wins.
-    /// Deprecated for rate XP — prefer <see cref="RegisterEffortPoll"/> or <see cref="EmitEffort"/>.
-    /// </summary>
-    public void RegisterActivityWrapper(IActivityWrapper wrapper) =>
-        ActivityWrappers.Register(wrapper);
 
     /// <summary>
     /// Register a watcher poll for continuous <c>prosequor:effort</c> when there is no natural

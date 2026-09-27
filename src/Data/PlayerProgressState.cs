@@ -140,6 +140,12 @@ public class PlayerProgressState
     /// </summary>
     public Dictionary<string, float> AttributeBuckets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Character class code from the entity. Absent means the default attribute baseline.</summary>
+    public string? CharacterClass { get; set; }
+
+    /// <summary>Extra trait codes from the entity, applied on top of <see cref="CharacterClass"/>.</summary>
+    public string[]? ExtraTraits { get; set; }
+
     public static PlayerProgressState CreateNew(
         ISkillRegistry registry,
         IAttributeStatRegistry? stats = null)

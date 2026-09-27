@@ -100,7 +100,7 @@ public class NumericActionTests
 
     [Fact]
     [Trait("Layer", "Action")]
-    public void AddMappedNumberOnDamage_Scale_MultipliesByMappedFraction()
+    public void AddMappedNumberOnDamage_Multiply_MultipliesByMappedFraction()
     {
         var progress = new ActionTestProgress();
         progress.SetAttribute(AttrId, 10);
@@ -115,7 +115,7 @@ public class NumericActionTests
         };
         var parameters = new MappedNumberParams
         {
-            Op = "scale",
+            Op = "multiply",
             FromScore = 0,
             FromValue = 1.0f,
             ToScore = 20,

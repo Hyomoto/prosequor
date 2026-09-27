@@ -27,7 +27,7 @@
         ]
       },
       "params": {
-        "op": "scale",
+        "op": "multiply",
         "from": [0, 18],
         "to": [2.5, 0.5]
       }
