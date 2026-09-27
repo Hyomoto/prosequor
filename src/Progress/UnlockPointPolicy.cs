@@ -11,15 +11,15 @@ public static class UnlockPointPolicy
     /// <summary>
     /// Unlock points granted when a skill rises from <paramref name="before"/> to
     /// <paramref name="after"/>. Counts each crossed multiple of
-    /// <see cref="SkillLevelsPerPoint"/> (e.g. 0→40 with interval 20 awards 2).
+    /// <paramref name="levelsPerPoint"/> (e.g. 0→40 with interval 20 awards 2).
     /// </summary>
-    public static int PointsForSkillLevelGain(int before, int after)
+    public static int PointsForSkillLevelGain(int before, int after, int levelsPerPoint = SkillLevelsPerPoint)
     {
-        if (after <= before || SkillLevelsPerPoint <= 0)
+        if (after <= before || levelsPerPoint <= 0)
         {
             return 0;
         }
 
-        return after / SkillLevelsPerPoint - before / SkillLevelsPerPoint;
+        return after / levelsPerPoint - before / levelsPerPoint;
     }
 }

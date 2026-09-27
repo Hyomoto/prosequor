@@ -17,6 +17,51 @@
           "Step": 1
         }
       ]
+    },
+    {
+      "ConfigFile": "prosequor/server.json",
+      "ConfigLabel": "prosequor:imm-leveling-label",
+      "Description": "prosequor:imm-leveling-desc",
+      "ConfigSource": "ModConfig",
+      "ConfigSide": "Server",
+      "Settings": [
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-skill-levels-per-point",
+          "Description": "prosequor:imm-skill-levels-per-point-desc",
+          "Map": "SkillLevelsPerPoint",
+          "Min": 0,
+          "Max": 1000,
+          "Step": 1
+        },
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-skill-point-every",
+          "Description": "prosequor:imm-skill-point-every-desc",
+          "Map": "SkillPointEvery",
+          "Min": 1,
+          "Max": 1000,
+          "Step": 1
+        },
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-max-player-level",
+          "Description": "prosequor:imm-max-player-level-desc",
+          "Map": "MaxPlayerLevel",
+          "Min": 1,
+          "Max": 1000,
+          "Step": 1
+        },
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-xp-scale",
+          "Description": "prosequor:imm-xp-scale-desc",
+          "Map": "XpScale",
+          "Min": 0,
+          "Max": 1000,
+          "Step": 0.1
+        }
+      ]
     }
   ]
 }

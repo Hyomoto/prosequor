@@ -55,6 +55,10 @@
         "cost": 1,
         "minSkillLevel": 1,
         "descriptionLang": "unlockdesc-medicine-herbal-remedies",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -76,7 +80,6 @@
           },
           {
             "minSkillLevel": 20,
-            "descriptionLang": "unlockdesc-medicine-herbal-remedies-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -86,7 +89,6 @@
           },
           {
             "minSkillLevel": 30,
-            "descriptionLang": "unlockdesc-medicine-herbal-remedies-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -103,6 +105,10 @@
         "cost": 1,
         "minSkillLevel": 10,
         "descriptionLang": "unlockdesc-medicine-chirurgeon",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "requires": [ "first-aid" ],
         "layout": { "layerOffset": 0 },
         "tiers": [
@@ -126,7 +132,6 @@
           },
           {
             "minSkillLevel": 30,
-            "descriptionLang": "unlockdesc-medicine-chirurgeon-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -136,7 +141,6 @@
           },
           {
             "minSkillLevel": 40,
-            "descriptionLang": "unlockdesc-medicine-chirurgeon-t3",
             "effects": [
               {
                 "replicate": 0,

@@ -246,9 +246,9 @@ public class PlayerProgressState
     }
 
     /// <summary>XP is truth; recompute cached levels from lifetime XP.</summary>
-    public void ReconcileLevelsFromXp()
+    public void ReconcileLevelsFromXp(int maxPlayerLevel = XpCurves.PlayerMaxLevel)
     {
-        PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(PlayerXp);
+        PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(PlayerXp, maxPlayerLevel);
         foreach (KeyValuePair<string, SkillProgressState> kv in Skills)
         {
             kv.Value.Level = XpCurves.SkillLevelFromLifetimeXp(kv.Value.Xp);

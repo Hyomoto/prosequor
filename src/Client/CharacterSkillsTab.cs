@@ -744,6 +744,9 @@ public class CharacterSkillsTab
     /// to recompose. Deferred by a frame because click handlers run while the composer iterates its
     /// elements, and recomposing disposes them.
     /// </summary>
+    /// <summary>Refresh an open tree after the server leveling packet updates slot capacity.</summary>
+    public void RefreshAfterLevelingSync() => RequestRecompose();
+
     void RequestRecompose()
     {
         if (recomposePending)

@@ -16,6 +16,8 @@ public sealed class ProgressPark
 
     public int Count => parked.Count;
 
+    public int MaxPlayerLevel { get; set; } = XpCurves.PlayerMaxLevel;
+
     public bool TryGet(string? playerUid, out ParkedPlayerProgress progress)
     {
         progress = null!;
@@ -58,7 +60,8 @@ public sealed class ProgressPark
             behavior.State,
             ruleIndex,
             registry,
-            CloneAccess(behavior.SkillAccess));
+            CloneAccess(behavior.SkillAccess),
+            MaxPlayerLevel);
     }
 
     public void ParkStored(
@@ -73,7 +76,12 @@ public sealed class ProgressPark
             return;
         }
 
-        parked[playerUid.Trim()] = new ParkedPlayerProgress(state, ruleIndex, registry, skillAccess);
+        parked[playerUid.Trim()] = new ParkedPlayerProgress(
+            state,
+            ruleIndex,
+            registry,
+            skillAccess,
+            MaxPlayerLevel);
     }
 
     static SkillAccess CloneAccess(SkillAccess source)
@@ -116,7 +124,8 @@ public sealed class ProgressPark
                     ProgressStore.ReadModData(player),
                     registry,
                     out PlayerProgressState state,
-                    stats))
+                    stats,
+                    MaxPlayerLevel))
             {
                 continue;
             }

@@ -26,6 +26,7 @@ public static class TrackMarkFixtures
         VerifyNeighborThreeDegreesCloserSwitches();
         VerifySeparatedAnimalSwitches();
         VerifyOutsideConeIgnored();
+        VerifyCenteredAnimalBeatsNearClip();
     }
 
     static void VerifyFocusMarks()
@@ -191,8 +192,8 @@ public static class TrackMarkFixtures
     {
         TrackAim.AimSample[] samples =
         [
-            new(1, 2f, 0f),
-            new(2, 1f, 0f),
+            new(1, 2f, 0f, 2f),
+            new(2, 1f, 0f, 1f),
         ];
         if (TrackAim.Select(heldId: 1, samples) != 1)
         {
@@ -204,8 +205,8 @@ public static class TrackMarkFixtures
     {
         TrackAim.AimSample[] samples =
         [
-            new(1, 4f, 0f),
-            new(2, 1f, 0f),
+            new(1, 4f, 0f, 4f),
+            new(2, 1f, 0f, 1f),
         ];
         if (TrackAim.Select(heldId: 1, samples) != 2)
         {
@@ -217,8 +218,8 @@ public static class TrackMarkFixtures
     {
         TrackAim.AimSample[] samples =
         [
-            new(1, 3f, 0f),
-            new(2, 1f, 20f),
+            new(1, 3f, 0f, 3f),
+            new(2, 1f, 20f, 1f),
         ];
         if (TrackAim.Select(heldId: 1, samples) != 2)
         {
@@ -228,7 +229,7 @@ public static class TrackMarkFixtures
 
     static void VerifyOutsideConeIgnored()
     {
-        TrackAim.AimSample[] outside = [new(1, 5f, 0f)];
+        TrackAim.AimSample[] outside = [new(1, 5f, 0f, 5f)];
         if (TrackAim.Select(heldId: null, outside) != null)
         {
             Assert.Fail("[prosequor] An animal outside the 4° cone should be ignored.");
@@ -236,12 +237,25 @@ public static class TrackMarkFixtures
 
         TrackAim.AimSample[] mixed =
         [
-            new(1, 2f, 0f),
-            new(2, 4.5f, 1f),
+            new(1, 2f, 0f, 2f),
+            new(2, 4.5f, 1f, 1f),
         ];
         if (TrackAim.Select(heldId: null, mixed) != 1)
         {
             Assert.Fail("[prosequor] An animal outside the 4° cone should lose to one inside it.");
+        }
+    }
+
+    static void VerifyCenteredAnimalBeatsNearClip()
+    {
+        TrackAim.AimSample[] samples =
+        [
+            new(1, 0f, 0f, 6f),
+            new(2, 0f, 12f, 1f),
+        ];
+        if (TrackAim.Select(heldId: 1, samples) != 2)
+        {
+            Assert.Fail("[prosequor] An animal under the cursor should beat a nearer one the look only clips.");
         }
     }
 

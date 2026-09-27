@@ -107,6 +107,14 @@ public static class PlayerInteractionStation
     public static float ResolveTrackLoseAngle(IPlayer player) =>
         Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Angle, seed: 0f));
 
+    /// <summary>Seconds a bow must stay drawn before Focus Shot scales that shot (seed 0).</summary>
+    public static float ResolveFocusShotHoldSeconds(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.FocusShot, HookIds.Hold, seed: 0f));
+
+    /// <summary>Focus Shot damage multiplier (seed 1) once the draw meets the hold.</summary>
+    public static float ResolveFocusShotDamageFactor(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.FocusShot, HookIds.Amount, seed: 1f));
+
     /// <summary>
     /// Which on-foot locomotion bonus applies. Liquid wins over sprint/sneak.
     /// Sprint and sneak are exclusive (both held → neither). Mounted is never a foot mode.

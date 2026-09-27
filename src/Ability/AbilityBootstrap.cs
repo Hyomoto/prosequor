@@ -615,6 +615,18 @@ public static class AbilityBootstrap
             HookIds.Angle,
             typeof(PlayerInteractionContext),
             typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.FocusShot,
+            HookIds.Hold,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.FocusShot,
+            HookIds.Amount,
+            typeof(PlayerInteractionContext),
+            typeof(float));
 
         hooks.RegisterPhase(
             HookIds.PlayerInteraction,
@@ -850,6 +862,8 @@ public static class AbilityBootstrap
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Range));
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Focus));
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Angle));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.FocusShot, HookIds.Hold));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.FocusShot, HookIds.Amount));
 
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
         actions.Register(new AddMappedNumberInteractionSpeedAction());

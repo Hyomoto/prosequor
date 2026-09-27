@@ -65,6 +65,7 @@ public class ProsequorModSystem : ModSystem
     public CropLifetimeCatalog? CropLifetime { get; private set; }
     public ProgressNetwork Network { get; } = new();
     public ContentFingerprint? Fingerprint { get; private set; }
+    public ServerLevelingConfig Leveling { get; private set; } = ServerLevelingConfig.CreateDefault();
 
     // Patches are process-wide, so client and server share one set and the last side out removes it.
     static readonly object patchLock = new();
@@ -85,6 +86,7 @@ public class ProsequorModSystem : ModSystem
     Action<LevelUpHudPacket>? levelUpHudHandler;
     Action? skillWaitingDumpHandler;
     Action<ContentFingerprintMismatchPacket>? contentMismatchHandler;
+    Action<LevelingSettingsPacket>? levelingSettingsHandler;
     BlockBreakXpAdapter? blockBreakXpAdapter;
     FishingCatchXpAdapter? fishingCatchXpAdapter;
     CraftXpAdapter? craftXpAdapter;
@@ -250,6 +252,8 @@ public class ProsequorModSystem : ModSystem
     public override void StartServerSide(ICoreServerAPI api)
     {
         sapi = api;
+        Leveling = ServerLevelingConfig.Load(api);
+        Leveling.ApplyTo(LevelUps, msg => api.Logger.Warning(msg));
         Network.StartServer(api);
         XpDispatcher = new XpActionDispatcher(api, XpRules);
         blockBreakXpAdapter = new BlockBreakXpAdapter(api, XpDispatcher);
@@ -350,7 +354,7 @@ public class ProsequorModSystem : ModSystem
         CraftMutateOutputStation.RegisterServer(api);
         FatherXp = new FatherXp(api, Registry);
         FatherXp.Load();
-        ProgressPark = new ProgressPark();
+        ProgressPark = new ProgressPark { MaxPlayerLevel = Leveling.MaxPlayerLevel };
         TryPreloadProgressPark();
         api.Event.SaveGameLoaded += OnSaveGameLoaded;
         api.Event.GameWorldSave += OnFatherXpWorldSave;
@@ -365,6 +369,8 @@ public class ProsequorModSystem : ModSystem
             {
                 AdmitInitialized(player, progress);
             }
+
+            PushLeveling(player);
         }
 
         activityWatchListenerId = api.Event.RegisterGameTickListener(
@@ -418,6 +424,8 @@ public class ProsequorModSystem : ModSystem
 
         contentMismatchHandler = OnContentMismatch;
         Network.ContentMismatchReceived += contentMismatchHandler;
+        levelingSettingsHandler = OnLevelingSettings;
+        Network.LevelingSettingsReceived += levelingSettingsHandler;
 
         api.ChatCommands
             .GetOrCreate("prosequor")
@@ -525,6 +533,12 @@ public class ProsequorModSystem : ModSystem
             contentMismatchHandler = null;
         }
 
+        if (levelingSettingsHandler != null)
+        {
+            Network.LevelingSettingsReceived -= levelingSettingsHandler;
+            levelingSettingsHandler = null;
+        }
+
         Network.Stop();
 
         if (levelUpHudElement != null)
@@ -625,6 +639,23 @@ public class ProsequorModSystem : ModSystem
         {
             AdmitInitialized(byPlayer, progress);
         }
+
+        PushLeveling(byPlayer);
+    }
+
+    void PushLeveling(IServerPlayer player)
+    {
+        Network.SendLevelingSettings(
+            player,
+            Leveling.MaxPlayerLevel,
+            Leveling.SpecializationPointLevels);
+    }
+
+    void OnLevelingSettings(LevelingSettingsPacket packet)
+    {
+        Leveling = Leveling.WithClientSync(packet.MaxPlayerLevel, packet.SpecializationPointLevels);
+        Leveling.ApplyTo(LevelUps, warn: null, specializationOnly: true);
+        skillsTab?.RefreshAfterLevelingSync();
     }
 
     void OnPlayerDisconnect(IServerPlayer byPlayer)

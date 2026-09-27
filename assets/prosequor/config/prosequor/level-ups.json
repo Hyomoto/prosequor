@@ -7,7 +7,7 @@
     },
     {
       "id": "prosequor:earn-specialization-point",
-      "every": 10,
+      "levels": [10, 20, 30, 40, 50],
       "action": "prosequor:earn-specialization-point"
     },
     {

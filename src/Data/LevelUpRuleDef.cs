@@ -46,4 +46,18 @@ public sealed class LevelUpRuleDef
 
         return Levels != null && Levels.Contains(reachedLevel);
     }
+
+    /// <summary>Copy with a replaced schedule. Set <paramref name="every"/> or <paramref name="levels"/>, not both.</summary>
+    public LevelUpRuleDef WithSchedule(int? every, IReadOnlySet<int>? levels) =>
+        new()
+        {
+            Id = Id,
+            Every = every,
+            Levels = levels,
+            Action = Action,
+            Value = Value,
+            AttributeKey = AttributeKey,
+            Priority = Priority,
+            SourceOrder = SourceOrder
+        };
 }

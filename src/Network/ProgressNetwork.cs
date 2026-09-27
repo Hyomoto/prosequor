@@ -29,6 +29,7 @@ public class ProgressNetwork
     public event Action<ContentFingerprintMismatchPacket>? ContentMismatchReceived;
     public event Action<ProgressSnapshotPacket>? ProgressSnapshotReceived;
     public event Action<ProgressDeltaPacket>? ProgressDeltaReceived;
+    public event Action<LevelingSettingsPacket>? LevelingSettingsReceived;
 
     public void StartServer(ICoreServerAPI api)
     {
@@ -45,6 +46,7 @@ public class ProgressNetwork
             .RegisterMessageType<ProgressSnapshotPacket>()
             .RegisterMessageType<ProgressDeltaPacket>()
             .RegisterMessageType<ProgressResyncRequestPacket>()
+            .RegisterMessageType<LevelingSettingsPacket>()
             .SetMessageHandler<UnlockNodeRequestPacket>(OnUnlockRequest)
             .SetMessageHandler<SkillWaitingHudStatusPacket>(OnSkillWaitingStatusFromClient)
             .SetMessageHandler<ContentFingerprintPacket>(OnFingerprintFromClient)
@@ -66,7 +68,9 @@ public class ProgressNetwork
             .RegisterMessageType<ProgressSnapshotPacket>()
             .RegisterMessageType<ProgressDeltaPacket>()
             .RegisterMessageType<ProgressResyncRequestPacket>()
+            .RegisterMessageType<LevelingSettingsPacket>()
             .SetMessageHandler<UnlockNodeResultPacket>(OnUnlockResult)
+            .SetMessageHandler<LevelingSettingsPacket>(OnLevelingSettings)
             .SetMessageHandler<LevelUpHudPacket>(OnLevelUpHud)
             .SetMessageHandler<SkillWaitingHudDumpRequestPacket>(_ => SkillWaitingDumpRequested?.Invoke())
             .SetMessageHandler<ContentFingerprintMismatchPacket>(OnContentMismatch)
@@ -98,6 +102,15 @@ public class ProgressNetwork
     public void SendProgressDelta(IServerPlayer player, ProgressDeltaPacket packet)
     {
         serverChannel?.SendPacket(packet, player);
+    }
+
+    public void SendLevelingSettings(IServerPlayer player, int maxPlayerLevel, int[] specializationPointLevels)
+    {
+        serverChannel?.SendPacket(new LevelingSettingsPacket
+        {
+            MaxPlayerLevel = maxPlayerLevel,
+            SpecializationPointLevels = specializationPointLevels ?? Array.Empty<int>()
+        }, player);
     }
 
     /// <summary>Asks the player's client to print skill-waiting HUD status to chat.</summary>
@@ -246,6 +259,11 @@ public class ProgressNetwork
     void OnLevelUpHud(LevelUpHudPacket packet)
     {
         LevelUpHudReceived?.Invoke(packet);
+    }
+
+    void OnLevelingSettings(LevelingSettingsPacket packet)
+    {
+        LevelingSettingsReceived?.Invoke(packet);
     }
 
     void OnProgressSnapshot(ProgressSnapshotPacket packet)

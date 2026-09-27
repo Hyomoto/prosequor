@@ -75,6 +75,10 @@
         "cost": 1,
         "minSkillLevel": 1,
         "descriptionLang": "unlockdesc-hunting-campfire-cooking",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -96,7 +100,6 @@
           },
           {
             "minSkillLevel": 10,
-            "descriptionLang": "unlockdesc-hunting-campfire-cooking-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -106,7 +109,6 @@
           },
           {
             "minSkillLevel": 20,
-            "descriptionLang": "unlockdesc-hunting-campfire-cooking-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -123,6 +125,9 @@
         "cost": 1,
         "minSkillLevel": 1,
         "descriptionLang": "unlockdesc-hunting-stalker",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -136,7 +141,6 @@
           },
           {
             "minSkillLevel": 10,
-            "descriptionLang": "unlockdesc-hunting-stalker-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -146,7 +150,6 @@
           },
           {
             "minSkillLevel": 30,
-            "descriptionLang": "unlockdesc-hunting-stalker-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -163,6 +166,9 @@
         "cost": 1,
         "minSkillLevel": 1,
         "descriptionLang": "unlockdesc-hunting-nice-shot",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -176,7 +182,6 @@
           },
           {
             "minSkillLevel": 15,
-            "descriptionLang": "unlockdesc-hunting-nice-shot-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -186,7 +191,6 @@
           },
           {
             "minSkillLevel": 25,
-            "descriptionLang": "unlockdesc-hunting-nice-shot-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -203,6 +207,10 @@
         "cost": 1,
         "minSkillLevel": 10,
         "descriptionLang": "unlockdesc-hunting-fletcher",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -224,7 +232,6 @@
           },
           {
             "minSkillLevel": 20,
-            "descriptionLang": "unlockdesc-hunting-fletcher-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -234,7 +241,6 @@
           },
           {
             "minSkillLevel": 30,
-            "descriptionLang": "unlockdesc-hunting-fletcher-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -275,7 +281,6 @@
           },
           {
             "minSkillLevel": 40,
-            "descriptionLang": "unlockdesc-hunting-skilled-skinning-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -329,6 +334,10 @@
         "cost": 1,
         "minSkillLevel": 20,
         "descriptionLang": "unlockdesc-hunting-bowyer",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -350,7 +359,6 @@
           },
           {
             "minSkillLevel": 45,
-            "descriptionLang": "unlockdesc-hunting-bowyer-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -360,7 +368,6 @@
           },
           {
             "minSkillLevel": 60,
-            "descriptionLang": "unlockdesc-hunting-bowyer-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -404,7 +411,6 @@
           },
           {
             "minSkillLevel": 50,
-            "descriptionLang": "unlockdesc-hunting-heartseeker-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -418,7 +424,6 @@
           },
           {
             "minSkillLevel": 70,
-            "descriptionLang": "unlockdesc-hunting-heartseeker-t3",
             "effects": [
               {
                 "replicate": 0,
@@ -461,7 +466,7 @@
                 "verb": "prosequor:track-mark",
                 "phase": "focus",
                 "action": "prosequor:number",
-                "params": { "op": "add", "value": 3 }
+                "params": { "op": "add", "value": 5 }
               },
               {
                 "hook": "prosequor:player-interaction",
@@ -474,19 +479,17 @@
           },
           {
             "minSkillLevel": 50,
-            "descriptionLang": "unlockdesc-hunting-tracker-t2",
             "effects": [
-              { "replicate": 0 },
-              { "replicate": 1 },
+              { "replicate": 0, "params": { "value": 40 } },
+              { "replicate": 1, "params": { "value": 4 } },
               { "replicate": 2 }
             ]
           },
           {
             "minSkillLevel": 70,
-            "descriptionLang": "unlockdesc-hunting-tracker-t3",
             "effects": [
               { "replicate": 0, "params": { "value": 50 } },
-              { "replicate": 1 },
+              { "replicate": 1, "params": { "value": 3 } },
               { "replicate": 2 }
             ]
           }
@@ -514,24 +517,49 @@
         "cost": 1,
         "minSkillLevel": 40,
         "descriptionLang": "unlockdesc-hunting-focus-shot",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] },
+          { "sum": [ "1.value" ], "format": "fractionPercent" }
+        ],
         "tiers": [
           {
-            "effects": []
+            "effects": [
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:focus-shot",
+                "phase": "hold",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 5 }
+              },
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:focus-shot",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.40 }
+              }
+            ]
           },
           {
             "minSkillLevel": 55,
-            "descriptionLang": "unlockdesc-hunting-focus-shot-t2",
-            "effects": []
+            "effects": [
+              { "replicate": 0, "params": { "value": 4 } },
+              { "replicate": 1, "params": { "value": 0.45 } }
+            ]
           },
           {
             "minSkillLevel": 70,
-            "descriptionLang": "unlockdesc-hunting-focus-shot-t3",
-            "effects": []
+            "effects": [
+              { "replicate": 0, "params": { "value": 4 } },
+              { "replicate": 1, "params": { "value": 0.50 } }
+            ]
           },
           {
             "minSkillLevel": 90,
-            "descriptionLang": "unlockdesc-hunting-focus-shot-t4",
-            "effects": []
+            "effects": [
+              { "replicate": 0, "params": { "value": 3 } },
+              { "replicate": 1, "params": { "value": 0.55 } }
+            ]
           }
         ],
         "requires": [ "heartseeker", "bowyer" ]

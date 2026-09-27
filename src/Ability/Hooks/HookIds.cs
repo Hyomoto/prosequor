@@ -68,6 +68,8 @@ public static class HookIds
     public static readonly PhaseId Focus = new("focus");
     /// <summary>Tracker mark drops when the body is past this many degrees from look (seed 0).</summary>
     public static readonly PhaseId Angle = new("angle");
+    /// <summary>Focus Shot bow-draw seconds required before the damage fold (seed 0).</summary>
+    public static readonly PhaseId Hold = new("hold");
     public static readonly PhaseId Size = new("size");
     public static readonly PhaseId AssistRadius = new("assist-radius");
     public static readonly PhaseId AutoFinish = new("auto-finish");
@@ -218,6 +220,8 @@ public static class VerbIds
     public static readonly VerbId UnawareDamage = new("prosequor:unaware-damage");
     /// <summary>Tracker mark parameters (range / focus / angle phases).</summary>
     public static readonly VerbId TrackMark = new("prosequor:track-mark");
+    /// <summary>Bow draw damage fold (hold / amount phases).</summary>
+    public static readonly VerbId FocusShot = new("prosequor:focus-shot");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");

@@ -175,6 +175,10 @@
         "cost": 1,
         "minSkillLevel": 15,
         "descriptionLang": "unlockdesc-cooking-clean-cook",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -196,7 +200,6 @@
           },
           {
             "minSkillLevel": 25,
-            "descriptionLang": "unlockdesc-cooking-clean-cook-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -216,6 +219,10 @@
         "cost": 1,
         "minSkillLevel": 20,
         "descriptionLang": "unlockdesc-cooking-very-filling",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -237,7 +244,6 @@
           },
           {
             "minSkillLevel": 30,
-            "descriptionLang": "unlockdesc-cooking-very-filling-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -258,6 +264,10 @@
         "cost": 1,
         "minSkillLevel": 25,
         "descriptionLang": "unlockdesc-cooking-nothing-wasted",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "layout": { "layerOffset": 0 },
         "tiers": [
           {
@@ -280,7 +290,6 @@
           },
           {
             "minSkillLevel": 40,
-            "descriptionLang": "unlockdesc-cooking-nothing-wasted-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -434,6 +443,10 @@
         "minSkillLevel": 30,
         "layout": { "layerOffset": 0, "columnBias": "left" },
         "descriptionLang": "unlockdesc-cooking-prized-liquors",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -457,7 +470,6 @@
           },
           {
             "minSkillLevel": 50,
-            "descriptionLang": "unlockdesc-cooking-prized-liquors-t2",
             "effects": [
               {
                 "replicate": 0,
@@ -479,6 +491,10 @@
         "minSkillLevel": 25,
         "layout": { "columnBias": "right" },
         "descriptionLang": "unlockdesc-cooking-strong-spirits",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -502,7 +518,6 @@
           },
           {
             "minSkillLevel": 40,
-            "descriptionLang": "unlockdesc-cooking-strong-spirits-t2",
             "effects": [
               {
                 "replicate": 0,
