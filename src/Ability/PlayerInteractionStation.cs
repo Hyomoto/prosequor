@@ -95,6 +95,18 @@ public static class PlayerInteractionStation
     public static float ResolveUnawareDamageThreshold(IPlayer player) =>
         Math.Max(0f, RunFloat(player, VerbIds.UnawareDamage, HookIds.Threshold, seed: 0f));
 
+    /// <summary>Tracker mark range in meters (seed 0). 0 when the node is not owned.</summary>
+    public static float ResolveTrackRange(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Range, seed: 0f));
+
+    /// <summary>Seconds of crosshair aim before a tracker mark lands (seed 0).</summary>
+    public static float ResolveTrackFocusSeconds(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Focus, seed: 0f));
+
+    /// <summary>Degrees from look direction past which a tracker mark drops (seed 0).</summary>
+    public static float ResolveTrackLoseAngle(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Angle, seed: 0f));
+
     /// <summary>
     /// Which on-foot locomotion bonus applies. Liquid wins over sprint/sneak.
     /// Sprint and sneak are exclusive (both held → neither). Mounted is never a foot mode.

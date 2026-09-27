@@ -561,6 +561,9 @@ Fact `target` = animal / mount / boat code.
 | `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` | `default` | number |
 | `unaware-damage` | `amount` | number |
 | | `threshold` | number |
+| `track-mark` | `range` | number |
+| | `focus` | number |
+| | `angle` | number |
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
@@ -573,6 +576,8 @@ Fact `target` = animal / mount / boat code.
 `animal-sense-range`: sneak-only sense-range multiplier (seed 1). `animal-threat-sneak`: sneak-only threat-emission multiplier (seed 1). `arrow-break`: arrow break chance 0–1 (seed = current break chance).
 
 `unaware-damage` / `amount`: outgoing damage multiplier (seed 1) when the victim's alert-meter threat is below `unaware-damage` / `threshold` (seed 0, percent).
+
+`track-mark` / `range`: meters (seed 0). `track-mark` / `focus`: seconds the animal closest to the cursor must stay there before it is marked (seed 0). A nearby animal does not replace it until that animal is clearly more centered. A gap shorter than 0.4s holds that progress; after that it drains at 2 seconds of progress per second away. `track-mark` / `angle`: the mark drops when the body is further than this many degrees from the look direction (seed 0). One mark. It remains through death while the body is still loaded, inside `range`, and within `angle`, and drops when the body is gone or another animal is marked.
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 

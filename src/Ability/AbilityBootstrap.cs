@@ -597,6 +597,24 @@ public static class AbilityBootstrap
             HookIds.Threshold,
             typeof(PlayerInteractionContext),
             typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Range,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Focus,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Angle,
+            typeof(PlayerInteractionContext),
+            typeof(float));
 
         hooks.RegisterPhase(
             HookIds.PlayerInteraction,
@@ -829,6 +847,9 @@ public static class AbilityBootstrap
 
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Amount));
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Threshold));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Range));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Focus));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Angle));
 
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
         actions.Register(new AddMappedNumberInteractionSpeedAction());

@@ -441,19 +441,54 @@
         "cost": 1,
         "minSkillLevel": 1,
         "descriptionLang": "unlockdesc-hunting-tracker",
+        "descriptionParams": [
+          { "sum": [ "0.value" ] },
+          { "sum": [ "1.value" ] },
+          { "sum": [ "2.value" ] }
+        ],
         "tiers": [
           {
-            "effects": []
+            "effects": [
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:track-mark",
+                "phase": "range",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 30 }
+              },
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:track-mark",
+                "phase": "focus",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 3 }
+              },
+              {
+                "hook": "prosequor:player-interaction",
+                "verb": "prosequor:track-mark",
+                "phase": "angle",
+                "action": "prosequor:number",
+                "params": { "op": "add", "value": 90 }
+              }
+            ]
           },
           {
             "minSkillLevel": 50,
             "descriptionLang": "unlockdesc-hunting-tracker-t2",
-            "effects": []
+            "effects": [
+              { "replicate": 0 },
+              { "replicate": 1 },
+              { "replicate": 2 }
+            ]
           },
           {
             "minSkillLevel": 70,
             "descriptionLang": "unlockdesc-hunting-tracker-t3",
-            "effects": []
+            "effects": [
+              { "replicate": 0, "params": { "value": 50 } },
+              { "replicate": 1 },
+              { "replicate": 2 }
+            ]
           }
         ],
         "requires": [ "hunter" ]

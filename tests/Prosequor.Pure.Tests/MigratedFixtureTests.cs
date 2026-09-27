@@ -177,4 +177,7 @@ public class MigratedFixtureTests
 
     [Fact]
     public void HuntingFixtures_Should_Pass() => HuntingFixtures.VerifyAll();
+
+    [Fact]
+    public void TrackMarkFixtures_Should_Pass() => TrackMarkFixtures.VerifyAll();
 }
