@@ -264,15 +264,7 @@ public static class AttributeLayout
                 LoadedTexture plateTex = plate;
                 composer.AddCustomRender(
                     ElementBounds.Fixed(left, top, cluster, cluster),
-                    (_, bounds) =>
-                    {
-                        capi.Render.Render2DTexturePremultipliedAlpha(
-                            plateTex.TextureId,
-                            (float)bounds.renderX,
-                            (float)bounds.renderY,
-                            (float)bounds.OuterWidth,
-                            (float)bounds.OuterHeight);
-                    });
+                    (_, bounds) => RenderMatched(capi, plateTex, bounds));
             }
 
             ElementBounds iconBounds = ElementBounds.Fixed(
@@ -280,19 +272,13 @@ public static class AttributeLayout
                 top + cluster * PlateCircleCy - iconSize / 2,
                 iconSize,
                 iconSize);
-            LoadedTexture? icon = icons.Get(attrId, iconSize);
+            LoadedTexture? icon = icons.Get(attrId, ScaledPx(iconSize));
             if (icon != null && icon.TextureId > 0)
             {
                 LoadedTexture tex = icon;
-                composer.AddCustomRender(iconBounds, (_, bounds) =>
-                {
-                    capi.Render.Render2DTexturePremultipliedAlpha(
-                        tex.TextureId,
-                        (float)bounds.renderX,
-                        (float)bounds.renderY,
-                        (float)bounds.OuterWidth,
-                        (float)bounds.OuterHeight);
-                });
+                composer.AddCustomRender(
+                    iconBounds,
+                    (_, bounds) => RenderMatched(capi, tex, bounds));
             }
 
             ElementBounds valueBounds = ElementBounds.Fixed(
@@ -359,9 +345,26 @@ public static class AttributeLayout
         }
     }
 
+    /// <summary>Screen pixels for a layout size, so the bake matches the drawn quad.</summary>
+    static int ScaledPx(double layoutSize) =>
+        Math.Max(8, (int)Math.Ceiling(GuiElement.scaled(layoutSize)));
+
+    /// <summary>
+    /// Draw a pre-scaled texture at its own pixel size, centered on the element.
+    /// Stretching to <see cref="ElementBounds.OuterWidth"/> bilinear-filters the SVG.
+    /// </summary>
+    static void RenderMatched(ICoreClientAPI capi, LoadedTexture tex, ElementBounds bounds)
+    {
+        float w = tex.Width;
+        float h = tex.Height;
+        float x = (float)Math.Round(bounds.renderX + (bounds.OuterWidth - w) / 2.0);
+        float y = (float)Math.Round(bounds.renderY + (bounds.OuterHeight - h) / 2.0);
+        capi.Render.Render2DTexturePremultipliedAlpha(tex.TextureId, x, y, w, h);
+    }
+
     static void EnsureBackplate(ICoreClientAPI capi, double size, ref LoadedTexture? backplate)
     {
-        int px = Math.Max(16, (int)Math.Round(size));
+        int px = ScaledPx(size);
         if (backplate != null && backplate.Width == px && backplate.Height == px)
         {
             return;

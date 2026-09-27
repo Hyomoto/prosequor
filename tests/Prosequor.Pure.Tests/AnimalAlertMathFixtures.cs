@@ -22,14 +22,25 @@ public static class AnimalAlertMathFixtures
     static void VerifyProximityCurve()
     {
         const float range = 20f;
+        const float peak = AnimalAlertMath.ProximityPeak;
         if (Math.Abs(AnimalAlertMath.Proximity(20f, range)) > 0.0001f
             || Math.Abs(AnimalAlertMath.Proximity(25f, range)) > 0.0001f
-            || Math.Abs(AnimalAlertMath.Proximity(0f, range) - 1f) > 0.0001f
-            || Math.Abs(AnimalAlertMath.Proximity(10f, range) - 0.25f) > 0.0001f
-            || Math.Abs(AnimalAlertMath.Proximity(15f, range) - 0.0625f) > 0.0001f
-            || Math.Abs(AnimalAlertMath.Proximity(5f, range) - 0.5625f) > 0.0001f)
+            || Math.Abs(AnimalAlertMath.Proximity(0f, range) - peak) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(10f, range) - peak * MathF.Sqrt(0.5f)) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(15f, range) - peak * 0.5f) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(5f, range) - peak * MathF.Sqrt(0.75f)) > 0.0001f)
         {
             Assert.Fail("[prosequor] Alert proximity curve failed.");
+        }
+
+        // Neutral 30-block radius: detectable at the edge, high at 15, extreme at 5.
+        const float sense = AnimalAlertMath.MinCharacteristicRange;
+        if (Math.Abs(AnimalAlertMath.Proximity(sense, sense)) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(0f, sense) - peak) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(15f, sense) - peak * MathF.Sqrt(0.5f)) > 0.0001f
+            || Math.Abs(AnimalAlertMath.Proximity(5f, sense) - peak * MathF.Sqrt(1f - 5f / sense)) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Alert 30-block proximity anchors failed.");
         }
     }
 
@@ -178,7 +189,7 @@ public static class AnimalAlertMathFixtures
 
     static void VerifyOrdinaryVersusAcute()
     {
-        // Wild (scale 1): walk at mid range is moderated by proximity².
+        // Wild (scale 1): walk threat is proximity times movement.
         float walk = AnimalAlertMath.Threat(
             proximity: 0.25f,
             movementDisturbance: AnimalAlertMath.MovementWalk,

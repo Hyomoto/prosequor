@@ -54,6 +54,13 @@ public static class AnimalAlertMath
     /// <summary>Meter sense radius floor (blocks).</summary>
     public const float MinCharacteristicRange = 30f;
 
+    /// <summary>
+    /// Proximity at distance 0. Neutral still threat before attribute emission.
+    /// Square-root falloff keeps the outer half of the radius hot: at 30 blocks
+    /// this is 0, at 15 about 1.06, at 5 about 1.37.
+    /// </summary>
+    public const float ProximityPeak = 1.5f;
+
     /// <summary>Incoming below this is treated as zero for decay (noise floor).</summary>
     public const float IncomingEpsilon = 0.01f;
 
@@ -88,11 +95,11 @@ public static class AnimalAlertMath
 
         if (distance <= 0f)
         {
-            return 1f;
+            return ProximityPeak;
         }
 
         float t = 1f - distance / characteristicRange;
-        return t * t;
+        return ProximityPeak * (float)Math.Sqrt(t);
     }
 
     public static float MovementDisturbance(bool moving, bool sneak, bool sprint)

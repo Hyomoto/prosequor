@@ -115,6 +115,11 @@ public class ProsequorModSystem : ModSystem
     public override void Start(ICoreAPI api)
     {
         ProgressEvents.SetLogger(api.Logger);
+        if (!AiTaskRegistry.TaskTypes.ContainsKey(AiTaskThreatFlee.TaskCode))
+        {
+            AiTaskRegistry.Register<AiTaskThreatFlee>(AiTaskThreatFlee.TaskCode);
+        }
+
         api.RegisterEntityBehaviorClass(EntityBehaviorProgress.Code, typeof(EntityBehaviorProgress));
         api.RegisterBlockEntityClass(
             BlockEntityProsequorPedigree.ClassName,

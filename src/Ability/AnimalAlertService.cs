@@ -31,6 +31,9 @@ public static class AnimalAlertService
     public const int FlagAwake = 1;
     public const int FlagCommitted = 2;
 
+    /// <summary>WatchedAttributes: entity id of the alert target while committed.</summary>
+    public const string AttrTarget = "prosequorAlertTarget";
+
     static readonly ConditionalWeakTable<Entity, AnimalAlertState> States = new();
     static readonly List<Entity> Tracked = new();
     static readonly HashSet<long> TrackedIds = new();
@@ -41,14 +44,6 @@ public static class AnimalAlertService
         AccessTools.Field(typeof(AiTaskFleeEntity), "instafleeOnDamageChance");
     static readonly FieldInfo FleeTamingField =
         AccessTools.Field(typeof(AiTaskBaseTargetable), "tamingGenerations");
-    static readonly FieldInfo SeekSeekingRangeField =
-        AccessTools.Field(typeof(AiTaskSeekEntity), "seekingRange");
-    static readonly FieldInfo IdleStopRangeField =
-        AccessTools.Field(typeof(AiTaskIdle), "stopRange");
-    static readonly FieldInfo IdleStopExactField =
-        AccessTools.Field(typeof(AiTaskIdle), "stopOnNearbyEntityCodesExact");
-    static readonly FieldInfo IdleStopBeginsField =
-        AccessTools.Field(typeof(AiTaskIdle), "stopOnNearbyEntityCodesBeginsWith");
     static readonly FieldInfo TargetExactField =
         AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntityCodesExact");
     static readonly FieldInfo TargetBeginsField =
@@ -102,7 +97,97 @@ public static class AnimalAlertService
             return;
         }
 
+        RestoreLatch(entity, state);
+        EnsureThreatFlee(taskAi);
         EnsureInTrackedList(entity);
+    }
+
+    /// <summary>
+    /// Chunk reload: committed flag and target id live on the entity, so resume
+    /// flees without a new rising-threat roll.
+    /// </summary>
+    static void RestoreLatch(Entity entity, AnimalAlertState state)
+    {
+        if (state.Committed || entity.WatchedAttributes == null)
+        {
+            return;
+        }
+
+        int flags = entity.WatchedAttributes.GetInt(AttrFlags, 0);
+        if ((flags & FlagCommitted) == 0)
+        {
+            return;
+        }
+
+        int alertQ = entity.WatchedAttributes.GetInt(AttrAlert, 0);
+        state.Committed = true;
+        state.Awake = true;
+        state.WasCommitted = true;
+        state.Alert = Math.Max(alertQ, AnimalAlertMath.CommitExit);
+        state.AlertTargetEntityId = entity.WatchedAttributes.GetLong(AttrTarget, 0L);
+        state.LastSyncedAlert = alertQ;
+        state.LastSyncedFlags = flags;
+        state.LastSyncedTarget = state.AlertTargetEntityId;
+    }
+
+    /// <summary>
+    /// Passive prey with an ungated player fleeentity get a task we own.
+    /// </summary>
+    public static void EnsureThreatFlee(EntityBehaviorTaskAI taskAi)
+    {
+        if (taskAi?.entity is not EntityAgent agent || taskAi.TaskManager == null)
+        {
+            return;
+        }
+
+        if (!HasUngatedPlayerFlee(agent))
+        {
+            return;
+        }
+
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is AiTaskThreatFlee)
+            {
+                return;
+            }
+        }
+
+        AiTaskFleeEntity? style = null;
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is AiTaskThreatFlee)
+            {
+                continue;
+            }
+
+            if (task is AiTaskFleeEntity flee && IsUngatedPlayerFlee(flee))
+            {
+                style = flee;
+                break;
+            }
+        }
+
+        taskAi.TaskManager.AddTask(AiTaskThreatFlee.Create(agent, style));
+    }
+
+    public static AiTaskThreatFlee? FindThreatFlee(Entity? animal)
+    {
+        EntityBehaviorTaskAI? taskAi = animal?.GetBehavior<EntityBehaviorTaskAI>();
+        if (taskAi?.TaskManager == null)
+        {
+            return null;
+        }
+
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is AiTaskThreatFlee flee)
+            {
+                return flee;
+            }
+        }
+
+        return null;
     }
 
     public static void OnEntityDespawn(Entity? entity)
@@ -207,7 +292,7 @@ public static class AnimalAlertService
             return false;
         }
 
-        float range = AnimalAlertMath.SenseRange(state.CharacteristicRange, state.Committed);
+        float range = state.CharacteristicRange;
         // Small pad so approaching from just outside still starts ticks promptly.
         float pad = range + 4f;
         for (int i = 0; i < players.Length; i++)
@@ -333,8 +418,8 @@ public static class AnimalAlertService
     }
 
     /// <summary>
-    /// Flee behavior triggered: double alert on first commit, one-shot flee seed,
-    /// optional herd broadcast.
+    /// Flee behavior triggered: double alert on first commit and optional herd broadcast.
+    /// The owned threat-flee task notices the latch on the next AI tick.
     /// </summary>
     static void BeginFleeBolt(Entity entity, AnimalAlertState state, bool propagatedHerd)
     {
@@ -351,55 +436,17 @@ public static class AnimalAlertService
         if (state.AlertTargetEntityId != 0)
         {
             Entity? target = entity.World.GetEntityById(state.AlertTargetEntityId);
-            if (target != null)
+            if (target != null
+                && AnimalAlertMath.MayBroadcastHerd(
+                    state.Committed,
+                    wasCommitted,
+                    state.PropagatedHerd))
             {
-                // Seed flee once so TaskAI can start outside vanilla seekingRange.
-                // Ongoing flee uses fused CanSensePlayer + vanilla ShouldExecute.
-                if (!wasCommitted)
-                {
-                    SeedUngatedFlee(entity, target);
-                }
-
-                if (AnimalAlertMath.MayBroadcastHerd(
-                        state.Committed,
-                        wasCommitted,
-                        state.PropagatedHerd))
-                {
-                    BroadcastHerdAlarm(entity, state, target);
-                }
+                BroadcastHerdAlarm(entity, state, target);
             }
         }
 
         state.WasCommitted = state.Committed;
-    }
-
-    /// <summary>
-    /// One-shot InstaFleeFrom on an ungated player fleeentity (not emotion-gated).
-    /// </summary>
-    static void SeedUngatedFlee(Entity entity, Entity target)
-    {
-        EntityBehaviorTaskAI? taskAi = entity.GetBehavior<EntityBehaviorTaskAI>();
-        if (taskAi?.TaskManager == null)
-        {
-            return;
-        }
-
-        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
-        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
-        {
-            if (task is not AiTaskFleeEntity flee || !TaskCanTargetPlayer(flee))
-            {
-                continue;
-            }
-
-            if (whenField?.GetValue(flee) is string[] emotions && emotions.Length > 0)
-            {
-                continue;
-            }
-
-            flee.InstaFleeFrom(target);
-            return;
-        }
     }
 
     static void IntegrateEntity(Entity entity, AnimalAlertState state, float dt)
@@ -425,7 +472,9 @@ public static class AnimalAlertService
             state.AlertTargetThreat = 0f;
         }
 
-        float range = AnimalAlertMath.SenseRange(state.CharacteristicRange, state.Committed);
+        // Base characteristic range only. Spooked perception (×2) applies inside
+        // that range via EffectiveIncoming; widening the sample radius kept cool-off unreachable.
+        float range = state.CharacteristicRange;
         IPlayer[]? players = entity.World.AllOnlinePlayers;
         if (players != null)
         {
@@ -472,7 +521,7 @@ public static class AnimalAlertService
                     || ep.Pos.Motion.LengthSq() > 0.0001;
                 int band = AnimalAlertMath.MovementBand(moving, sneak, sprint);
 
-                // Proximity uses sense range (wider while spooked; narrowed while sneaking).
+                // Proximity uses the base range (narrowed while sneaking).
                 float raw = EvaluateRawThreat(
                     entity,
                     state,
@@ -512,7 +561,7 @@ public static class AnimalAlertService
             chosenRaw = Math.Max(chosenRaw, currentTargetRaw);
         }
 
-        // 2. If spooked, multiply threat (and sense range above).
+        // 2. If spooked and the source is still inside base range, multiply threat.
         float incoming = AnimalAlertMath.EffectiveIncoming(chosenRaw, state.Committed);
         state.CurrentThreat = incoming;
 
@@ -585,12 +634,14 @@ public static class AnimalAlertService
         int alertQ = (int)Math.Clamp(Math.Round(state.Alert), 0, 100);
         int threatQ = (int)Math.Clamp(Math.Round(state.CurrentThreat * 100f), 0, 100);
         int flags = (state.Awake ? FlagAwake : 0) | (state.Committed ? FlagCommitted : 0);
+        long targetId = state.Committed ? state.AlertTargetEntityId : 0L;
 
         if (alertQ == 0 && threatQ == 0 && flags == 0)
         {
             if (state.LastSyncedAlert == 0
                 && state.LastSyncedThreat == 0
-                && state.LastSyncedFlags == 0)
+                && state.LastSyncedFlags == 0
+                && state.LastSyncedTarget == 0)
             {
                 return;
             }
@@ -613,15 +664,23 @@ public static class AnimalAlertService
                 entity.WatchedAttributes.MarkPathDirty(AttrFlags);
             }
 
+            if (entity.WatchedAttributes.HasAttribute(AttrTarget))
+            {
+                entity.WatchedAttributes.RemoveAttribute(AttrTarget);
+                entity.WatchedAttributes.MarkPathDirty(AttrTarget);
+            }
+
             state.LastSyncedAlert = 0;
             state.LastSyncedThreat = 0;
             state.LastSyncedFlags = 0;
+            state.LastSyncedTarget = 0;
             return;
         }
 
         if (alertQ == state.LastSyncedAlert
             && threatQ == state.LastSyncedThreat
-            && flags == state.LastSyncedFlags)
+            && flags == state.LastSyncedFlags
+            && targetId == state.LastSyncedTarget)
         {
             return;
         }
@@ -629,12 +688,23 @@ public static class AnimalAlertService
         entity.WatchedAttributes.SetInt(AttrAlert, alertQ);
         entity.WatchedAttributes.SetInt(AttrThreat, threatQ);
         entity.WatchedAttributes.SetInt(AttrFlags, flags);
+        if (targetId != 0)
+        {
+            entity.WatchedAttributes.SetLong(AttrTarget, targetId);
+        }
+        else if (entity.WatchedAttributes.HasAttribute(AttrTarget))
+        {
+            entity.WatchedAttributes.RemoveAttribute(AttrTarget);
+        }
+
         entity.WatchedAttributes.MarkPathDirty(AttrAlert);
         entity.WatchedAttributes.MarkPathDirty(AttrThreat);
         entity.WatchedAttributes.MarkPathDirty(AttrFlags);
+        entity.WatchedAttributes.MarkPathDirty(AttrTarget);
         state.LastSyncedAlert = alertQ;
         state.LastSyncedThreat = threatQ;
         state.LastSyncedFlags = flags;
+        state.LastSyncedTarget = targetId;
     }
 
     public static bool TryReadOverlay(
@@ -762,68 +832,53 @@ public static class AnimalAlertService
         float maxSeek = 0f;
         float taming = 10f;
         float insta = 0f;
-        bool senses = false;
+        bool ungatedFlee = false;
+        bool ungatedHunt = false;
 
         foreach (IAiTask task in manager.AllTasks)
         {
             switch (task)
             {
                 case AiTaskFleeEntity flee:
-                    if (TaskCanTargetPlayer(flee))
+                    if (!TaskCanTargetPlayer(flee))
                     {
-                        senses = true;
-                        if (FleeSeekingRangeField.GetValue(flee) is float fr)
-                        {
-                            maxSeek = Math.Max(maxSeek, fr);
-                        }
+                        break;
+                    }
 
-                        if (FleeInstaChanceField.GetValue(flee) is float ic)
-                        {
-                            insta = Math.Max(insta, ic);
-                        }
+                    if (FleeTamingField.GetValue(flee) is float tg)
+                    {
+                        taming = tg;
+                    }
 
-                        if (FleeTamingField.GetValue(flee) is float tg)
-                        {
-                            taming = tg;
-                        }
+                    // Daylight or damage flees that are emotion-gated are not prey panic.
+                    if (EmotionGates(flee))
+                    {
+                        break;
+                    }
+
+                    ungatedFlee = true;
+                    if (FleeSeekingRangeField.GetValue(flee) is float fr)
+                    {
+                        maxSeek = Math.Max(maxSeek, fr);
+                    }
+
+                    if (FleeInstaChanceField.GetValue(flee) is float ic)
+                    {
+                        insta = Math.Max(insta, ic);
                     }
 
                     break;
                 case AiTaskSeekEntity seek:
-                    if (TaskCanTargetPlayer(seek))
+                    if (TaskCanTargetPlayer(seek) && !EmotionGates(seek))
                     {
-                        senses = true;
-                        if (SeekSeekingRangeField.GetValue(seek) is float sr)
-                        {
-                            maxSeek = Math.Max(maxSeek, sr);
-                        }
-
-                        if (FleeTamingField.GetValue(seek) is float tg2)
-                        {
-                            taming = tg2;
-                        }
+                        ungatedHunt = true;
                     }
 
                     break;
                 case AiTaskMeleeAttack melee:
-                    if (TaskCanTargetPlayer(melee))
+                    if (TaskCanTargetPlayer(melee) && !EmotionGates(melee))
                     {
-                        senses = true;
-                        if (FleeTamingField.GetValue(melee) is float tg3)
-                        {
-                            taming = tg3;
-                        }
-                    }
-
-                    break;
-                case AiTaskIdle idle:
-                    if (IdleStopsOnPlayer(idle))
-                    {
-                        senses = true;
-                        if (IdleStopRangeField.GetValue(idle) is float stop)
-                        {
-                            maxSeek = Math.Max(maxSeek, stop);
-                        }
+                        ungatedHunt = true;
                     }
 
                     break;
@@ -836,7 +891,15 @@ public static class AnimalAlertService
         state.CharacteristicRange = Math.Max(AnimalAlertMath.MinCharacteristicRange, resolvedRange);
         state.TamingGenerations = taming;
         state.InstaFleeOnDamageChance = insta;
-        state.SensesPlayers = senses;
+        // Passive prey only. An ungated player seek or melee means this creature
+        // hunts the seraph (drifters, wolves) and must keep vanilla AI.
+        state.SensesPlayers = ungatedFlee && !ungatedHunt;
+    }
+
+    static bool EmotionGates(IAiTask task)
+    {
+        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
+        return whenField?.GetValue(task) is string[] emotions && emotions.Length > 0;
     }
 
     static EmotionState? FindAlarmHerdState(Entity entity)
@@ -899,9 +962,8 @@ public static class AnimalAlertService
     }
 
     /// <summary>
-    /// Atlas: after <see cref="ForcePanicForTests"/>, probe flee arming via fused eligibility
-    /// and vanilla ShouldExecute. Emotion-gated flee must stay quiet while calm.
-    /// ShouldExecute may be false if the one-shot seed already started the task.
+    /// Atlas: after <see cref="ForcePanicForTests"/>, the owned threat-flee task must
+    /// be ready and vanilla player-flee (including emotion-gated) must not start.
     /// </summary>
     public static bool TryProbePanicFlee(
         Entity animal,
@@ -916,49 +978,37 @@ public static class AnimalAlertService
             return false;
         }
 
-        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
-        MethodInfo? inEmotion = AccessTools.Method(
-            typeof(AiTaskBase),
-            "IsInEmotionState",
-            [typeof(string[])]);
+        AiTaskThreatFlee? threat = FindThreatFlee(animal);
+        if (threat?.ShouldExecute() == true)
+        {
+            ungatedReady = 1;
+        }
 
+        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
         foreach (IAiTask task in taskAi.TaskManager.AllTasks)
         {
-            if (task is not AiTaskFleeEntity flee || !TaskCanTargetPlayer(flee))
+            if (task is not AiTaskFleeEntity flee
+                || task is AiTaskThreatFlee
+                || !TaskCanTargetPlayer(flee))
+            {
+                continue;
+            }
+
+            if (!flee.ShouldExecute())
             {
                 continue;
             }
 
             string[]? emotions = whenField?.GetValue(flee) as string[];
-            bool emotionGated = emotions is { Length: > 0 };
-            bool inRequiredEmotion = !emotionGated
-                || inEmotion?.Invoke(flee, [emotions!]) is true;
-
-            bool should = flee.ShouldExecute();
-            if (emotionGated && !inRequiredEmotion)
+            if (emotions is { Length: > 0 })
             {
-                if (should)
-                {
-                    gatedForcedWhileCalm++;
-                }
+                gatedForcedWhileCalm++;
             }
-            else if (should)
+            else
             {
-                ungatedReady++;
+                // Vanilla ungated player flee started; the owned task should own that path.
+                gatedForcedWhileCalm++;
             }
-        }
-
-        // One-shot bolt seed may already be running the ungated flee (ShouldExecute false).
-        // Fused CanSensePlayer still proves eligibility is armed.
-        if (ungatedReady == 0
-            && gatedForcedWhileCalm == 0
-            && animal != null
-            && TryGetAlertTarget(animal, out Entity? target)
-            && target is EntityPlayer ep
-            && TryCanSensePlayer(animal, ep, out bool sensed)
-            && sensed)
-        {
-            ungatedReady = 1;
         }
 
         return ungatedReady > 0 && gatedForcedWhileCalm == 0;
@@ -1009,50 +1059,24 @@ public static class AnimalAlertService
             return false;
         }
 
-        FieldInfo whenField = AccessTools.Field(typeof(AiTaskBase), "WhenInEmotionStates");
         foreach (IAiTask task in taskAi.TaskManager.AllTasks)
         {
-            if (task is not AiTaskFleeEntity flee || !TaskCanTargetPlayer(flee))
+            if (task is AiTaskFleeEntity flee && IsUngatedPlayerFlee(flee))
             {
-                continue;
+                return true;
             }
-
-            if (whenField?.GetValue(flee) is string[] emotions && emotions.Length > 0)
-            {
-                continue;
-            }
-
-            return true;
         }
 
         return false;
     }
 
-    static bool IdleStopsOnPlayer(AiTaskIdle idle)
+    static bool IsUngatedPlayerFlee(AiTaskFleeEntity flee)
     {
-        if (IdleStopExactField.GetValue(idle) is string[] exact)
+        if (!TaskCanTargetPlayer(flee))
         {
-            for (int i = 0; i < exact.Length; i++)
-            {
-                if (exact[i] == "player")
-                {
-                    return true;
-                }
-            }
+            return false;
         }
 
-        if (IdleStopBeginsField.GetValue(idle) is string[] begins)
-        {
-            for (int i = 0; i < begins.Length; i++)
-            {
-                string prefix = begins[i];
-                if (prefix.Length == 0 || "player".StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return !EmotionGates(flee);
     }
 }

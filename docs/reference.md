@@ -566,7 +566,7 @@ Fact `target` = animal / mount / boat code.
 | | `last-stand` | number |
 | `bleed-out` | `rate` | number |
 
-`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. The meter owns player-flee eligibility (`CanSensePlayer` false until panic, then true for the alert target); creature TaskAI still runs `fleeentity` / seek / melee.
+`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. Passive prey (ungated flee from the player, and no ungated player seek or melee) flee for as long as the meter is committed; vanilla player-flee on those animals does not run. Creatures that hunt the player keep vanilla AI.
 
 `ranged-damage` / `ranged-distance` / `walk-speed` / `hunger-rate` / `mechanicals-damage`: signed percent folds written onto vanilla entity stats as `pct/100` additives (`rangedWeaponsDamage`, `bowDrawingStrength`, `walkspeed`, `hungerrate`, `mechanicalsDamage`). Neutral mid is `0` except walk-speed (no mid; score 10 is the display neutral).
 

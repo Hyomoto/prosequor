@@ -8,7 +8,7 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Wires the alert meter into TaskAI init, player sensing, flee/seek/melee/idle, and damage.
-/// Meter owns player-flee eligibility via CanSensePlayer; TaskAI runs flee naturally.
+/// Passive prey flee for as long as the meter is committed; vanilla player-flee on those animals does not run.
 /// </summary>
 [HarmonyPatch]
 public static class AnimalAlertTaskAiPatch
@@ -22,6 +22,50 @@ public static class AnimalAlertTaskAiPatch
     [HarmonyPatch(typeof(EntityBehaviorTaskAI), nameof(EntityBehaviorTaskAI.OnEntityDespawn))]
     public static void OnEntityDespawnPostfix(EntityBehaviorTaskAI __instance) =>
         AnimalAlertService.OnEntityDespawn(__instance?.entity);
+}
+
+/// <summary>
+/// Vanilla fleeentity must not start a flee from a player on meter-tracked prey.
+/// Non-player targets (wolves, foxes) are unchanged. <see cref="AiTaskThreatFlee"/> overrides
+/// ShouldExecute, so this postfix does not run for the owned task.
+/// </summary>
+[HarmonyPatch(typeof(AiTaskFleeEntity), nameof(AiTaskFleeEntity.ShouldExecute))]
+public static class AnimalAlertVanillaFleePatch
+{
+    static readonly FieldInfo? TargetField =
+        AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntity");
+
+    [HarmonyPostfix]
+    public static void Postfix(AiTaskFleeEntity __instance, ref bool __result)
+    {
+        if (!__result || __instance is AiTaskThreatFlee || __instance.GetType() != typeof(AiTaskFleeEntity))
+        {
+            return;
+        }
+
+        Entity? host = TargetHost(__instance);
+        if (host == null
+            || !AnimalAlertService.TryGet(host, out AnimalAlertState state)
+            || !state.SensesPlayers)
+        {
+            return;
+        }
+
+        Entity? target = TargetField?.GetValue(__instance) as Entity;
+        if (target is not EntityPlayer)
+        {
+            return;
+        }
+
+        __result = false;
+        TargetField?.SetValue(__instance, null);
+    }
+
+    static Entity? TargetHost(AiTaskFleeEntity task)
+    {
+        FieldInfo? entityField = AccessTools.Field(typeof(AiTaskBase), "entity");
+        return entityField?.GetValue(task) as Entity;
+    }
 }
 
 /// <summary>
