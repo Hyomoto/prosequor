@@ -4,6 +4,7 @@ using Prosequor.Ability;
 using Prosequor.Ability.Hooks;
 using Prosequor.Client;
 using Prosequor.Client.CatEyes;
+using Prosequor.Client.Tracker;
 using Prosequor.Commands;
 using Prosequor.Data;
 using Prosequor.Inventory;
@@ -75,6 +76,7 @@ public class ProsequorModSystem : ModSystem
     CharacterSkillsTab? skillsTab;
     CharacterStatsPanel? statsPanel;
     CatEyesController? catEyes;
+    TrackerOutlineRenderer? trackerOutline;
     LevelUpHudController? levelUpHud;
     HudElementLevelUp? levelUpHudElement;
     SkillWaitingHudController? skillWaitingHud;
@@ -383,23 +385,8 @@ public class ProsequorModSystem : ModSystem
             CarryInventoryDialogPatch.RequestRecomposeIfOpen;
         Network.StartClient(api);
         catEyes = new CatEyesController(api);
-        animalAlertOverlay = new AnimalAlertOverlayRenderer(api);
-        api.ChatCommands
-            .Create("alertviz")
-            .WithDescription("Toggle Prosequor animal alert/threat overlay bars")
-            .HandleWith(_ =>
-            {
-                if (animalAlertOverlay == null)
-                {
-                    return TextCommandResult.Error("Alert overlay not ready.");
-                }
-
-                animalAlertOverlay.Enabled = !animalAlertOverlay.Enabled;
-                return TextCommandResult.Success(
-                    animalAlertOverlay.Enabled
-                        ? "Animal alert overlay on (thick=alert, thin=threat; cyan/amber/red)."
-                        : "Animal alert overlay off.");
-            });
+        trackerOutline = new TrackerOutlineRenderer(api);
+        animalAlertOverlay = new AnimalAlertOverlayRenderer(api, trackerOutline);
         levelUpHud = new LevelUpHudController(api);
         levelUpHudElement = new HudElementLevelUp(api, levelUpHud);
         levelUpHudHandler = packet => levelUpHud?.Enqueue(packet);
@@ -513,6 +500,8 @@ public class ProsequorModSystem : ModSystem
 
         catEyes?.Dispose();
         catEyes = null;
+        trackerOutline?.Dispose();
+        trackerOutline = null;
         skillsTab?.Dispose();
         skillsTab = null;
         statsPanel?.Dispose();

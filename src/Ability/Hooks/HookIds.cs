@@ -62,6 +62,12 @@ public static class HookIds
     public static readonly PhaseId Cap = new("cap");
     /// <summary>Heartseeker threat gate percent (seed 0).</summary>
     public static readonly PhaseId Threshold = new("threshold");
+    /// <summary>Tracker mark distance in meters (seed 0).</summary>
+    public static readonly PhaseId Range = new("range");
+    /// <summary>Tracker aim time in seconds before a mark lands (seed 0).</summary>
+    public static readonly PhaseId Focus = new("focus");
+    /// <summary>Tracker mark drops when the body is past this many degrees from look (seed 0).</summary>
+    public static readonly PhaseId Angle = new("angle");
     public static readonly PhaseId Size = new("size");
     public static readonly PhaseId AssistRadius = new("assist-radius");
     public static readonly PhaseId AutoFinish = new("auto-finish");
@@ -210,6 +216,8 @@ public static class VerbIds
     public static readonly VerbId ArrowBreak = new("prosequor:arrow-break");
     /// <summary>Outgoing damage vs low-threat animals (amount / threshold phases).</summary>
     public static readonly VerbId UnawareDamage = new("prosequor:unaware-damage");
+    /// <summary>Tracker mark parameters (range / focus / angle phases).</summary>
+    public static readonly VerbId TrackMark = new("prosequor:track-mark");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
