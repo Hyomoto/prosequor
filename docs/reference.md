@@ -559,7 +559,7 @@ Fact `target` = animal / mount / boat code.
 | Verb | Phase | Contract |
 | --- | --- | --- |
 | `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `ranged-damage` / `ranged-distance` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `walk-speed` / `hunger-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` / `mechanicals-damage` | `default` | number |
-| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` | `default` | number |
+| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` / `crit-damage` | `default` | number |
 | `unaware-damage` | `amount` | number |
 | | `threshold` | number |
 | `track-mark` | `range` | number |
@@ -583,6 +583,8 @@ Fact `target` = animal / mount / boat code.
 `track-mark` / `range`: meters (seed 0). `track-mark` / `focus`: seconds the animal closest to the cursor must stay there before it is marked (seed 0). A nearby animal does not replace it until that animal is clearly more centered. A gap shorter than 0.4s holds that progress; after that it drains at 2 seconds of progress per second away. `track-mark` / `angle`: the mark drops when the body is further than this many degrees from the look direction (seed 0). One mark. It remains through death while the body is still loaded, inside `range`, and within `angle`, and drops when the body is gone or another animal is marked.
 
 `focus-shot` / `hold`: seconds a bow must stay drawn (seed 0). `focus-shot` / `amount`: damage multiplier (seed 1) on that arrow when the draw lasts at least `hold` seconds. A shorter draw keeps the vanilla power. Thrown spears are unchanged.
+
+`crit-chance`: percent chance a player weapon hit (blunt, slashing, or piercing) is a critical hit (seed 0). `crit-damage`: multiplier applied to that hit after the roll succeeds (seed 2).
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 
@@ -638,7 +640,7 @@ NumberSpec. Surface: block / plant-crop / `default`.
 | `from` | Two-number score span `[low, high]` |
 | `to` | Value list (≥ 2 numbers) across that span |
 | `curve` | Optional `linear` (default) or `ease` |
-| `op` | `add` (default) or `scale` (`value * mapped`) |
+| `op` | `add` (default) or `multiply` (`value * mapped`) |
 | `round` | Optional `ceil` \| `floor` \| `round`; omit for fractional |
 
 `linear` spaces `to` evenly across `from` (value passes through every entry). `ease` repeats the first and last `to` values, then evaluates one Bernstein polynomial (two entries → smoothstep ease-in/out). A score below `from[0]` maps to `0`; a score above `from[1]` maps to the last `to` entry.
@@ -948,7 +950,7 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 
 ```json
 {
-  "id": "constitution",
+  "id": "resilience",
   "rules": [
     {
       "id": "prosequor:con-health",

@@ -16,18 +16,9 @@ public class CraftXpAdapter
 
     readonly ICoreServerAPI sapi;
 
-    public CraftXpAdapter(ICoreServerAPI sapi, XpActionDispatcher dispatcher)
+    public CraftXpAdapter(ICoreServerAPI sapi)
     {
         this.sapi = sapi;
-        _ = dispatcher;
-    }
-
-    public void Start()
-    {
-    }
-
-    public void Dispose()
-    {
     }
 
     public void NotifyTake(IPlayer byPlayer, ItemStack? crafted, int totalUnits, int craftCount)

@@ -24,12 +24,6 @@ public static class AnimalBehaviorStation
     public static float ResolveFleeChanceReduction(IPlayer player, Entity? animal) =>
         RunFloat(player, animal, VerbIds.AnimalFlee, HookIds.Chance, seed: 0f, baseValue: 1f);
 
-    /// <summary>
-    /// Response-rate / seek chance reduction (same fold as flee chance; Inconspicuity).
-    /// </summary>
-    public static float ResolveSeekChanceReduction(IPlayer player, Entity? animal) =>
-        RunFloat(player, animal, VerbIds.AnimalSeek, HookIds.Chance, seed: 0f, baseValue: 1f);
-
     /// <summary>Gentle Spirit friendliness multiplier percent (seed 100 = ×1).</summary>
     public static int ResolveFleeFearMultiplierPercent(IPlayer player, Entity? animal) =>
         RunInt(player, animal, VerbIds.AnimalFlee, HookIds.Multiplier, HusbandryFriendliness.MultSeedPercent);
@@ -106,13 +100,6 @@ public static class AnimalBehaviorStation
             0);
         return (allowed >= 1, context.FriendlinessGain);
     }
-    /// <summary>Unused: player flee/seek dice no longer fold response. Returns <paramref name="chance"/>.</summary>
-    public static float ResolveResponseChance(
-        IPlayer player,
-        Entity? animal,
-        VerbId verb,
-        float chance) =>
-        chance;
 
     static int RunInt(IPlayer player, Entity? animal, VerbId verb, PhaseId phase, int seed) =>
         Run(player, animal, verb, phase, seed, baseValue: 0f);

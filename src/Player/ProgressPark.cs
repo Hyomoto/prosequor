@@ -49,19 +49,22 @@ public sealed class ProgressPark
         string? playerUid,
         EntityBehaviorProgress? behavior,
         AbilityRuleIndex? ruleIndex,
-        ISkillRegistry? registry = null)
+        ISkillRegistry? registry = null,
+        ITraitAttributeRegistry? traits = null)
     {
         if (string.IsNullOrWhiteSpace(playerUid) || behavior == null || !behavior.HasSyncedMirror)
         {
             return;
         }
 
+        behavior.CaptureClassProfile();
         parked[playerUid.Trim()] = new ParkedPlayerProgress(
             behavior.State,
             ruleIndex,
             registry,
             CloneAccess(behavior.SkillAccess),
-            MaxPlayerLevel);
+            MaxPlayerLevel,
+            traits);
     }
 
     public void ParkStored(
@@ -69,7 +72,8 @@ public sealed class ProgressPark
         PlayerProgressState state,
         AbilityRuleIndex? ruleIndex,
         ISkillRegistry? registry = null,
-        SkillAccess? skillAccess = null)
+        SkillAccess? skillAccess = null,
+        ITraitAttributeRegistry? traits = null)
     {
         if (string.IsNullOrWhiteSpace(playerUid) || state == null)
         {
@@ -81,7 +85,8 @@ public sealed class ProgressPark
             ruleIndex,
             registry,
             skillAccess,
-            MaxPlayerLevel);
+            MaxPlayerLevel,
+            traits);
     }
 
     static SkillAccess CloneAccess(SkillAccess source)
@@ -104,7 +109,8 @@ public sealed class ProgressPark
         ISkillRegistry registry,
         AbilityRuleIndex? ruleIndex,
         IReadOnlySet<string>? defaultSkillAccess = null,
-        IAttributeStatRegistry? stats = null)
+        IAttributeStatRegistry? stats = null,
+        ITraitAttributeRegistry? traits = null)
     {
         if (sapi?.PlayerData?.PlayerDataByUid == null || registry == null)
         {
@@ -137,7 +143,7 @@ public sealed class ProgressPark
                 access.Update(SkillAccess.ClassKey, defaultSkillAccess);
             }
 
-            ParkStored(uid, state, ruleIndex, registry, access);
+            ParkStored(uid, state, ruleIndex, registry, access, traits);
             loaded++;
         }
 

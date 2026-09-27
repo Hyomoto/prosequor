@@ -19,7 +19,6 @@ public sealed class ActivityWatchService
     const double MountTravelSq = 0.04;
 
     readonly ICoreServerAPI sapi;
-    readonly IActivityWrapperRegistry wrappers;
     readonly IXpRuleRegistry rules;
     readonly Dictionary<string, double> lastSampleTotalHours = new(StringComparer.Ordinal);
     readonly ConcurrentDictionary<string, Vec3d> lastMotionPosByPlayer = new(StringComparer.Ordinal);
@@ -27,13 +26,9 @@ public sealed class ActivityWatchService
     readonly List<IServerPlayer> resolvedSlice = new();
     readonly CollectXpBuffer collectXp = new();
 
-    public ActivityWatchService(
-        ICoreServerAPI sapi,
-        IActivityWrapperRegistry wrappers,
-        IXpRuleRegistry rules)
+    public ActivityWatchService(ICoreServerAPI sapi, IXpRuleRegistry rules)
     {
         this.sapi = sapi;
-        this.wrappers = wrappers;
         this.rules = rules;
     }
 
@@ -149,12 +144,6 @@ public sealed class ActivityWatchService
 
             facts.Clear();
             MaterializeEffortFacts(context, moving, facts);
-
-            // Legacy wrappers (deprecated; prefer Effort.Emit / RegisterPoll).
-            foreach (IActivityWrapper wrapper in wrappers.All)
-            {
-                wrapper.Collect(context, facts);
-            }
 
             if (facts.Count == 0)
             {

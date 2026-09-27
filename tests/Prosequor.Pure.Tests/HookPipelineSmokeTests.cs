@@ -309,7 +309,7 @@ public class HookPipelineSmokeTests
                 hook, verb, phase, ActionIds.AddMappedNumber, attrSource,
                 new MappedNumberParams
                 {
-                    Op = "scale",
+                    Op = "multiply",
                     FromScore = 0,
                     FromValue = 1.0f,
                     ToScore = 20,

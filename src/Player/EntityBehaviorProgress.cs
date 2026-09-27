@@ -514,9 +514,62 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         EnsureLoaded(splr, registry);
     }
 
+    /// <summary>
+    /// Copy <c>characterClass</c> and <c>extraTraits</c> onto <see cref="State"/> so parked
+    /// scores use the same baseline as live progress. Marks the blob dirty when they change.
+    /// </summary>
+    public void CaptureClassProfile()
+    {
+        if (entity.World?.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        string? classCode = entity.WatchedAttributes?.GetString("characterClass");
+        string[]? extras = entity.WatchedAttributes?.GetStringArray("extraTraits");
+        if (string.Equals(state.CharacterClass, classCode, StringComparison.Ordinal)
+            && TraitsEqual(state.ExtraTraits, extras))
+        {
+            return;
+        }
+
+        state.CharacterClass = classCode;
+        state.ExtraTraits = extras == null ? null : (string[])extras.Clone();
+        MarkPersistDirty();
+    }
+
+    static bool TraitsEqual(string[]? left, string[]? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left == null || right == null || left.Length != right.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Length; i++)
+        {
+            if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public void FlushSave()
     {
-        if (entity.World.Side != EnumAppSide.Server || !dirty)
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        CaptureClassProfile();
+        if (!dirty)
         {
             return;
         }
@@ -746,6 +799,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         if (entity is EntityPlayer eplr && eplr.Player is IServerPlayer splr)
         {
             pending.Clear();
+            CaptureClassProfile();
             ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
             ProgressStore.WriteModData(splr, state);
             dirty = false;

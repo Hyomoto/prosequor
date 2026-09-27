@@ -14,6 +14,14 @@
       }
     },
     {
+      "id": "prosequor:inc-crit-damage",
+      "minScore": 14,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:crit-damage",
+      "action": "prosequor:number",
+      "params": { "op": "set", "value": 2 }
+    },
+    {
       "id": "prosequor:inc-animal-threat",
       "minScore": 0,
       "hook": "prosequor:player-interaction",

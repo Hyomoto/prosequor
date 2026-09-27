@@ -534,11 +534,11 @@ public static class ItemstackInfoTooltipPatches
         if (!string.IsNullOrEmpty(headerAffixes))
         {
             // Separators inherit this face; each colored name already carries face+size.
-            sb.Append("\n<font face=\"")
+            sb.Append("<font face=\"")
                 .Append(GuiStyle.StandardFontName)
                 .Append("\" size=\"")
                 .Append(((int)GuiStyle.DetailFontSize).ToString())
-                .Append("\">")
+                .Append("\">\n")
                 .Append(headerAffixes)
                 .Append("</font>");
         }

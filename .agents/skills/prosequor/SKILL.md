@@ -155,8 +155,6 @@ Gameplay must not call `IPlayerProgress.AddSkillXp`. That method is the pay sink
 | Game already pulses (interact step, pour tick) | `Effort.Emit` or `mod.EmitEffort` | `prosequor:effort` (`rate`) |
 | Continuous state, no pulse (mounted, fishing) | `mod.RegisterEffortPoll` | `prosequor:effort` |
 
-`RegisterActivityWrapper` is deprecated for rate XP.
-
 Publish roles the rule will read (`caller`, `target`, tokens, metric, quantity). Payees (`user`, `maker`, `contributor`, `contributors`) are chosen by the **rule**, not by merging maker into contributors. Emit `makerUid` and `contributors` separately. Channel and token catalogs: [docs/reference.md](../../../docs/reference.md) (XP rules). Prefer `DeedToken` / `EffortToken` for standard tags. A new token needs the enum, an emitter, and a doc line in that file — data-only rules can only match tokens something already emits.
 
 Offline XP is held on the world save and flushed on join. Test plans without a world: `Deed.PlanPays`.
@@ -287,7 +285,6 @@ New Harmony: smoke/transpile tests next to existing `HarmonyPatchAllSmokeTests` 
 | Hook without a registered action | Pair them in `AbilityBootstrap` |
 | Author `maxLevel` | `SkillKindPolicy` |
 | Assume collection membership at `AssetsFinalize` | Keys then; codes at `GameReady` |
-| `RegisterActivityWrapper` for new rate XP | `EmitEffort` or `RegisterEffortPoll` |
 | Chain unlock renames in `UnlockIdRemap` | Single hop; bump schema |
 | Treat `docs/reference.md` as optional when adding a JSON feature | Update it in the same change (user-facing keys/values only; no engine/"why" notes; keep the Contents TOC) |
 | Dump implementation, shipped curves, or design rationale into `docs/reference.md` | Keep it unopinionated and raw — what the key does, what accepted values do |

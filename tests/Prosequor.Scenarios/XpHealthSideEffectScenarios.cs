@@ -14,7 +14,7 @@ namespace Prosequor.Scenarios;
 
 /// <summary>
 /// Health must not ratcheting-heal from XP. Deed pay must not re-apply Constitution;
-/// a real Constitution score change must keep fill against the pre-change pool.
+/// a real Resilience score change must keep fill against the pre-change pool.
 /// </summary>
 public class XpHealthSideEffectScenarios : AtlasScenarioBase
 {
@@ -80,7 +80,7 @@ public class XpHealthSideEffectScenarios : AtlasScenarioBase
     [AtlasScenario(FreshWorld = true)]
     [Trait("Layer", "Xp")]
     [Trait("Kind", "HealthSideEffect")]
-    public async Task ConstitutionScoreGain_Should_PreserveFillRatio()
+    public async Task ResilienceScoreGain_Should_PreserveFillRatio()
     {
         ITestPlayer joined = await World.JoinPlayer("ConFillKeep");
         IPlayer player = joined.Player;
@@ -88,28 +88,28 @@ public class XpHealthSideEffectScenarios : AtlasScenarioBase
         EntityBehaviorHealth health = RequireHealth(entity);
         IPlayerProgress progress = RequireProgress(player);
 
-        progress.SetAttribute(AttributeIds.Constitution, 10);
+        progress.SetAttribute(AttributeIds.Resilience, 10);
         health.UpdateMaxHealth();
         float beforeMax = health.MaxHealth;
-        Assert.True(beforeMax > 5f, $"Expected a usable max health at CON 10, got {beforeMax}.");
+        Assert.True(beforeMax > 5f, $"Expected a usable max health at RES 10, got {beforeMax}.");
 
         // Half pool so fill is unambiguous (not full, not near-empty).
         health.Health = beforeMax * 0.5f;
         float beforeHealth = health.Health;
         float beforeFill = beforeHealth / beforeMax;
 
-        progress.SetAttribute(AttributeIds.Constitution, 11);
+        progress.SetAttribute(AttributeIds.Resilience, 11);
 
         float afterMax = health.MaxHealth;
         float afterHealth = health.Health;
         Assert.True(
             afterMax > beforeMax + 0.05f,
-            $"Expected CON 11 to raise max health. before={beforeMax:0.###} after={afterMax:0.###}.");
+            $"Expected RES 11 to raise max health. before={beforeMax:0.###} after={afterMax:0.###}.");
 
         float afterFill = afterHealth / afterMax;
         Assert.True(
             Math.Abs(afterFill - beforeFill) <= 0.02f,
-            $"Constitution score change must keep fill. before={beforeHealth:0.###}/{beforeMax:0.###} "
+            $"Resilience score change must keep fill. before={beforeHealth:0.###}/{beforeMax:0.###} "
             + $"({beforeFill:0.###}) after={afterHealth:0.###}/{afterMax:0.###} ({afterFill:0.###}).");
     }
 

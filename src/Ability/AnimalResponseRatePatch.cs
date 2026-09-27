@@ -8,7 +8,7 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Replaces flee/seek <c>AiTaskBase.ExecutionChance</c> loads with Inconspicuity-scaled helpers.
+/// Replaces flee/seek <c>AiTaskBase.ExecutionChance</c> loads with helpers that return the field.
 /// Helpers must return <see cref="double"/> to match the field / <c>NextDouble</c> compare.
 /// </summary>
 public static class AnimalResponseRatePatch

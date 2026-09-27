@@ -665,7 +665,7 @@ public static class AttributeStatFixtures
                 },
                 @params = new Newtonsoft.Json.Linq.JObject
                 {
-                    ["op"] = "scale",
+                    ["op"] = "multiply",
                     ["fromScore"] = 0,
                     ["fromValue"] = 2.5,
                     ["toScore"] = 18,

@@ -14,18 +14,9 @@ public class ClayFormXpAdapter
 
     readonly ICoreServerAPI sapi;
 
-    public ClayFormXpAdapter(ICoreServerAPI sapi, XpActionDispatcher dispatcher)
+    public ClayFormXpAdapter(ICoreServerAPI sapi)
     {
         this.sapi = sapi;
-        _ = dispatcher;
-    }
-
-    public void Start()
-    {
-    }
-
-    public void Dispose()
-    {
     }
 
     /// <param name="voxelCount">Novel good-voxel delta. One flat emit per voxel.</param>
