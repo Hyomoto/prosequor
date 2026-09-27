@@ -2,6 +2,18 @@
   "id": "inconspicuity",
   "rules": [
     {
+      "id": "prosequor:inc-crit-chance",
+      "minScore": 14,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:crit-chance",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "from": [14, 18],
+        "to": [3, 15],
+        "round": "ceil"
+      }
+    },
+    {
       "id": "prosequor:inc-animal-threat",
       "minScore": 0,
       "hook": "prosequor:player-interaction",
@@ -22,18 +34,6 @@
       "params": {
         "from": [11, 18],
         "to": [3, 24],
-        "round": "ceil"
-      }
-    },
-    {
-      "id": "prosequor:inc-crit-chance",
-      "minScore": 14,
-      "hook": "prosequor:player-interaction",
-      "verb": "prosequor:crit-chance",
-      "action": "prosequor:add-mapped-number",
-      "params": {
-        "from": [14, 18],
-        "to": [3, 15],
         "round": "ceil"
       }
     },

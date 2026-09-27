@@ -2,6 +2,18 @@
   "id": "strength",
   "rules": [
     {
+      "id": "prosequor:str-basic-slots",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:basic-slots",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "from": [14, 18],
+        "to": [2, 6],
+        "round": "ceil"
+      }
+    },
+    {
       "id": "prosequor:str-armor-walk",
       "minScore": 0,
       "hook": "prosequor:player-interaction",
@@ -22,18 +34,6 @@
       "params": {
         "from": [0, 18],
         "to": [33, 150],
-        "round": "ceil"
-      }
-    },
-    {
-      "id": "prosequor:str-basic-slots",
-      "minScore": 0,
-      "hook": "prosequor:player-interaction",
-      "verb": "prosequor:basic-slots",
-      "action": "prosequor:add-mapped-number",
-      "params": {
-        "from": [13, 18],
-        "to": [0, 5],
         "round": "ceil"
       }
     },
