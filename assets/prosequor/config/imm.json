@@ -15,6 +15,12 @@
           "Min": 0,
           "Max": 100,
           "Step": 1
+        },
+        {
+          "Type": "Switch",
+          "Label": "prosequor:imm-show-vanilla-traits-tab",
+          "Description": "prosequor:imm-show-vanilla-traits-tab-desc",
+          "Map": "ShowVanillaTraitsTab"
         }
       ]
     },
