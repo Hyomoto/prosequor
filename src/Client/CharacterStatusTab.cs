@@ -1,7 +1,5 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using HarmonyLib;
-using Prosequor.Ability;
 using Prosequor.Data;
 using Prosequor.Player;
 using Vintagestory.API.Client;
@@ -14,64 +12,78 @@ using Vintagestory.GameContent;
 namespace Prosequor.Client;
 
 /// <summary>
-/// Replaces the Character dialog Traits tab with a scrollable inset of leftover traits,
-/// qualitative attribute effects, and blended entity-stat lines.
+/// Character-dialog Status tab. Trait lines are included only while the vanilla traits tab is hidden.
 /// </summary>
-[HarmonyPatch(typeof(CharacterSystem), "composeTraitsTab")]
-public static class CharacterTraitsTabPatches
+public sealed class CharacterStatusTab
 {
-    const string BodyKey = "prosequorTraitsBody";
-    const string ScrollKey = "prosequorTraitsScroll";
+    public const string TabLangKey = "prosequor:charactertab-status";
+
+    const string BodyKey = "prosequorStatusBody";
+    const string ScrollKey = "prosequorStatusScroll";
     const double ScrollbarWidth = 16;
     const double InsetPad = 6;
     const double TopY = 25;
     const double FallbackWidth = 385;
     const double FallbackHeight = 440;
 
-    static GuiComposer? activeComposer;
-    static ElementBounds? clipBounds;
-    static ElementBounds? contentBounds;
-    static float scrollY;
-    static double contentHeight;
-    static EntityBehaviorProgress? observedProgress;
-    static Entity? observedEntity;
-    static CharacterSystem? activeModSys;
-    static ICoreClientAPI? activeCapi;
-    static string? lastHtml;
+    readonly ICoreClientAPI capi;
+    bool includeTraits;
 
-    public static void Dispose()
+    GuiDialogCharacterBase? dlg;
+    GuiComposer? activeComposer;
+    ElementBounds? clipBounds;
+    ElementBounds? contentBounds;
+    float scrollY;
+    double contentHeight;
+    EntityBehaviorProgress? observedProgress;
+    Entity? observedEntity;
+    string? lastHtml;
+
+    public CharacterStatusTab(ICoreClientAPI capi)
+    {
+        this.capi = capi;
+    }
+
+    /// <summary>Trait lines belong on Status only when the vanilla traits tab is hidden.</summary>
+    public static bool IncludeTraits(bool vanillaTabSuppressed) => vanillaTabSuppressed;
+
+    public void Start(bool includeTraits)
+    {
+        this.includeTraits = includeTraits;
+        dlg = capi.Gui.LoadedGuis.Find(g => g is GuiDialogCharacterBase) as GuiDialogCharacterBase;
+        if (dlg == null)
+        {
+            capi.Logger.Warning("[prosequor] GuiDialogCharacterBase not found; Status tab skipped.");
+            return;
+        }
+
+        int handlerIndex = dlg.RenderTabHandlers.Count;
+        dlg.Tabs.Add(new GuiTab
+        {
+            Name = Lang.Get(TabLangKey),
+            DataInt = handlerIndex
+        });
+        dlg.RenderTabHandlers.Add(Compose);
+    }
+
+    public void Dispose()
     {
         DetachProgress();
         DetachStats();
         activeComposer = null;
-        activeModSys = null;
-        activeCapi = null;
+        dlg = null;
         clipBounds = null;
         contentBounds = null;
         lastHtml = null;
         contentHeight = 0;
     }
 
-    [HarmonyPrefix]
-    public static bool Prefix(CharacterSystem __instance, GuiComposer compo)
+    void Compose(GuiComposer compo)
     {
-        ICoreClientAPI? capi = Traverse.Create(__instance).Field<ICoreClientAPI>("capi").Value;
-        if (capi == null)
-        {
-            return true;
-        }
-
-        if (PlayerModelLibCompat.IsLoaded(capi))
-        {
-            return true;
-        }
-
         DetachProgress();
         DetachStats();
         lastHtml = null;
         activeComposer = compo;
-        activeModSys = __instance;
-        activeCapi = capi;
         scrollY = 0f;
         contentHeight = 0;
 
@@ -116,53 +128,13 @@ public static class CharacterTraitsTabPatches
         compo.AddVerticalScrollbar(OnScroll, scrollBounds, ScrollKey);
 
         EntityPlayer entity = capi.World.Player.Entity;
-        EntityBehaviorProgress? progress = entity.GetBehavior<EntityBehaviorProgress>();
-        AttachProgress(progress);
-        AttachStats(entity);
-
-        Refresh();
-        capi.Event.EnqueueMainThreadTask(ApplyScrollbar, "prosequor-traits-scroll");
-        return false;
-    }
-
-    [HarmonyPostfix]
-    public static void Postfix(CharacterSystem __instance, GuiComposer compo)
-    {
-        ICoreClientAPI? capi = Traverse.Create(__instance).Field<ICoreClientAPI>("capi").Value;
-        if (capi == null || !PlayerModelLibCompat.IsLoaded(capi))
-        {
-            return;
-        }
-
-        if (compo.GetRichtext(BodyKey) != null)
-        {
-            return;
-        }
-
-        GuiElementRichtext? body = compo.GetRichtext("traitsDesc");
-        if (body == null)
-        {
-            return;
-        }
-
-        DetachProgress();
-        DetachStats();
-        lastHtml = null;
-        activeComposer = compo;
-        activeModSys = __instance;
-        activeCapi = capi;
-        scrollY = 0f;
-        contentHeight = 0;
-        clipBounds = null;
-        contentBounds = null;
-
-        EntityPlayer entity = capi.World.Player.Entity;
         AttachProgress(entity.GetBehavior<EntityBehaviorProgress>());
         AttachStats(entity);
         Refresh();
+        capi.Event.EnqueueMainThreadTask(ApplyScrollbar, "prosequor-status-scroll");
     }
 
-    static void OnScroll(float value)
+    void OnScroll(float value)
     {
         scrollY = GameMath.Clamp(value, 0f, MaxScrollOffset());
         if (contentBounds == null)
@@ -174,7 +146,7 @@ public static class CharacterTraitsTabPatches
         contentBounds.CalcWorldBounds();
     }
 
-    static float MaxScrollOffset()
+    float MaxScrollOffset()
     {
         if (clipBounds == null)
         {
@@ -184,7 +156,7 @@ public static class CharacterTraitsTabPatches
         return (float)Math.Max(0, contentHeight - clipBounds.fixedHeight);
     }
 
-    static void AttachProgress(EntityBehaviorProgress? progress)
+    void AttachProgress(EntityBehaviorProgress? progress)
     {
         DetachProgress();
         observedProgress = progress;
@@ -194,7 +166,7 @@ public static class CharacterTraitsTabPatches
         }
     }
 
-    static void DetachProgress()
+    void DetachProgress()
     {
         if (observedProgress != null)
         {
@@ -203,14 +175,14 @@ public static class CharacterTraitsTabPatches
         }
     }
 
-    static void AttachStats(Entity entity)
+    void AttachStats(Entity entity)
     {
         DetachStats();
         observedEntity = entity;
         observedEntity.WatchedAttributes.RegisterModifiedListener("stats", OnStatsChanged);
     }
 
-    static void DetachStats()
+    void DetachStats()
     {
         if (observedEntity == null)
         {
@@ -221,25 +193,22 @@ public static class CharacterTraitsTabPatches
         observedEntity = null;
     }
 
-    static void OnProgressChanged() => Refresh();
+    void OnProgressChanged() => Refresh();
 
-    static void OnStatsChanged() => Refresh();
+    void OnStatsChanged() => Refresh();
 
-    static void Refresh()
+    void Refresh()
     {
         GuiComposer? compo = activeComposer;
-        CharacterSystem? modSys = activeModSys;
-        ICoreClientAPI? capi = activeCapi;
-        if (compo == null || modSys == null || capi == null)
+        if (compo == null)
         {
             return;
         }
 
-        string html = BuildHtml(modSys, capi);
-        GuiElementRichtext? body = compo.GetRichtext(BodyKey) ?? compo.GetRichtext("traitsDesc");
+        string html = BuildHtml(capi, includeTraits);
+        GuiElementRichtext? body = compo.GetRichtext(BodyKey);
         if (body == null)
         {
-            // Traits tab composer was torn down (switched tabs / closed dialog).
             Dispose();
             return;
         }
@@ -267,7 +236,7 @@ public static class CharacterTraitsTabPatches
         ApplyScrollbar();
     }
 
-    static void ApplyScrollbar()
+    void ApplyScrollbar()
     {
         GuiComposer? compo = activeComposer;
         if (compo == null)
@@ -275,7 +244,7 @@ public static class CharacterTraitsTabPatches
             return;
         }
 
-        GuiElementScrollbar? scrollbar = compo.GetScrollbar(ScrollKey) ?? compo.GetScrollbar("scrollbar");
+        GuiElementScrollbar? scrollbar = compo.GetScrollbar(ScrollKey);
         if (scrollbar == null)
         {
             return;
@@ -300,11 +269,18 @@ public static class CharacterTraitsTabPatches
         }
     }
 
-    public static string BuildHtml(CharacterSystem modSys, ICoreClientAPI capi)
+    public static string BuildHtml(ICoreClientAPI capi, bool includeTraits)
     {
         EntityPlayer entity = capi.World.Player.Entity;
         StringBuilder sb = new();
-        AppendTraits(sb, modSys, entity);
+        if (includeTraits)
+        {
+            CharacterSystem? characters = capi.ModLoader.GetModSystem<CharacterSystem>();
+            if (characters != null)
+            {
+                AppendTraits(sb, characters, entity);
+            }
+        }
 
         HashSet<string> emittedBlended = new(StringComparer.OrdinalIgnoreCase);
         List<(string Text, bool Positive)> blended = [];
@@ -365,7 +341,7 @@ public static class CharacterTraitsTabPatches
             }
         }
 
-        if (codes.Count == 0)
+        if (codes.Count == 0 || modSys.TraitsByCode == null)
         {
             return;
         }
@@ -378,20 +354,23 @@ public static class CharacterTraitsTabPatches
                      .OrderBy(t => (int)t.Type))
         {
             attrs.Clear();
-            foreach (KeyValuePair<string, double> attribute in item.Attributes)
+            if (item.Attributes != null)
             {
-                if (attrs.Length > 0)
+                foreach (KeyValuePair<string, double> attribute in item.Attributes)
                 {
-                    attrs.Append(", ");
-                }
+                    if (attrs.Length > 0)
+                    {
+                        attrs.Append(", ");
+                    }
 
-                attrs.Append(
-                    Lang.Get(
-                        string.Format(
-                            GlobalConstants.DefaultCultureInfo,
-                            "charattribute-{0}-{1}",
-                            attribute.Key,
-                            attribute.Value)));
+                    attrs.Append(
+                        Lang.Get(
+                            string.Format(
+                                GlobalConstants.DefaultCultureInfo,
+                                "charattribute-{0}-{1}",
+                                attribute.Key,
+                                attribute.Value)));
+                }
             }
 
             if (attrs.Length > 0)
@@ -433,7 +412,6 @@ public static class CharacterTraitsTabPatches
             return text;
         }
 
-        // "• Name" or "<font …>• Name" / "<font …> • Name"
         string stripped = Regex.Replace(
             text,
             @"(^|>)\s*[•\u2022\u25CF\u25E6\u00B7]\s*",

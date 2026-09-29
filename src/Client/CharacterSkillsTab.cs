@@ -143,7 +143,7 @@ public class CharacterSkillsTab
             return;
         }
 
-        tabIndex = dlg.Tabs.Count;
+        tabIndex = dlg.RenderTabHandlers.Count;
         dlg.Tabs.Add(new GuiTab
         {
             Name = Lang.Get("prosequor:charactertab-skills"),

@@ -99,193 +99,12 @@
         "requires": []
       },
       {
-        "id": "clay-digging",
-        "nameLang": "unlock-digging-clay-digging",
-        "icon": "textures/icons/digging/clay-digging.svg",
-        "cost": 1,
-        "minSkillLevel": 10,
-        "descriptionLang": "unlockdesc-digging-clay-digging",
-        "descriptionParams": [
-          { "sum": [ "0.base" ], "format": "fractionPercent" },
-          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
-          { "sum": [ "0.cap" ], "format": "fractionPercent" }
-        ],
-        "totalParams": [
-          { "target": 0, "format": "fractionPercent" }
-        ],
-        "layout": { "layerOffset": 0 },
-        "tiers": [
-          {
-            "effects": [
-              {
-                "hook": "prosequor:block-interaction",
-                "verb": "prosequor:mutate-drops",
-                "phase": "quantity",
-                "action": "prosequor:number",
-                "when": {
-                  "tags": [ "target:<clay>" ]
-                },
-                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
-              }
-            ]
-          },
-          {
-            "effects": [
-              {
-                "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
-                "minSkillLevel": 25
-              }
-            ]
-          },
-          {
-            "effects": [
-              {
-                "replicate": 0,
-                "params": { "cap": 1.0 },
-                "minSkillLevel": 40
-              }
-            ]
-          }
-        ],
-        "requires": [ "shovelman" ]
-      },
-      {
-        "id": "shovelman",
-        "nameLang": "unlock-digging-shovelman",
-        "icon": "textures/icons/digging/shovelman.svg",
-        "cost": 1,
-        "minSkillLevel": 30,
-        "specialization": true,
-        "descriptionLang": "unlockdesc-digging-shovelman",
-        "descriptionParams": [
-          { "sum": [ "0.value" ], "format": "fractionPercent" }
-        ],
-        "tiers": [
-          {
-            "effects": [
-              {
-                "hook": "prosequor:progress",
-                "verb": "prosequor:skill-xp",
-                "phase": "amount",
-                "action": "prosequor:number",
-                "params": { "op": "scale", "value": 0.4 }
-              },
-              {
-                "hook": "prosequor:progress",
-                "verb": "prosequor:skill-bucket",
-                "phase": "cap",
-                "action": "prosequor:number",
-                "params": { "op": "scale", "value": 1 }
-              }
-            ]
-          }
-        ],
-        "requires": [ "shovelexpert" ]
-      },
-      {
-        "id": "peat-digging",
-        "nameLang": "unlock-digging-peat-digging",
-        "icon": "textures/icons/digging/peat-digging.svg",
-        "cost": 1,
-        "minSkillLevel": 10,
-        "layout": { "layerOffset": 0 },
-        "descriptionLang": "unlockdesc-digging-peat-digging",
-        "descriptionParams": [
-          { "sum": [ "0.base" ], "format": "fractionPercent" },
-          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
-          { "sum": [ "0.cap" ], "format": "fractionPercent" }
-        ],
-        "totalParams": [
-          { "target": 0, "format": "fractionPercent" }
-        ],
-        "tiers": [
-          {
-            "effects": [
-              {
-                "hook": "prosequor:block-interaction",
-                "verb": "prosequor:mutate-drops",
-                "phase": "quantity",
-                "action": "prosequor:number",
-                "when": {
-                  "tags": [ "target:<peat>" ]
-                },
-                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
-              }
-            ]
-          },
-          {
-            "effects": [
-              {
-                "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
-                "minSkillLevel": 25
-              }
-            ]
-          },
-          {
-            "effects": [
-              {
-                "replicate": 0,
-                "params": { "cap": 1.0 },
-                "minSkillLevel": 40
-              }
-            ]
-          }
-        ],
-        "requires": [ "shovelman" ]
-      },
-      {
-        "id": "clay-spotter",
-        "nameLang": "unlock-digging-clay-spotter",
-        "icon": "textures/icons/digging/clay-spotter.svg",
-        "cost": 1,
-        "minSkillLevel": 30,
-        "descriptionLang": "unlockdesc-digging-clay-spotter",
-        "descriptionParams": [
-          { "sum": [ "0.chance.percent" ], "format": "percent" }
-        ],
-        "tiers": [
-          {
-            "effects": [
-              {
-                "hook": "prosequor:block-interaction",
-                "verb": "prosequor:mutate-drops",
-                "phase": "stacks",
-                "action": "prosequor:chance",
-                "when": {
-                  "tags": [ "target:<clay>" ]
-                },
-                "params": {
-                  "chance": { "percent": 50 },
-                  "onSuccess": {
-                    "action": "prosequor:append-from-drop-table",
-                    "params": { "table": "prosequor:clay-item" }
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "effects": [
-              {
-                "replicate": 0,
-                "params": {
-                  "chance": { "percent": 100 }
-                },
-                "minSkillLevel": 60
-              }
-            ]
-          }
-        ],
-        "requires": [ "clay-digging" ]
-      },
-      {
         "id": "charcoaldigger",
         "nameLang": "unlock-digging-charcoaldigger",
         "icon": "textures/icons/digging-skill.svg",
         "cost": 1,
         "minSkillLevel": 10,
+        "layout": { "layerOffset": 0 },
         "descriptionLang": "unlockdesc-digging-charcoaldigger",
         "descriptionParams": [
           { "sum": [ "0.base" ], "format": "fractionPercent" },
@@ -329,7 +148,143 @@
             ]
           }
         ],
-        "requires": [ "shovelman" ]
+        "requires": [ "peat-digging" ]
+      },
+      {
+        "id": "peat-digging",
+        "nameLang": "unlock-digging-peat-digging",
+        "icon": "textures/icons/digging/peat-digging.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "descriptionLang": "unlockdesc-digging-peat-digging",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<peat>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
+                "minSkillLevel": 25
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "cap": 1.0 },
+                "minSkillLevel": 40
+              }
+            ]
+          }
+        ],
+        "requires": [ "shovelexpert" ]
+      },
+      {
+        "id": "clay-digging",
+        "nameLang": "unlock-digging-clay-digging",
+        "icon": "textures/icons/digging/clay-digging.svg",
+        "cost": 1,
+        "minSkillLevel": 10,
+        "layout": { "layerOffset": 0 },
+        "descriptionLang": "unlockdesc-digging-clay-digging",
+        "descriptionParams": [
+          { "sum": [ "0.base" ], "format": "fractionPercent" },
+          { "sum": [ "0.perSkillLevel" ], "format": "fractionPercent" },
+          { "sum": [ "0.cap" ], "format": "fractionPercent" }
+        ],
+        "totalParams": [
+          { "target": 0, "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "quantity",
+                "action": "prosequor:number",
+                "when": {
+                  "tags": [ "target:<clay>" ]
+                },
+                "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
+                "minSkillLevel": 25
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": { "cap": 1.0 },
+                "minSkillLevel": 40
+              }
+            ]
+          }
+        ],
+        "requires": [ "peat-digging" ]
+      },
+      {
+        "id": "shovelman",
+        "nameLang": "unlock-digging-shovelman",
+        "icon": "textures/icons/digging/shovelman.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "specialization": true,
+        "descriptionLang": "unlockdesc-digging-shovelman",
+        "descriptionParams": [
+          { "sum": [ "0.value" ], "format": "fractionPercent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-xp",
+                "phase": "amount",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 0.4 }
+              },
+              {
+                "hook": "prosequor:progress",
+                "verb": "prosequor:skill-bucket",
+                "phase": "cap",
+                "action": "prosequor:number",
+                "params": { "op": "scale", "value": 1 }
+              }
+            ]
+          }
+        ],
+        "requires": [ "clay-digging", "charcoaldigger" ]
       },
       {
         "id": "saltpeter-digging",
@@ -380,7 +335,52 @@
             ]
           }
         ],
-        "requires": [ "peat-digging" ]
+        "requires": [ "charcoaldigger" ]
+      },
+      {
+        "id": "clay-spotter",
+        "nameLang": "unlock-digging-clay-spotter",
+        "icon": "textures/icons/digging/clay-spotter.svg",
+        "cost": 1,
+        "minSkillLevel": 30,
+        "descriptionLang": "unlockdesc-digging-clay-spotter",
+        "descriptionParams": [
+          { "sum": [ "0.chance.percent" ], "format": "percent" }
+        ],
+        "tiers": [
+          {
+            "effects": [
+              {
+                "hook": "prosequor:block-interaction",
+                "verb": "prosequor:mutate-drops",
+                "phase": "stacks",
+                "action": "prosequor:chance",
+                "when": {
+                  "tags": [ "target:<clay>" ]
+                },
+                "params": {
+                  "chance": { "percent": 50 },
+                  "onSuccess": {
+                    "action": "prosequor:append-from-drop-table",
+                    "params": { "table": "prosequor:clay-item" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "effects": [
+              {
+                "replicate": 0,
+                "params": {
+                  "chance": { "percent": 100 }
+                },
+                "minSkillLevel": 60
+              }
+            ]
+          }
+        ],
+        "requires": [ "clay-digging" ]
       },
       {
         "id": "shovel-care",
@@ -438,7 +438,7 @@
             ]
           }
         ],
-        "requires": [ "clay-spotter", "saltpeter-digging" ]
+        "requires": [ "clay-spotter", "saltpeter-digging", "shovelman" ]
       }
     ]
   }

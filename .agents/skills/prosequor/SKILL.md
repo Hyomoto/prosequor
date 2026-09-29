@@ -12,7 +12,7 @@ description: >-
 
 Vintage Story progression mod (`modid`: `prosequor`). JSON **declares** matches and effects; C# **emits** facts and runs stations. Do not scrape authored JSON at runtime, and do not invent a parallel XP or unlock path.
 
-This skill is the **layout and injection map**. Field grammar lives in [docs/reference.md](../../../docs/reference.md). Admin commands: [docs/commands.md](../../../docs/commands.md). Design targets and historical remaps are not runtime truth — [attrref.md](../../../attrref.md), [docs/surface-verb-phase-remap.md](../../../docs/surface-verb-phase-remap.md).
+This skill is the **layout and injection map**. Field grammar lives in [docs/reference.md](../../../docs/reference.md). Modder how-to: [docs/modding.md](../../../docs/modding.md). Admin commands: [docs/commands.md](../../../docs/commands.md). Design targets and historical remaps are not runtime truth — [attrref.md](../../../attrref.md), [docs/surface-verb-phase-remap.md](../../../docs/surface-verb-phase-remap.md).
 
 ### `docs/reference.md`
 
@@ -78,8 +78,9 @@ Vanilla-style asset patches (`assets/<domain>/patches/*.json`) are separate from
 5. `SkillRegistry.LoadFromAssets` — skills, then contribution grafts, then compile (needs attribute catalog for `attributeScores`)
 6. `TraitAttributes.LoadFromAssets`
 7. `LevelUps.LoadFromAssets` (also reads contribution `levelUps`)
-8. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
-9. `ContentFingerprint.Compute`
+8. `Options.LoadFromAssets` — UI requests (`traitsTab`); not part of the content fingerprint
+9. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
+10. `ContentFingerprint.Compute`
 
 `StartServerSide` → `GameReady`: collection **membership** (pattern expand, C# fillers, unions), pool index resolve, `TagCriterion.BindAll`, catalogs (clay, block-break hardness). Keys must exist at compile time; item/block codes inside collections are not required until GameReady.
 
@@ -97,6 +98,7 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 | Attribute stat | `config/prosequor/stats/<id>.json` | `src/Data/AttributeStatRegistry.cs` | File `id` is the attribute; same effect envelope as skills, gated by score |
 | Trait map | `config/prosequor/trait-attributes.json` | `src/Data/TraitAttributeRegistry.cs` | Vanilla class-trait → attribute mapping; optional `skills` adds registered skill ids to that class set |
 | Level-ups | `config/prosequor/level-ups.json` | `src/Data/LevelUpRegistry.cs` | Player-level grants; also graftable via contribution `levelUps` |
+| Options | `config/prosequor/options.json` or `options/*.json` | `src/Data/OptionsRegistry.cs` | One object per file. `traitsTab: true` in any applied file leaves the vanilla traits tab visible. Optional engine-style `dependsOn`. Not in the content fingerprint |
 | XP rule | `xpRules` on the **owning skill** (or a contribution) | `src/Xp/XpRuleCompiler.cs` then `XpRuleRegistry` | No `skill` field — ownership is the enclosing skill |
 | Handbook | `assets/prosequor/config/handbook/*.json` | game handbook | Player prose only; not a code hook |
 | Lang / icons | `assets/<domain>/lang/`, texture paths on nodes | — | Required for contributed nodes |
