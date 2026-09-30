@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Prosequor Mod Page Mockup</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #f5f1e8;
+            color: #201b16;
+            font-family: Verdana, "Times New Roman", serif;
+            font-size: 18px;
+            line-height: 1.55;
+        }
+
+        main {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 20px 10px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: Verdana, "Times New Roman", serif;
+            line-height: 1.0;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 0.3em;
+        }
+
+        h2 {
+            font-size: 1.65rem;
+            margin-top: 2.2em;
+            margin-bottom: 0.7em;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            margin-top: 1.7em;
+            margin-bottom: 0.4em;
+            color: #1c648b;
+        }
+
+        p {
+            margin: 0.8em 0;
+        }
+
+        ul {
+            margin-top: 0.5em;
+        }
+
+        li {
+            margin: 0.35em 0;
+        }
+
+        a {
+            color: #1c648b;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #acb9cb;
+            margin: 2.5em 0;
+        }
+
+        details {
+            margin: 0.45em 0;
+            border: 1px solid #acb9cb;
+            border-radius: 4px;
+            background: #e4ebf4;
+        }
+
+        summary {
+            cursor: pointer;
+            padding: 0.55em 0.8em;
+            font-weight: bold;
+        }
+
+        details > *:not(summary) {
+            margin-left: 1em;
+            margin-right: 1em;
+        }
+
+        details > p:last-child,
+        details > ul:last-child {
+            margin-bottom: 1em;
+        }
+
+        .lead {
+            font-size: 1.08em;
+        }
+
+        .notice {
+            border-left: 4px solid #8b2f1c;
+            padding: 0.8em 1em;
+            background: rgba(139, 47, 28, 0.06);
+        }
+
+        .muted {
+            color: #6f665a;
+        }
+    </style>
+</head>
+
+<body>
+  <main>
+    <p class="lead">
+        Pictures are probably worth more than words here, so the screenshots will hopefully
+        tell you all you need to know. The rest of this page is context.
+    </p>
+    
+    <div class="notice">
+        <strong>This is a release candidate.</strong>
+        It is feature complete and should be stable, but there will be balance and compatibility
+        issues. It can be safely added to or removed from in-progress games; see
+        <a href="#removing-prosequor">Removing Prosequor</a> below.
+    </div>
+    
+    <hr>
+    
+    <h2>What am I trying to solve?</h2>
+    
+    <p>
+        There are a lot of mods that want to add progression and RPG-style levelling systems to Vintage Story so let's not be coy: Xskills is basically the standard and that's what it will be judged against and Prosequor takes inspiration from.|
+    </p>
+    <p>
+        So what does Prosequor do?
+    </p>
+    <p>
+        Prosequor treats progression as a core feature, to make levelling feel like a part of the base game rather than one bolted on after-the-fact.  Additionally, it was built to be cleanly extended, integrated with or altered by other mods.  Prosequor is not just kind of data-driven, it's entirely data-driven to make it easy for people to modify, patch and add to it: in short, a lot of Prosequor's features are driven by JSON files just like recipes and item definitions.
+    </p>
+    
+    <h2>What does it add?</h2>
+    
+    <h3>Player Level</h3>
+    
+    <p>Level up to 50.</p>
+    
+    <h3>Attributes</h3>
+    
+    <ul>
+        <li>
+            <strong>Strength</strong> — Melee and block damage, armor speed penalty.
+            Major skill: extra inventory slots, +5 at 18.
+        </li>
+        <li>
+            <strong>Constitution</strong> — Max health, max satiety.
+            Major skill: improves hunger delay, +50% at 18.
+        </li>
+        <li>
+            <strong>Perception</strong> — Ranged draw speed and spread.
+            Major skill: low-light vision. At 18 you can see even in the darkest caves.
+        </li>
+        <li>
+            <strong>Inconspicuity</strong> — Animal seek range, flee rate and detection range,
+            cracked vessel collection. Major skill: critical hits, 15% chance at 18.
+        </li>
+        <li>
+            <strong>Resilience</strong> — Climate tolerance and fall damage.
+            Major skill: Last Stand, recharges after 2 in-game hours at 18.
+        </li>
+    </ul>
+    
+    <p class="muted">
+        Major skills apply once an attribute reaches 14+.
+    </p>
+    
+    <h3>Skills and Skill Trees</h3>
+    
+    <ul>
+        <li>
+            <strong>7 professions</strong> — tailoring, digging, farming, forestry,
+            husbandry, metalworking and mining — that level to 100.
+        </li>
+        <li>
+            <strong>6 minor skills</strong> — clayforming, panning, riding, seamanship,
+            fishing and cooking — that level to 50.
+        </li>
+        <li>
+            <strong>5 passive skills</strong> — athletics, swimming, foraging, sneaking
+            and adaptation — that level to 50.
+        </li>
+    </ul>
+    
+    <p>
+        Professions typically have 10 or more skills and ranks; minor skills tend to have
+        fewer. Every skill has one or more passives. There are approximately 106 unique
+        skills and 236 ranks.
+    </p>
+    
+    <h3>Credit Given Where Credit Is Due</h3>
+    
+    <p>
+        Items remember who made them: created by, grown by, brewed by, prepared by —
+        even when stacked.
+    </p>
+    
+    <h3>Quality &amp; Affixes</h3>
+    
+    <p>
+        Superior quality, warm clothing, stout liquors and many more. Better crafts aren't
+        just numerically different; they carry visible qualities and affixes of their own.
+    </p>
+    
+    <h3>Animal Friendliness</h3>
+    
+    <p>
+        Become friends with animals and be known as their favorite seraph. Whether you're
+        attracting the deer around your house or domesticating animals of your own, you're
+        rewarded for actually taking care of them.
+    </p>
+    
+    <h3>What's in a Class?</h3>
+    
+    <p>
+        Class traits are migrated to starting attributes, but the skills you level affect how
+        those attributes develop afterward. More freedom to pursue your character build.
+    </p>
+    
+    <h3>XP Sharing</h3>
+    
+    <p>
+        When players work together they get paid together; no need to worry about who placed
+        the final voxel.
+    </p>
+    
+    <h3>Offline XP Gain</h3>
+    
+    <p>
+        Passive XP gain — growing crops, tanning, etc. — is accumulated while offline, so
+        you will not lose XP just because you logged off.
+    </p>
+    
+    <h3>GUI Tweaks</h3>
+    
+    <p>
+        Familiar, but with fewer walls of text and more visual identity.
+    </p>
+    
+    <hr>
+    
+    <h2>What's the catch?</h2>
+    
+    <p>
+        Prosequor is a large mod and I built it with compatibility in mind, but I touch many
+        parts of the game engine to integrate XP gain, provide skill hooks and myriad other
+        behaviors.
+    </p>
+    
+    <p>
+        I have tried to make Prosequor easy for other mods to support and to minimize clashes,
+        but I cannot possibly expect that it's going to have perfect compatibility. I can only
+        guarantee compatibility with Vanilla because that's what it is written against and
+        what the test bed runs against.
+    </p>
+    
+    <h2>The Bucket System</h2>
+    
+    <p>
+        And thus we reach the controversial part: XP gain is gated behind buckets.
+    </p>
+    
+    <p>
+        Part of design is psychology, and Prosequor wants you to play the game, not obsess
+        over levelling up.  As such, you should naturally gain XP and improve as you play.  I
+        did not make this mod to encourage you to grind out animal husbandry or farming.  I
+        made it so that players will naturally differentiate themselves from each other on
+        servers without turning into homogenized blobs after a long weekend.
+    </p>
+    
+    <p>
+        Each skill has an XP bucket: the more you earn from that skill, the more its payout
+        declines, eventually reaching zero. To start earning again you need to take a break:
+        pursue another skill, sleep, or just go RP.  I've tweaked the buckets so they aren't overly hostile to regular play, but they are put in place to make it impossible to grind out skills non-stop. It's not because I
+        don't want you to get to 100; it's because I don't want you to grind out activities
+        to level up at all.
+    </p>
+    
+    <h2>Can I play it singleplayer?</h2>
+    
+    <p>
+        Yes. But it is multiplayer-focused, and I balanced it around playing for a long time
+        on a server rather than single-player runs.
+    </p>
+    
+    <hr>
+    
+    <h2>For the Modders</h2>
+    
+    <p>
+        If you want to support Prosequor by adding compatibility with your own mods, I have
+        tried to make it as refreshingly simple as I can. Obviously this is not the place for
+        a technical primer, but a quick description may pique interest.
+    </p>
+    
+    <p>
+        Prosequor relies largely on rules. The rules match in-game signals and modify the
+        outcome.
+    </p>
+    
+    <p>
+        A rule is just data:
+        <em>where</em> it listens (a hook),
+        <em>when</em> in that moment it runs (a verb and a phase),
+        <em>what</em> it is allowed to change (the phase's contract — usually a number,
+        a stack, or a list of stacks), and
+        <em>which</em> signals it cares about (filters by block, tool, etc.).
+    </p>
+    
+    <p>
+        Skill effects, tree unlocks and attribute stats all compile into the same pile.
+        When something happens in the world, matching rules run in order and fold a seed
+        value into a result.
+    </p>
+    
+    <details>
+        <summary>That sounds expensive</summary>
+    
+        <p>
+            You'd be surprised. Prosequor's systems are optimized to reduce server load as
+            much as possible.
+        </p>
+    
+        <p>
+            Watcher work is spread over multiple ticks, repeated rule matches are fingerprinted
+            and cached, and the matching paths themselves were written with larger server
+            populations in mind. I didn't consider "works with two players" as good enough.
+        </p>
+    
+        <p>
+            It does not hang per-player work on every game tick, and crafts, XP and skill
+            changes run when the game already fires an event.
+        </p>
+    
+        <p>
+            That said, if it's expensive in vanilla, Prosequor didn't make it cheaper.
+            In my "worst case" crafting test, the event takes 10.4ms on average to resolve,
+            but only about 20 microseconds is Prosequor's own work.
+        </p>
+    
+        <p>
+            If you install
+            <a href="https://mods.vintagestory.at/horperfopt#tab-description">
+                HoR Performance Optimizer
+            </a>,
+            this same test case drops to 2.2ms. Given that's the most expensive pipe in
+            Prosequor, I'm happy with what it achieves.
+        </p>
+    </details>
+    
+    <details>
+        <summary>So About the Name</summary>
+    
+        <p>
+            <strong>Proh-seh-kwor.</strong> As in <em>pro sequor</em>.
+        </p>
+    
+        <p>
+            Nobody's quite sure exactly how a Roman would have said it, and they're not around to correct us, but it is the Latin root behind words like <em>pursue</em> and <em>prosecute</em>. It bridges two loves of mine: names people don't like, and not naming my mod VS RPG Skill and Levelling Mod.
+        </p>
+    </details>
+    
+    <details id="removing-prosequor">
+        <summary>Removing Prosequor</summary>
+    
+        <p>
+            By and large Prosequor makes no changes that can't be rolled back, with caveats.
+        </p>
+    
+        <ul>
+            <li>
+                Class traits are converted to character attributes, so if you remove the mod
+                you will have to reselect your class to get your vanilla traits back.
+            </li>
+            <li>
+                Any items you have in your strength-granted slots will be lost, so empty
+                those before you go.
+            </li>
+            <li>
+                Changes such as health or satiety will persist until Vanilla recalculates them.
+            </li>
+        </ul>
+    </details>
+    
+    <hr>
+    
+    <h2>Compatibility</h2>
+    
+    <p>
+        I wrote a companion mod,
+        <a href="https://mods.vintagestory.at/show/mod/68666">Prosequor+</a>,
+        which provides some baseline compatibility with a handful of popular mods.
+    </p>
+    
+    <p>
+        It does not add new skills or skill trees — that would be up to the authors if they
+        want to — but it hooks their behaviors into Prosequor's existing pipeline.
+    </p>
+    
+    <details>
+        <summary>Fully Compatible</summary>
+    
+        <ul>
+            <li>
+                <a href="https://mods.vintagestory.at/immersivemining#tab-description">
+                    Immersive Mining
+                </a>
+                by SaltyWater and GamingToast
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/show/mod/60672">
+                    Barbershop Plus
+                </a>
+                by Me
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/diversediets">
+                    Diverse Diets
+                </a>
+                by Tentharchitect
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/realgrapes">
+                    Real Grapes
+                </a>
+                by xXx_Ape_xXx
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/knapster">
+                    Knapster
+                </a>
+                by Apache
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/playermodellib">
+                    PlayerModelLib
+                </a>
+                by VSCustodian, Maltiez and Caliber
+            </li>
+        </ul>
+    </details>
+    
+    <details>
+        <summary>Incompatible</summary>
+    
+        <ul>
+            <li>
+                <a href="https://mods.vintagestory.at/show/mod/36975">
+                    Traits Acquirer
+                </a>
+                — unable to determine a fix; possible UI crashes and skills-menu corruption
+                (critical), replacement of Prosequor's traits screen (annoying).
+            </li>
+        </ul>
+    </details>
+    
+    <details>
+        <summary>Known Issues</summary>
+    
+        <ul>
+            <li>
+                <a href="">Floral Zones (various)</a>
+                — many plants trigger skills and earn xp, but some do not. Partial compatibility.
+            </li>
+            <li>
+                <a href="https://mods.vintagestory.at/show/mod/14390">Gourmand</a>
+                — nutrition bar has no icon. Otherwise should be fully compatible.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/ecomachina">Eco Machina</a>
+                — experimental tree growth can skip XP hooks. Leaving it off is fully compatible.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/fallingtrees">Falling Trees</a>
+                — bypasses several Prosequor felling hooks; partially compatible.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/toolsmith">Toolsmith</a>
+                — needs investigation, but it is likely tools will skip some or all
+                XP/quality paths.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/smithingplusplus">SmithingPlusPlus</a>
+                — bit smithing, bit recovery (turn off in config), other conflicts under
+                investigation; both target forging at the anvil.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/hydrateordiedrate">
+                    Hydrate or Diedrate
+                </a>
+                — draws a satiety overlay, but is disjoint with satiety values that aren't
+                multiples of 100. Visual bug, but annoying.
+            </li>
+    
+            <li>
+                <a href="https://mods.vintagestory.at/show/mod/65408">
+                    Seraph Levelling
+                </a>
+                — replaces Prosequor's traits screen; otherwise should be compatible.
+            </li>
+        </ul>
+    </details>
+    
+      <h2>AI Disclosure</h2>
+  
+      <p>
+          While I hope this is not the part that turns you away, AI tools were heavily used. I know that this is important for many people, and so I am disclosing it. I have spent months on this project, and without AI it would not be as polished, tested, performant or complete. AI was used extensively throughout development, including writing code, design mockups and generating test cases.
+      <br><br>
+          No AI-generated artwork or audio was used; everything was either authored by me or sourced and credited.
+      </p>
+  </main>
+</body>
+</html>
