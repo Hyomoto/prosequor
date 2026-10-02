@@ -43,6 +43,14 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
         foreach (KeyValuePair<string, LevelUpRuleJson> kv in drafts
                      .OrderBy(d => d.Key, StringComparer.OrdinalIgnoreCase))
         {
+            if (LevelUpRuleCompiler.IsRetiredGrant(kv.Value.action))
+            {
+                warn?.Invoke(
+                    $"[prosequor] Level-up rule '{kv.Key}' action '{kv.Value.action}' no longer grants. "
+                    + "Skill points and specialization slots come from the progression table.");
+                continue;
+            }
+
             List<string> errors = new();
             LevelUpRuleDef? def = LevelUpRuleCompiler.Compile(kv.Value, ref sourceOrder, errors, catalog);
             if (def == null)

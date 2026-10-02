@@ -77,10 +77,11 @@ Vanilla-style asset patches (`assets/<domain>/patches/*.json`) are separate from
 4. `AttributeStats.LoadFromAssets` — attribute ids come from loaded stat files
 5. `SkillRegistry.LoadFromAssets` — skills, then contribution grafts, then compile (needs attribute catalog for `attributeScores`)
 6. `TraitAttributes.LoadFromAssets`
-7. `LevelUps.LoadFromAssets` (also reads contribution `levelUps`)
-8. `Options.LoadFromAssets` — UI requests (`traitsTab`); not part of the content fingerprint
-9. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
-10. `ContentFingerprint.Compute`
+7. `TraitAttributes.LoadClassProfiles` — `prosequor` objects on `config/characterclasses` (after skills, so unknown skill ids can be skipped)
+8. `LevelUps.LoadFromAssets` (also reads contribution `levelUps`)
+9. `Options.LoadFromAssets` — UI requests (`traitsTab`); not part of the content fingerprint
+10. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
+11. `ContentFingerprint.Compute`
 
 `StartServerSide` → `GameReady`: collection **membership** (pattern expand, C# fillers, unions), pool index resolve, `TagCriterion.BindAll`, catalogs (clay, block-break hardness). Keys must exist at compile time; item/block codes inside collections are not required until GameReady.
 
@@ -97,6 +98,7 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 | Affix list | `config/prosequor/affixes.json` or `affixes/*.json` | `src/Data/AffixListRegistry.cs` | Display stamps; list id must be `<assetDomain>:localId` |
 | Attribute stat | `config/prosequor/stats/<id>.json` | `src/Data/AttributeStatRegistry.cs` | File `id` is the attribute; same effect envelope as skills, gated by score |
 | Trait map | `config/prosequor/trait-attributes.json` | `src/Data/TraitAttributeRegistry.cs` | Vanilla class-trait → attribute mapping; optional `skills` adds registered skill ids to that class set |
+| Class profile | `prosequor` object on `config/characterclasses.json` | `src/Data/ClassProfile.cs` | Absolute starting attributes (omitted ids are 10), optional skill ids, trait add/remove (`-code` removes), and starting node groups `{ skill, nodes }` |
 | Level-ups | `config/prosequor/level-ups.json` | `src/Data/LevelUpRegistry.cs` | Player-level grants; also graftable via contribution `levelUps` |
 | Options | `config/prosequor/options.json` or `options/*.json` | `src/Data/OptionsRegistry.cs` | One object per file. `traitsTab: true` in any applied file leaves the vanilla traits tab visible. Optional engine-style `dependsOn`. Not in the content fingerprint |
 | XP rule | `xpRules` on the **owning skill** (or a contribution) | `src/Xp/XpRuleCompiler.cs` then `XpRuleRegistry` | No `skill` field — ownership is the enclosing skill |
@@ -111,7 +113,7 @@ Full fields: [docs/reference.md](../../../docs/reference.md). Shapes only:
 
 **Skill file** — `id`, presentation (`nameLang`, `descriptionLang`, `descriptionParams`, `icon`), optional `hobby`, `optional`, `attributeScores`, `xpRules`, always-on `effects`, `tree.nodes[]`. Omitted presentation uses defaults: `skill-{id}`, `skilldesc-{id}`, `textures/icons/{id}-skill.svg`.
 
-`optional: true` keeps the skill out of the shared class base set. Trait-attribute `skills` can still grant a registered id onto a class. Player skill membership is the `"class"` slot on `SkillAccess` (union of contributor sets). Menu, XP, effects, and purchases read that union. Later contributors call `SkillAccess.Update(key, set)`.
+`optional: true` keeps the skill out of the shared class base set. Trait-attribute `skills` and a character class `prosequor.skills` list can still grant a registered id onto a class. Player skill membership is the `"class"` slot on `SkillAccess` (union of contributor sets). Menu, XP, effects, and purchases read that union. Later contributors call `SkillAccess.Update(key, set)`.
 
 **Node** — `id` unique within the skill, `requires` / `excludes`, `layout`, `tiers[]`, optional `specialization`. `requires`: **OR inside** a nested array, **AND across** entries. One-sided `excludes` is symmetrized at compile.
 

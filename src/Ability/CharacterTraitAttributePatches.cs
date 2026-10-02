@@ -55,7 +55,8 @@ public static class CharacterTraitAttributePatches
             TraitAttributeConverter.MutateLoadedClasses(
                 characterSystem,
                 mod.TraitAttributes,
-                mod.AttributeStats);
+                mod.AttributeStats,
+                api.Logger);
         if (mod.Registry.All.Count > 0)
         {
             mod.TraitAttributes.RebuildClassSkillSets(mod.Registry, api);

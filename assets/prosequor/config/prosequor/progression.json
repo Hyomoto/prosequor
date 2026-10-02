@@ -1,0 +1,6 @@
+{
+  "maxPlayerLevel": 50,
+  "skillPointsPerPlayerLevel": "1..50",
+  "skillPointsPerSkillLevel": "20,40,60,80,100",
+  "specializationLevels": "10,20,30,40,50"
+}

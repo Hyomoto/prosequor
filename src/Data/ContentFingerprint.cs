@@ -14,7 +14,7 @@ namespace Prosequor.Data;
 
 /// <summary>
 /// Join-time diagnostic of compiled authored content (skills, stats, collections,
-/// pools, affixes, traits, level-ups). World-expanded collection membership is excluded so
+/// pools, affixes, traits, class profiles, level-ups). World-expanded collection membership is excluded so
 /// client and dedicated server can match before GameReady.
 /// </summary>
 public sealed class ContentFingerprint
@@ -301,6 +301,78 @@ public sealed class ContentFingerprint
                 sb.Append(" skills=").Append(string.Join(
                     ',',
                     mapping.Skills.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)));
+            }
+
+            sb.Append('\n');
+        }
+
+        AppendClassProfiles(sb, traits);
+    }
+
+    static void AppendClassProfiles(StringBuilder sb, ITraitAttributeRegistry traits)
+    {
+        sb.Append("classes\n");
+        foreach (ClassProfile profile in traits.ClassProfiles.Values
+                     .OrderBy(profile => profile.Code, StringComparer.OrdinalIgnoreCase))
+        {
+            sb.Append(profile.Code).Append(" attrs=");
+            bool first = true;
+            foreach (KeyValuePair<string, int> attr in profile.Attributes
+                         .OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                if (!first)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append(attr.Key).Append('=').Append(attr.Value);
+                first = false;
+            }
+
+            if (profile.Skills.Count > 0)
+            {
+                sb.Append(" skills=").Append(string.Join(
+                    ',',
+                    profile.Skills.OrderBy(id => id, StringComparer.OrdinalIgnoreCase)));
+            }
+
+            if (profile.TraitEdits.Count > 0)
+            {
+                sb.Append(" traits=");
+                for (int i = 0; i < profile.TraitEdits.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        sb.Append(',');
+                    }
+
+                    ClassTraitEdit edit = profile.TraitEdits[i];
+                    if (edit.Remove)
+                    {
+                        sb.Append('-');
+                    }
+
+                    sb.Append(edit.Code);
+                }
+            }
+
+            if (profile.Unlocks.Count > 0)
+            {
+                sb.Append(" unlocks=");
+                bool firstUnlock = true;
+                foreach (ClassUnlockGroup group in profile.Unlocks)
+                {
+                    foreach (string nodeId in group.Nodes)
+                    {
+                        if (!firstUnlock)
+                        {
+                            sb.Append(',');
+                        }
+
+                        sb.Append(group.Skill).Append(':').Append(nodeId);
+                        firstUnlock = false;
+                    }
+                }
             }
 
             sb.Append('\n');

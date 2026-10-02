@@ -29,7 +29,7 @@ public class ProgressNetwork
     public event Action<ContentFingerprintMismatchPacket>? ContentMismatchReceived;
     public event Action<ProgressSnapshotPacket>? ProgressSnapshotReceived;
     public event Action<ProgressDeltaPacket>? ProgressDeltaReceived;
-    public event Action<LevelingSettingsPacket>? LevelingSettingsReceived;
+    public event Action? ProgressionProfileReceived;
 
     public void StartServer(ICoreServerAPI api)
     {
@@ -46,7 +46,7 @@ public class ProgressNetwork
             .RegisterMessageType<ProgressSnapshotPacket>()
             .RegisterMessageType<ProgressDeltaPacket>()
             .RegisterMessageType<ProgressResyncRequestPacket>()
-            .RegisterMessageType<LevelingSettingsPacket>()
+            .RegisterMessageType<ProgressionProfilePacket>()
             .SetMessageHandler<UnlockNodeRequestPacket>(OnUnlockRequest)
             .SetMessageHandler<SkillWaitingHudStatusPacket>(OnSkillWaitingStatusFromClient)
             .SetMessageHandler<ContentFingerprintPacket>(OnFingerprintFromClient)
@@ -68,9 +68,9 @@ public class ProgressNetwork
             .RegisterMessageType<ProgressSnapshotPacket>()
             .RegisterMessageType<ProgressDeltaPacket>()
             .RegisterMessageType<ProgressResyncRequestPacket>()
-            .RegisterMessageType<LevelingSettingsPacket>()
+            .RegisterMessageType<ProgressionProfilePacket>()
+            .SetMessageHandler<ProgressionProfilePacket>(OnProgressionProfile)
             .SetMessageHandler<UnlockNodeResultPacket>(OnUnlockResult)
-            .SetMessageHandler<LevelingSettingsPacket>(OnLevelingSettings)
             .SetMessageHandler<LevelUpHudPacket>(OnLevelUpHud)
             .SetMessageHandler<SkillWaitingHudDumpRequestPacket>(_ => SkillWaitingDumpRequested?.Invoke())
             .SetMessageHandler<ContentFingerprintMismatchPacket>(OnContentMismatch)
@@ -99,18 +99,20 @@ public class ProgressNetwork
         serverChannel?.SendPacket(packet, player);
     }
 
+    public void SendProgressionProfile(IServerPlayer player, ProgressionProfile profile)
+    {
+        serverChannel?.SendPacket(new ProgressionProfilePacket
+        {
+            MaxPlayerLevel = profile.MaxPlayerLevel,
+            SkillPointsPerPlayerLevel = ToRunDtos(profile.SkillPointsPerPlayerLevel),
+            SkillPointsPerSkillLevel = ToRunDtos(profile.SkillPointsPerSkillLevel),
+            SpecializationLevels = ToRunDtos(profile.SpecializationLevels)
+        }, player);
+    }
+
     public void SendProgressDelta(IServerPlayer player, ProgressDeltaPacket packet)
     {
         serverChannel?.SendPacket(packet, player);
-    }
-
-    public void SendLevelingSettings(IServerPlayer player, int maxPlayerLevel, int[] specializationPointLevels)
-    {
-        serverChannel?.SendPacket(new LevelingSettingsPacket
-        {
-            MaxPlayerLevel = maxPlayerLevel,
-            SpecializationPointLevels = specializationPointLevels ?? Array.Empty<int>()
-        }, player);
     }
 
     /// <summary>Asks the player's client to print skill-waiting HUD status to chat.</summary>
@@ -261,9 +263,19 @@ public class ProgressNetwork
         LevelUpHudReceived?.Invoke(packet);
     }
 
-    void OnLevelingSettings(LevelingSettingsPacket packet)
+    void OnProgressionProfile(ProgressionProfilePacket packet)
     {
-        LevelingSettingsReceived?.Invoke(packet);
+        if (capi == null)
+        {
+            return;
+        }
+
+        ProsequorModSystem.For(capi)?.SetProgression(ProgressionProfile.FromRuns(
+            packet.MaxPlayerLevel,
+            FromRunDtos(packet.SkillPointsPerPlayerLevel),
+            FromRunDtos(packet.SkillPointsPerSkillLevel),
+            FromRunDtos(packet.SpecializationLevels)));
+        ProgressionProfileReceived?.Invoke();
     }
 
     void OnProgressSnapshot(ProgressSnapshotPacket packet)
@@ -288,6 +300,40 @@ public class ProgressNetwork
     {
         EntityBehaviorProgress? progress = TryLocalProgress();
         progress?.ApplyOwnerDelta(packet);
+    }
+
+    static List<LevelRunDto> ToRunDtos(LevelSet levels)
+    {
+        LevelRun[] runs = levels.ToRuns();
+        List<LevelRunDto> list = new(runs.Length);
+        for (int i = 0; i < runs.Length; i++)
+        {
+            list.Add(new LevelRunDto
+            {
+                Start = runs[i].Start,
+                End = runs[i].End,
+                Step = runs[i].Step
+            });
+        }
+
+        return list;
+    }
+
+    static List<LevelRun> FromRunDtos(List<LevelRunDto>? runs)
+    {
+        List<LevelRun> list = new();
+        if (runs == null)
+        {
+            return list;
+        }
+
+        for (int i = 0; i < runs.Count; i++)
+        {
+            LevelRunDto dto = runs[i];
+            list.Add(new LevelRun(dto.Start, dto.End, dto.Step));
+        }
+
+        return list;
     }
 
     EntityBehaviorProgress? TryLocalProgress()

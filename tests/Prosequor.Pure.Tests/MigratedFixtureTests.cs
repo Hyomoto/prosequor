@@ -125,6 +125,9 @@ public class MigratedFixtureTests
     public void LevelUpRuleFixtures_Should_Pass() => LevelUpRuleFixtures.VerifyAll();
 
     [Fact]
+    public void ProgressionProfileFixtures_Should_Pass() => ProgressionProfileFixtures.VerifyAll();
+
+    [Fact]
     public void ContributionDependsOnFixtures_Should_Pass() => ContributionDependsOnFixtures.VerifyAll();
 
     [Fact]
@@ -135,9 +138,6 @@ public class MigratedFixtureTests
 
     [Fact]
     public void LevelUpAudioFixtures_Should_Pass() => LevelUpAudioFixtures.VerifyAll();
-
-    [Fact]
-    public void ServerLevelingFixtures_Should_Pass() => ServerLevelingFixtures.VerifyAll();
 
     [Fact]
     public void SkillWaitingHintFixtures_Should_Pass() => SkillWaitingHintFixtures.VerifyAll();

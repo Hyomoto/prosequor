@@ -84,3 +84,36 @@ public class ProgressAttributeBucketDto
     [ProtoMember(2)]
     public float Fill { get; set; }
 }
+
+/// <summary>One inclusive arithmetic run of grant levels.</summary>
+[ProtoContract]
+public class LevelRunDto
+{
+    [ProtoMember(1)]
+    public int Start { get; set; }
+
+    [ProtoMember(2)]
+    public int End { get; set; }
+
+    [ProtoMember(3)]
+    public int Step { get; set; }
+}
+
+/// <summary>
+/// Resolved progression table for the owning client. Experience gain stays on the server.
+/// </summary>
+[ProtoContract]
+public class ProgressionProfilePacket
+{
+    [ProtoMember(1)]
+    public int MaxPlayerLevel { get; set; }
+
+    [ProtoMember(2)]
+    public List<LevelRunDto> SkillPointsPerPlayerLevel { get; set; } = new();
+
+    [ProtoMember(3)]
+    public List<LevelRunDto> SkillPointsPerSkillLevel { get; set; } = new();
+
+    [ProtoMember(4)]
+    public List<LevelRunDto> SpecializationLevels { get; set; } = new();
+}

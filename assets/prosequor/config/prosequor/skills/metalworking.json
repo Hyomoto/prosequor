@@ -19,7 +19,7 @@
     },
     {
       "id": "prosequor:smith-work",
-      "amount": 0.01,
+      "amount": 0.025,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "crafting", "caller:@hand", "target:<smithing-formed>" ]
@@ -27,7 +27,7 @@
     },
     {
       "id": "prosequor:mold-cast",
-      "amount": [1, 5, 15],
+      "amount": [1, 3, 10],
       "pay": "ingredients",
       "payee": "contributors",
       "when": {

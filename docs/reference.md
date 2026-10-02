@@ -57,6 +57,8 @@ excludes  →  who you cannot also own
 - [Affix lists](#affix-lists)
 - [Attribute stats](#attribute-stats)
 - [Trait attributes](#trait-attributes)
+- [Character classes](#character-classes)
+- [Progression](#progression)
 - [Level-ups](#level-ups)
 - [Contributions](#contributions)
 - [Options](#options)
@@ -135,7 +137,7 @@ Duplicate ids last-win. Omitted or empty = no fill.
 | `icon` | Texture path |
 | `cost` | Unlock points (global for normal skills; hobby spendable for hobbies; tier can override; default `1`) |
 | `minSkillLevel` | Floor for first tier (tier can override; default `0`) |
-| `specialization` | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [level-ups](#level-ups) `earn-specialization-point` rules |
+| `specialization` | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [progression](#progression) `specializationLevels` |
 | `tiers` | Ranks; later tiers usually `replicate` earlier effects |
 | `layout` | Visual grid hints |
 | `requires` / `excludes` | Prerequisites and mutual exclusion |
@@ -389,6 +391,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `cementation-fired` | Cementation complete |
 | `reinforced` | Block reinforced with the plumb and square |
 | `healed` | Healing item successfully applied (bandage / poultice) |
+| `panned` | Pan finished; quantity is items received |
 | `saddle-break` / `saddle-tame` | Riding progress |
 | `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
 | `milked` | Successful milking |
@@ -1006,7 +1009,89 @@ baseline without wiping growth.
 
 Valid attribute keys: any loaded stat id (`config/prosequor/stats/`). Last-win by `code`.
 
-Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set.
+Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set. A character class [`prosequor.skills`](#character-classes) list is unioned the same way.
+
+---
+
+## Character classes
+
+On each object in `config/characterclasses.json` (any domain), optional object `prosequor`. Omitted means no class profile. `enabled: false` skips that class. Last-win by class `code` (asset domain, then path). An entry with no `prosequor` key does not clear a profile already stored for that code.
+
+```json
+"prosequor": {
+  "attributes": { "strength": 12 },
+  "skills": ["prosequor:some-optional"],
+  "traits": ["soldier", "-claustrophobic"],
+  "unlocks": [
+    { "skill": "prosequor:hunting", "nodes": ["tracker"] }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `attributes` | Attribute id → absolute starting score. Omitted ids are `10`. Empty `{}` or a missing `attributes` key is all `10`s. Unknown ids are skipped with a warning |
+| `skills` | Skill ids added to this class's skill set. Unknown ids are skipped with a warning. Ids already in the non-optional base are ignored |
+| `traits` | Trait codes added to this class. A leading `-` removes that trait (`"-claustrophobic"`). Applied in order, before trait-attribute deltas and before mapped traits are taken off the class. Adding a code already on the class does nothing. Removing a code that is not on the class does nothing. Unknown trait codes are skipped with a warning |
+| `unlocks` | Starting nodes, grouped by skill. Each node is owned at tier 1 when the character is created. Does not spend unlock points. Unknown skills, skills outside the class set, and unknown nodes are skipped with a warning. Extra keys on an unlock object are ignored |
+
+Trait-attribute deltas are added to these scores afterward. Each resulting score is clamped to 0–18.
+
+---
+
+## Progression
+
+Path: `progression.json`. One object. Last-win across mods.
+
+```json
+{
+  "maxPlayerLevel": 50,
+  "skillPointsPerPlayerLevel": "1..50",
+  "skillPointsPerSkillLevel": "20,40,60,80,100",
+  "specializationLevels": "10,20,30,40,50"
+}
+```
+
+Level lists are comma-separated pieces. A piece is a whole number or a range. `X..Y` is X through Y inclusive. `..Y` starts at 1. `X..` and `..` end at the cap for that list. `^Z` on a range keeps every Zth level from the range start (`1..11^3` is 1, 4, 7, 10). The end level is included when it lands on that step.
+
+A missing end stops at the level before the next piece starts. A missing start begins at the level after the previous piece ends (`1..,20..50^2` is 1–19, then 20, 22, 24, … 50). `10..20,..,40..50` fills 21 through 39. `1..,..50` and `..,..` have no meeting point and are rejected. A range that runs backwards, a step below 1, an empty piece, and a list wider than 10000 levels are rejected. Empty text is an empty list.
+
+On a player list, an omitted end uses `maxPlayerLevel` from the same file. When that key is absent, the end is the cap already in effect. On `skillPointsPerSkillLevel`, an omitted end is 100.
+
+A listed level grants one point, or one specialization slot, when that level is reached. A new character is already player level 1, so player level 1 in `skillPointsPerPlayerLevel` does not grant at creation.
+
+| Field | Meaning |
+| --- | --- |
+| `maxPlayerLevel` | Player level cap. Whole number ≥ 1. Default 50 |
+| `skillPointsPerPlayerLevel` | Player levels that grant one skill point |
+| `skillPointsPerSkillLevel` | Skill levels that grant one skill point. Hobbies do not use this list |
+| `specializationLevels` | Player levels that grant one specialization slot |
+
+### Presets
+
+Path: `presets/<name>.json`. One object. `id` is the preset id. Other keys are the same as `progression.json`, plus `xpGain`. Only keys that are present replace the baseline. Same id: last asset wins, then a file in `ModConfig/prosequor/presets/` wins over assets.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Preset id. If omitted, the file name is the id |
+| `xpGain` | Number ≥ 0. Multiplies skill XP earned from play. Default 1. Admin grant modes are not multiplied |
+
+Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xpGain` 2), `prosequor:mmo` (`specializationLevels` `"20,40"`).
+
+### Server config
+
+File: `ModConfig/prosequor/server.json`.
+
+```json
+{ "preset": "prosequor:multiplayer" }
+```
+
+| Field | Meaning |
+| --- | --- |
+| `preset` | Preset id. Missing key is read as `prosequor:multiplayer` |
+| other progression keys | Applied after the preset. A key whose value matches the selected preset is removed when the file is loaded |
+
+An unknown preset id keeps the id and uses the baseline table. Keys in the file still apply. Changing `preset` drops stored keys the new preset already has and keeps keys that still differ.
 
 ---
 
@@ -1014,13 +1099,16 @@ Every character class starts with every non-`optional` skill. Trait `skills` ent
 
 Path: `level-ups.json` or `level-ups/*.json`.
 
+Skill points and specialization slots are [progression](#progression) fields. `prosequor:earn-skill-point` and `prosequor:earn-specialization-point` do not grant; a rule that uses either action is skipped.
+
 ```json
 {
   "rules": [
     {
-      "id": "prosequor:earn-skill-point",
-      "every": 1,
-      "action": "prosequor:earn-skill-point"
+      "id": "prosequor:earn-attribute",
+      "levels": [5, 10],
+      "action": "prosequor:earn-attribute",
+      "params": { "key": "buckets", "value": 1 }
     }
   ]
 }
@@ -1037,8 +1125,6 @@ Path: `level-ups.json` or `level-ups/*.json`.
 
 | Action | Params |
 | --- | --- |
-| `prosequor:earn-skill-point` | Optional `value` (default 1) — add unlock points |
-| `prosequor:earn-specialization-point` | Optional `value` (default 1) — specialization slot capacity |
 | `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to growth (effective = class/trait baseline + growth, cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
 
 ---

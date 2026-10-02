@@ -240,12 +240,13 @@ public static class XpBucketFixtures
             Assert.Fail("[prosequor] XP bucket fixture failed (player XP for skill level gain).");
         }
 
-        if (UnlockPointPolicy.PointsForSkillLevelGain(0, 19) != 0
-            || UnlockPointPolicy.PointsForSkillLevelGain(19, 20) != 1
-            || UnlockPointPolicy.PointsForSkillLevelGain(20, 21) != 0
-            || UnlockPointPolicy.PointsForSkillLevelGain(0, 40) != 2
-            || UnlockPointPolicy.PointsForSkillLevelGain(0, 0) != 0
-            || UnlockPointPolicy.PointsForSkillLevelGain(40, 20) != 0)
+        LevelSet skillPoints = ProgressionProfile.Baseline.SkillPointsPerSkillLevel;
+        if (UnlockPointPolicy.PointsForSkillLevelGain(0, 19, skillPoints) != 0
+            || UnlockPointPolicy.PointsForSkillLevelGain(19, 20, skillPoints) != 1
+            || UnlockPointPolicy.PointsForSkillLevelGain(20, 21, skillPoints) != 0
+            || UnlockPointPolicy.PointsForSkillLevelGain(0, 40, skillPoints) != 2
+            || UnlockPointPolicy.PointsForSkillLevelGain(0, 0, skillPoints) != 0
+            || UnlockPointPolicy.PointsForSkillLevelGain(40, 20, skillPoints) != 0)
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (skill milestone unlock points).");
         }

@@ -3,13 +3,12 @@ using Xunit;
 
 namespace Prosequor.Progress;
 
-/// <summary>Compiled level-up rule matching, grants, and specialization capacity.</summary>
+/// <summary>Compiled level-up rule matching and attribute grants.</summary>
 public static class LevelUpRuleFixtures
 {
     public static void VerifyAll()
     {
-        VerifyEveryOneSkillPoints();
-        VerifySpecializationEveryTen();
+        VerifyRetiredGrantsDoNotPay();
         VerifyExplicitAttributeLevels();
         VerifySkippingLevelsAppliesAll();
         VerifyNamedAttributeGrant();
@@ -18,23 +17,11 @@ public static class LevelUpRuleFixtures
         VerifyInvalidRowsRejected();
     }
 
-    /// <summary>Shipped-equivalent default rules for fixtures that need the stock schedule.</summary>
+    /// <summary>Attribute schedule used by fixtures. Skill points and slots are not level-up rules.</summary>
     public static IReadOnlyList<LevelUpRuleDef> DefaultRules()
     {
         Dictionary<string, LevelUpRuleJson> drafts = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["prosequor:earn-skill-point"] = new LevelUpRuleJson
-            {
-                id = "prosequor:earn-skill-point",
-                every = 1,
-                action = "prosequor:earn-skill-point"
-            },
-            ["prosequor:earn-specialization-point"] = new LevelUpRuleJson
-            {
-                id = "prosequor:earn-specialization-point",
-                every = 10,
-                action = "prosequor:earn-specialization-point"
-            },
             ["prosequor:earn-attribute"] = new LevelUpRuleJson
             {
                 id = "prosequor:earn-attribute",
@@ -58,28 +45,34 @@ public static class LevelUpRuleFixtures
         return state;
     }
 
-    static void VerifyEveryOneSkillPoints()
+    static void VerifyRetiredGrantsDoNotPay()
     {
+        Dictionary<string, LevelUpRuleJson> drafts = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["prosequor:earn-skill-point"] = new LevelUpRuleJson
+            {
+                id = "prosequor:earn-skill-point",
+                every = 1,
+                action = "prosequor:earn-skill-point"
+            },
+            ["prosequor:earn-specialization-point"] = new LevelUpRuleJson
+            {
+                id = "prosequor:earn-specialization-point",
+                every = 10,
+                action = "prosequor:earn-specialization-point"
+            }
+        };
+        List<string> warnings = new();
+        IReadOnlyList<LevelUpRuleDef> rules = LevelUpRegistry.CompileDrafts(
+            drafts,
+            _ => { },
+            warnings.Add);
         PlayerProgressState state = FreshState();
-        state.UnlockPoints = 0;
-        LevelUpRules.Apply(state, DefaultRules(), beforeLevel: 1, afterLevel: 4, new Random(1));
-        if (state.UnlockPoints != 3)
+        LevelUpRules.Apply(state, rules, beforeLevel: 1, afterLevel: 50, new Random(1));
+        if (rules.Count != 0 || warnings.Count != 2 || state.UnlockPoints != 0)
         {
             Assert.Fail(
-                $"[prosequor] Level-up fixture failed (every-1 skill points; got {state.UnlockPoints}, expected 3).");
-        }
-    }
-
-    static void VerifySpecializationEveryTen()
-    {
-        IReadOnlyList<LevelUpRuleDef> rules = DefaultRules();
-        if (SpecializationPolicy.AllowedSlots(9, rules) != 0
-            || SpecializationPolicy.AllowedSlots(10, rules) != 1
-            || SpecializationPolicy.AllowedSlots(19, rules) != 1
-            || SpecializationPolicy.AllowedSlots(20, rules) != 2
-            || SpecializationPolicy.AllowedSlots(50, rules) != 5)
-        {
-            Assert.Fail("[prosequor] Level-up fixture failed (spec slots 9/10/19/20/50).");
+                $"[prosequor] Level-up fixture failed (retired grants; rules={rules.Count} warnings={warnings.Count} points={state.UnlockPoints}).");
         }
     }
 
@@ -102,7 +95,7 @@ public static class LevelUpRuleFixtures
         if (winners.Count != 1
             || winners[0] != AttributeIds.Resilience
             || state.Attributes[AttributeIds.Resilience] != 2
-            || state.UnlockPoints != 1)
+            || state.UnlockPoints != 0)
         {
             Assert.Fail("[prosequor] Level-up fixture failed (explicit attribute at level 10).");
         }
@@ -129,7 +122,7 @@ public static class LevelUpRuleFixtures
         const int attributeGrants = 8;
         if (winners.Count != attributeGrants
             || state.Attributes[AttributeIds.Resilience] != attributeGrants
-            || state.UnlockPoints != 49)
+            || state.UnlockPoints != 0)
         {
             Assert.Fail(string.Format(
                 "[prosequor] Level-up fixture failed (1→50; resilience={0} winners={1} points={2}).",
@@ -238,16 +231,17 @@ public static class LevelUpRuleFixtures
             }
         };
 
-        IReadOnlyList<LevelUpRuleDef> rules = LevelUpRegistry.CompileDrafts(drafts, _ => { });
-        if (SpecializationPolicy.AllowedSlots(20, rules) != 0)
+        List<string> warnings = new();
+        IReadOnlyList<LevelUpRuleDef> rules = LevelUpRegistry.CompileDrafts(drafts, _ => { }, warnings.Add);
+        if (rules.Count != 1 || warnings.Count != 1)
         {
-            Assert.Fail("[prosequor] Level-up fixture failed (contrib disable spec).");
+            Assert.Fail(
+                $"[prosequor] Level-up fixture failed (retired skill-point rule; rules={rules.Count} warnings={warnings.Count}).");
         }
 
         PlayerProgressState state = FreshState();
         LevelUpRules.Apply(state, rules, beforeLevel: 1, afterLevel: 5, new Random(1));
-        // Levels 2 and 4 fire every-2 with value 2 → +4 points; level 5 grants strength.
-        if (state.UnlockPoints != 4
+        if (state.UnlockPoints != 0
             || state.Attributes[AttributeIds.Strength] != 1)
         {
             Assert.Fail(string.Format(
