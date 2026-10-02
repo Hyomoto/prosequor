@@ -4554,11 +4554,11 @@ public static class AbilityFixtures
                 panBoost));
         }
 
-        IReadOnlyList<LevelUpRuleDef> levelUps = LevelUpRuleFixtures.DefaultRules();
-        if (SpecializationPolicy.AllowedSlots(9, levelUps) != 0
-            || SpecializationPolicy.AllowedSlots(10, levelUps) != 1
-            || SpecializationPolicy.AllowedSlots(19, levelUps) != 1
-            || SpecializationPolicy.AllowedSlots(20, levelUps) != 2)
+        LevelSet specs = ProgressionProfile.Baseline.SpecializationLevels;
+        if (SpecializationPolicy.AllowedSlots(9, specs) != 0
+            || SpecializationPolicy.AllowedSlots(10, specs) != 1
+            || SpecializationPolicy.AllowedSlots(19, specs) != 1
+            || SpecializationPolicy.AllowedSlots(20, specs) != 2)
         {
             Assert.Fail("[prosequor] Specialization fixture failed (slot boundaries 9/10/20).");
         }
@@ -4571,13 +4571,13 @@ public static class AbilityFixtures
         progress.SetUnlockTier("forestry", "forester", 0);
 
         if (SpecializationPolicy.OwnedCount(progress, skills) != 0
-            || !SpecializationPolicy.HasAvailableSlot(progress, skills, levelUps))
+            || !SpecializationPolicy.HasAvailableSlot(progress, skills, specs))
         {
             Assert.Fail("[prosequor] Specialization fixture failed (empty slot at level 10).");
         }
 
         UnlockPurchaseStatus ok = SkillTreeEligibility.Evaluate(
-            digging, progress, skills, levelUps, "digger", out _);
+            digging, progress, skills, specs, "digger", out _);
         if (ok != UnlockPurchaseStatus.Ok)
         {
             Assert.Fail(string.Format("[prosequor] Specialization fixture failed (eligible at level 10). Status {0}.",
@@ -4586,13 +4586,13 @@ public static class AbilityFixtures
 
         progress.SetUnlockTier("digging", "digger", 1);
         if (SpecializationPolicy.OwnedCount(progress, skills) != 1
-            || SpecializationPolicy.HasAvailableSlot(progress, skills, levelUps))
+            || SpecializationPolicy.HasAvailableSlot(progress, skills, specs))
         {
             Assert.Fail("[prosequor] Specialization fixture failed (slot consumed).");
         }
 
         UnlockPurchaseStatus blocked = SkillTreeEligibility.Evaluate(
-            forestry, progress, skills, levelUps, "forester", out _);
+            forestry, progress, skills, specs, "forester", out _);
         if (blocked != UnlockPurchaseStatus.SpecializationLimitReached)
         {
             Assert.Fail(string.Format("[prosequor] Specialization fixture failed (cross-skill limit). Status {0}.",
@@ -4600,15 +4600,15 @@ public static class AbilityFixtures
         }
 
         progress.SetPlayerLevel(20);
-        if (!SpecializationPolicy.HasAvailableSlot(progress, skills, levelUps)
-            || SkillTreeEligibility.Evaluate(forestry, progress, skills, levelUps, "forester", out _)
+        if (!SpecializationPolicy.HasAvailableSlot(progress, skills, specs)
+            || SkillTreeEligibility.Evaluate(forestry, progress, skills, specs, "forester", out _)
                 != UnlockPurchaseStatus.Ok)
         {
             Assert.Fail("[prosequor] Specialization fixture failed (second slot at level 20).");
         }
 
         progress.SetPlayerLevel(9);
-        if (SkillTreeEligibility.Evaluate(forestry, progress, skills, levelUps, "forester", out _)
+        if (SkillTreeEligibility.Evaluate(forestry, progress, skills, specs, "forester", out _)
             != UnlockPurchaseStatus.SpecializationLimitReached)
         {
             Assert.Fail("[prosequor] Specialization fixture failed (no slots below level 10).");

@@ -739,14 +739,14 @@ public class CharacterSkillsTab
         return true;
     }
 
+    /// <summary>Refresh an open tree after the server progression packet updates slot capacity.</summary>
+    public void RefreshAfterProgressionSync() => RequestRecompose();
+
     /// <summary>
     /// The dialog owns the composer (title bar, tabs, background), so switching views means asking it
     /// to recompose. Deferred by a frame because click handlers run while the composer iterates its
     /// elements, and recomposing disposes them.
     /// </summary>
-    /// <summary>Refresh an open tree after the server leveling packet updates slot capacity.</summary>
-    public void RefreshAfterLevelingSync() => RequestRecompose();
-
     void RequestRecompose()
     {
         if (recomposePending)

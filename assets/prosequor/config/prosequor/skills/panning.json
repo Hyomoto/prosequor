@@ -26,6 +26,15 @@
         "activity": "prosequor:effort",
         "tags": [ "interacting", "caller:<pan>", "target:<bonysoil>" ]
       }
+    },
+    {
+      "id": "prosequor:panning-complete",
+      "amount": 0.1,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "panned", "caller:<pan>" ]
+      }
     }
   ],
   "effects": [

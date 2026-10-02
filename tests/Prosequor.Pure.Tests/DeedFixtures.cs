@@ -34,7 +34,100 @@ public static class DeedFixtures
         VerifyOfflineMailboxFromPlan();
         VerifyTaglessDeedWarns();
         VerifyTailoringClothLeatherAndHidePays();
+        VerifyPanningCompletePays();
     }
+
+    static void VerifyPanningCompletePays()
+    {
+        CollectionIndex collections = new();
+        collections.EnsureKey("pan");
+        collections.AddCode("pan", "game:pan-wooden");
+
+        if (!XpRuleCompiler.TryCompile(
+                new XpRuleJson
+                {
+                    id = "prosequor:panning-complete",
+                    amount = new Newtonsoft.Json.Linq.JValue(0.1),
+                    pay = new Newtonsoft.Json.Linq.JValue("quantity"),
+                    when = new XpRuleWhenJson
+                    {
+                        activity = Deed.Activity,
+                        tags = ["panned", "caller:<pan>"]
+                    }
+                },
+                "panning",
+                1,
+                collections,
+                out XpRule rule,
+                out string compileError))
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] panning complete compile failed: {0}",
+                compileError));
+            return;
+        }
+
+        FixedAmountRules rules = new(rule);
+        const string nugget = "game:nugget-nativecopper";
+
+        IReadOnlyList<Deed.PlannedPay> one = PlanPanning(rules, collections, "game:pan-wooden", nugget, 1);
+        if (one.Count != 1 || Math.Abs(one[0].Amount - 0.1f) > 0.0001f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] panning complete should pay 0.1 for one item, got count={0} amount={1}",
+                one.Count,
+                one.Count > 0 ? one[0].Amount : 0f));
+        }
+
+        IReadOnlyList<Deed.PlannedPay> two = PlanPanning(rules, collections, "game:pan-wooden", nugget, 2);
+        if (two.Count != 1 || Math.Abs(two[0].Amount - 0.2f) > 0.0001f)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] panning complete should pay 0.2 for two items, got count={0} amount={1}",
+                two.Count,
+                two.Count > 0 ? two[0].Amount : 0f));
+        }
+
+        IReadOnlyList<Deed.PlannedPay> wrongCaller = PlanPanning(
+            rules,
+            collections,
+            "game:shovel-copper",
+            nugget,
+            1);
+        if (wrongCaller.Count != 0)
+        {
+            Assert.Fail("[prosequor] panning complete should not pay a non-pan caller.");
+        }
+    }
+
+    static IReadOnlyList<Deed.PlannedPay> PlanPanning(
+        FixedAmountRules rules,
+        CollectionIndex collections,
+        string caller,
+        string dropCode,
+        int quantity) =>
+        Deed.PlanPays(
+            rules,
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Panned },
+            caller: caller,
+            target: "game:gravel-granite",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            new Deed.Channels(
+                Resistance: 0f,
+                ResistanceMin: 0f,
+                ResistanceMax: 0f,
+                HasResistance: false,
+                Voxels: 0f,
+                VoxelsMin: 0f,
+                VoxelsMax: 0f,
+                HasVoxels: false,
+                Quantity: quantity,
+                Ingredients: 0,
+                QuantityUnits: [new Deed.QuantityUnit(dropCode, quantity)]));
 
     static void VerifyDeedTokenTags()
     {
@@ -72,6 +165,9 @@ public static class DeedFixtures
             || !DeedTokenTags.TryParse("trough-eaten", out DeedToken troughAlias)
             || troughAlias != DeedToken.FedAnimal
             || DeedTokenTags.Canonical("trough-eaten") != DeedTokenTags.FedAnimal
+            || DeedToken.Panned.ToTag() != DeedTokenTags.Panned
+            || !DeedTokenTags.TryParse("panned", out DeedToken panned)
+            || panned != DeedToken.Panned
             || Deed.Activity != "prosequor:deed")
         {
             Assert.Fail("[prosequor] DeedToken tag map failed.");

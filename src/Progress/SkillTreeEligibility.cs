@@ -24,7 +24,7 @@ public static class SkillTreeEligibility
         IPlayerProgress? progress,
         string nodeId,
         out SkillTreeNodeDef? node) =>
-        Evaluate(skill, progress, null, null, nodeId, out node, out _, requirePoints: true);
+        Evaluate(skill, progress, null, default, nodeId, out node, out _, requirePoints: true);
 
     public static UnlockPurchaseStatus Evaluate(
         SkillDef? skill,
@@ -32,16 +32,16 @@ public static class SkillTreeEligibility
         ISkillRegistry? registry,
         string nodeId,
         out SkillTreeNodeDef? node) =>
-        Evaluate(skill, progress, registry, null, nodeId, out node, out _, requirePoints: true);
+        Evaluate(skill, progress, registry, default, nodeId, out node, out _, requirePoints: true);
 
     public static UnlockPurchaseStatus Evaluate(
         SkillDef? skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules,
+        LevelSet specializationLevels,
         string nodeId,
         out SkillTreeNodeDef? node) =>
-        Evaluate(skill, progress, registry, levelUpRules, nodeId, out node, out _, requirePoints: true);
+        Evaluate(skill, progress, registry, specializationLevels, nodeId, out node, out _, requirePoints: true);
 
     /// <summary>
     /// Checks the next unpurchased tier. <paramref name="tier"/> is the 1-based tier the player would buy.
@@ -52,7 +52,7 @@ public static class SkillTreeEligibility
         string nodeId,
         out SkillTreeNodeDef? node,
         out int tier) =>
-        Evaluate(skill, progress, null, null, nodeId, out node, out tier, requirePoints: true);
+        Evaluate(skill, progress, null, default, nodeId, out node, out tier, requirePoints: true);
 
     public static UnlockPurchaseStatus Evaluate(
         SkillDef? skill,
@@ -61,17 +61,17 @@ public static class SkillTreeEligibility
         string nodeId,
         out SkillTreeNodeDef? node,
         out int tier) =>
-        Evaluate(skill, progress, registry, null, nodeId, out node, out tier, requirePoints: true);
+        Evaluate(skill, progress, registry, default, nodeId, out node, out tier, requirePoints: true);
 
     public static UnlockPurchaseStatus Evaluate(
         SkillDef? skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules,
+        LevelSet specializationLevels,
         string nodeId,
         out SkillTreeNodeDef? node,
         out int tier) =>
-        Evaluate(skill, progress, registry, levelUpRules, nodeId, out node, out tier, requirePoints: true);
+        Evaluate(skill, progress, registry, specializationLevels, nodeId, out node, out tier, requirePoints: true);
 
     /// <param name="requirePoints">
     /// When false, skips unlock-point / hobby-spendable checks (admin <c>GrantUnlock</c>).
@@ -84,19 +84,19 @@ public static class SkillTreeEligibility
         out SkillTreeNodeDef? node,
         out int tier,
         bool requirePoints) =>
-        Evaluate(skill, progress, registry, null, nodeId, out node, out tier, requirePoints);
+        Evaluate(skill, progress, registry, default, nodeId, out node, out tier, requirePoints);
 
     /// <param name="requirePoints">
     /// When false, skips unlock-point / hobby-spendable checks (admin <c>GrantUnlock</c>).
     /// </param>
-    /// <param name="levelUpRules">
-    /// Compiled level-up rules used for specialization slot capacity. Null = no slots.
+    /// <param name="specializationLevels">
+    /// Player levels that grant a specialization slot. Empty means no slots.
     /// </param>
     public static UnlockPurchaseStatus Evaluate(
         SkillDef? skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules,
+        LevelSet specializationLevels,
         string nodeId,
         out SkillTreeNodeDef? node,
         out int tier,
@@ -187,7 +187,7 @@ public static class SkillTreeEligibility
                 return UnlockPurchaseStatus.SpecializationLimitReached;
             }
 
-            if (!SpecializationPolicy.HasAvailableSlot(progress, registry, levelUpRules))
+            if (!SpecializationPolicy.HasAvailableSlot(progress, registry, specializationLevels))
             {
                 return UnlockPurchaseStatus.SpecializationLimitReached;
             }
@@ -200,20 +200,20 @@ public static class SkillTreeEligibility
         SkillDef? skill,
         IPlayerProgress? progress,
         string nodeId) =>
-        Evaluate(skill, progress, null, null, nodeId, out _) == UnlockPurchaseStatus.Ok;
+        Evaluate(skill, progress, null, default, nodeId, out _) == UnlockPurchaseStatus.Ok;
 
     public static bool IsEligible(
         SkillDef? skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
         string nodeId) =>
-        Evaluate(skill, progress, registry, null, nodeId, out _) == UnlockPurchaseStatus.Ok;
+        Evaluate(skill, progress, registry, default, nodeId, out _) == UnlockPurchaseStatus.Ok;
 
     public static bool IsEligible(
         SkillDef? skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules,
+        LevelSet specializationLevels,
         string nodeId) =>
-        Evaluate(skill, progress, registry, levelUpRules, nodeId, out _) == UnlockPurchaseStatus.Ok;
+        Evaluate(skill, progress, registry, specializationLevels, nodeId, out _) == UnlockPurchaseStatus.Ok;
 }

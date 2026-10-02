@@ -1,16 +1,6 @@
 {
   "rules": [
     {
-      "id": "prosequor:earn-skill-point",
-      "every": 1,
-      "action": "prosequor:earn-skill-point"
-    },
-    {
-      "id": "prosequor:earn-specialization-point",
-      "levels": [10, 20, 30, 40, 50],
-      "action": "prosequor:earn-specialization-point"
-    },
-    {
       "id": "prosequor:earn-attribute",
       "levels": [5, 10, 15, 19, 23, 27, 30, 33, 36, 39, 41, 43, 45, 47, 49, 50],
       "action": "prosequor:earn-attribute",

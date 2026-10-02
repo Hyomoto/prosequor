@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using Prosequor.Progress;
 using Vintagestory.API.Common;
 
@@ -11,10 +12,14 @@ public interface ITraitAttributeRegistry
     /// <summary>Shared base: every registered non-optional skill. Empty until skills are bound.</summary>
     IReadOnlySet<string> BaseSkillSet { get; }
 
-    /// <summary>Class code → skill ids that class can learn (base plus trait grants).</summary>
+    /// <summary>Class code → skill ids that class can learn (base plus trait and class-profile grants).</summary>
     IReadOnlyDictionary<string, IReadOnlySet<string>> ClassSkillSets { get; }
 
+    /// <summary>Class code → compiled <c>prosequor</c> block from character class assets.</summary>
+    IReadOnlyDictionary<string, ClassProfile> ClassProfiles { get; }
+
     bool TryGet(string code, out TraitAttributeMapping mapping);
+    bool TryGetClassProfile(string classCode, out ClassProfile profile);
     void SetClassStartingScores(string classCode, Dictionary<string, int> scores);
     void ClearClassStartingScores();
 
@@ -28,7 +33,7 @@ public interface ITraitAttributeRegistry
     void ClearClassOriginalTraits();
 
     /// <summary>
-    /// Build the shared base and per-class skill sets from original traits + the skill registry.
+    /// Build the shared base and per-class skill sets from original traits, class profiles, and the skill registry.
     /// No-op when the skill registry is empty. Idempotent.
     /// </summary>
     void RebuildClassSkillSets(ISkillRegistry skills, ICoreAPI? api = null);
@@ -61,6 +66,8 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
         new(StringComparer.OrdinalIgnoreCase);
     readonly Dictionary<string, IReadOnlySet<string>> classSkillSets =
         new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, ClassProfile> classProfiles =
+        new(StringComparer.OrdinalIgnoreCase);
 
     IReadOnlySet<string> baseSkillSet = SkillAccess.EmptySet;
 
@@ -73,6 +80,8 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
 
     public IReadOnlyDictionary<string, IReadOnlySet<string>> ClassSkillSets => classSkillSets;
 
+    public IReadOnlyDictionary<string, ClassProfile> ClassProfiles => classProfiles;
+
     public bool TryGet(string code, out TraitAttributeMapping mapping)
     {
         if (!string.IsNullOrWhiteSpace(code) && byCode.TryGetValue(code.Trim(), out TraitAttributeMapping? found) && found != null)
@@ -84,6 +93,32 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
         mapping = null!;
         return false;
     }
+
+    public bool TryGetClassProfile(string classCode, out ClassProfile profile)
+    {
+        if (!string.IsNullOrWhiteSpace(classCode)
+            && classProfiles.TryGetValue(classCode.Trim(), out ClassProfile? found)
+            && found != null)
+        {
+            profile = found;
+            return true;
+        }
+
+        profile = null!;
+        return false;
+    }
+
+    public void RegisterClassProfile(ClassProfile profile)
+    {
+        if (profile == null || string.IsNullOrWhiteSpace(profile.Code))
+        {
+            return;
+        }
+
+        classProfiles[profile.Code.Trim()] = profile;
+    }
+
+    public void ClearClassProfiles() => classProfiles.Clear();
 
     public void SetClassStartingScores(string classCode, Dictionary<string, int> scores)
     {
@@ -197,12 +232,13 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
 
         foreach (KeyValuePair<string, string[]> kv in classOriginalTraits)
         {
-            classSkillSets[kv.Key] = BuildClassSet(baseSet, kv.Value, skills, api);
+            classSkillSets[kv.Key] = BuildClassSet(baseSet, kv.Key, kv.Value, skills, api);
         }
     }
 
     IReadOnlySet<string> BuildClassSet(
         IReadOnlySet<string> baseSet,
+        string classCode,
         IReadOnlyList<string> traitCodes,
         ISkillRegistry skills,
         ICoreAPI? api)
@@ -217,26 +253,62 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
 
             foreach (string skillId in mapping.Skills)
             {
-                if (baseSet.Contains(skillId))
-                {
-                    continue;
-                }
+                ConsiderSkill(
+                    ref extras,
+                    baseSet,
+                    skills,
+                    skillId,
+                    api,
+                    "[prosequor] Skipping trait-attribute skill '{0}' on trait '{1}': unknown skill.",
+                    mapping.Code);
+            }
+        }
 
-                if (!skills.TryGet(skillId, out _))
-                {
-                    api?.Logger.Warning(
-                        "[prosequor] Skipping trait-attribute skill '{0}' on trait '{1}': unknown skill.",
-                        skillId,
-                        mapping.Code);
-                    continue;
-                }
-
-                extras ??= new HashSet<string>(baseSet, StringComparer.OrdinalIgnoreCase);
-                extras.Add(skillId);
+        if (TryGetClassProfile(classCode, out ClassProfile profile))
+        {
+            foreach (string skillId in profile.Skills)
+            {
+                ConsiderSkill(
+                    ref extras,
+                    baseSet,
+                    skills,
+                    skillId,
+                    api,
+                    "[prosequor] Skipping class skill '{0}' on class '{1}': unknown skill.",
+                    classCode);
             }
         }
 
         return extras == null ? baseSet : extras;
+    }
+
+    static void ConsiderSkill(
+        ref HashSet<string>? extras,
+        IReadOnlySet<string> baseSet,
+        ISkillRegistry skills,
+        string skillId,
+        ICoreAPI? api,
+        string unknownFormat,
+        string source)
+    {
+        if (string.IsNullOrWhiteSpace(skillId))
+        {
+            return;
+        }
+
+        if (baseSet.Contains(skillId) || (extras != null && extras.Contains(skillId)))
+        {
+            return;
+        }
+
+        if (!skills.TryGet(skillId, out _))
+        {
+            api?.Logger.Warning(unknownFormat, skillId, source);
+            return;
+        }
+
+        extras ??= new HashSet<string>(baseSet, StringComparer.OrdinalIgnoreCase);
+        extras.Add(skillId);
     }
 
     public void Register(TraitAttributeMapping mapping)
@@ -343,5 +415,120 @@ public sealed class TraitAttributeRegistry : ITraitAttributeRegistry
             "[prosequor] Loaded {0} trait-attribute mapping(s) from {1} file(s).",
             byCode.Count,
             assets.Count);
+    }
+
+    /// <summary>
+    /// Read <c>prosequor</c> objects from every <c>config/characterclasses</c> asset.
+    /// Disabled classes are skipped. A class entry with no <c>prosequor</c> key does not clear one already stored.
+    /// Later assets (domain, then path) replace an earlier profile for the same class code.
+    /// </summary>
+    public void LoadClassProfiles(ICoreAPI api, IAttributeStatRegistry? stats = null, ISkillRegistry? skills = null)
+    {
+        classProfiles.Clear();
+        IReadOnlyList<string> catalog = stats != null
+            ? AttributeIds.CatalogIds(stats)
+            : AttributeIds.All;
+
+        List<KeyValuePair<AssetLocation, JToken>> assets = api.Assets
+            .GetMany<JToken>(api.Logger, "config/characterclasses", null)
+            .OrderBy(kv => kv.Key.Domain, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(kv => kv.Key.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (KeyValuePair<AssetLocation, JToken> kv in assets)
+        {
+            JToken? token = kv.Value;
+            if (token is JObject single)
+            {
+                IngestClassObject(single, kv.Key, catalog, skills, api);
+                continue;
+            }
+
+            if (token is not JArray list)
+            {
+                api.Logger.Warning(
+                    "[prosequor] Skipping character classes in {0}: expected an object or array.",
+                    kv.Key);
+                continue;
+            }
+
+            foreach (JToken entry in list)
+            {
+                if (entry is not JObject classObject)
+                {
+                    api.Logger.Warning(
+                        "[prosequor] Skipping character class entry in {0}: expected an object.",
+                        kv.Key);
+                    continue;
+                }
+
+                IngestClassObject(classObject, kv.Key, catalog, skills, api);
+            }
+        }
+
+        api.Logger.Notification(
+            "[prosequor] Loaded {0} character class profile(s) from {1} file(s).",
+            classProfiles.Count,
+            assets.Count);
+    }
+
+    void IngestClassObject(
+        JObject classObject,
+        AssetLocation source,
+        IReadOnlyList<string> catalog,
+        ISkillRegistry? skills,
+        ICoreAPI api)
+    {
+        if (classObject.Value<bool?>("enabled") == false)
+        {
+            return;
+        }
+
+        string? code = classObject.Value<string>("code");
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            api.Logger.Warning(
+                "[prosequor] Skipping character class in {0}: missing code.",
+                source);
+            return;
+        }
+
+        JToken? prosequor = classObject["prosequor"];
+        if (prosequor == null || prosequor.Type == JTokenType.Null)
+        {
+            return;
+        }
+
+        ClassProfileJson? row = ClassProfile.ReadJson(prosequor, out string? error);
+        if (row == null)
+        {
+            api.Logger.Warning(
+                "[prosequor] Skipping class profile on '{0}' in {1}: {2}",
+                code.Trim(),
+                source,
+                error ?? "unreadable prosequor object.");
+            return;
+        }
+
+        ClassProfile? profile = ClassProfile.Compile(
+            code,
+            row,
+            catalog,
+            skills,
+            message => api.Logger.Warning("{0}", message));
+        if (profile == null)
+        {
+            return;
+        }
+
+        if (classProfiles.ContainsKey(profile.Code))
+        {
+            api.Logger.Warning(
+                "[prosequor] Class profile '{0}' redefined by {1}; last-win.",
+                profile.Code,
+                source);
+        }
+
+        classProfiles[profile.Code] = profile;
     }
 }

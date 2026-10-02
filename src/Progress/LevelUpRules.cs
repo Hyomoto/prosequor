@@ -10,7 +10,7 @@ public static class LevelUpRules
     /// <summary>
     /// For each level in (beforeLevel, afterLevel], run every matching rule in priority then
     /// source-order. Returns attribute ids that received a point (one entry per successful grant).
-    /// Specialization rules are capacity-only and do not mutate state here.
+    /// Skill points and specialization slots come from the progression table, not these rules.
     /// </summary>
     public static IReadOnlyList<string> Apply(
         PlayerProgressState state,
@@ -52,38 +52,6 @@ public static class LevelUpRules
         return winners;
     }
 
-    /// <summary>
-    /// Derived specialization slot capacity: sum of matching
-    /// <see cref="LevelUpActionKind.EarnSpecializationPoint"/> grants from level 1..playerLevel.
-    /// </summary>
-    public static int SpecializationSlots(IReadOnlyList<LevelUpRuleDef> rules, int playerLevel)
-    {
-        ArgumentNullException.ThrowIfNull(rules);
-        if (playerLevel < XpCurves.PlayerMinLevel || rules.Count == 0)
-        {
-            return 0;
-        }
-
-        int slots = 0;
-        foreach (LevelUpRuleDef rule in rules)
-        {
-            if (rule.Action != LevelUpActionKind.EarnSpecializationPoint)
-            {
-                continue;
-            }
-
-            for (int level = XpCurves.PlayerMinLevel; level <= playerLevel; level++)
-            {
-                if (rule.Matches(level))
-                {
-                    slots += rule.Value;
-                }
-            }
-        }
-
-        return Math.Max(0, slots);
-    }
-
     static void ApplyOne(
         PlayerProgressState state,
         LevelUpRuleDef rule,
@@ -92,19 +60,9 @@ public static class LevelUpRules
         IReadOnlyList<string>? catalog,
         IReadOnlyDictionary<string, int>? attributeBaselines)
     {
-        switch (rule.Action)
+        if (rule.Action == LevelUpActionKind.EarnAttribute)
         {
-            case LevelUpActionKind.EarnSkillPoint:
-                state.UnlockPoints = Math.Max(0, state.UnlockPoints + rule.Value);
-                break;
-
-            case LevelUpActionKind.EarnSpecializationPoint:
-                // Capacity is derived; nothing to store.
-                break;
-
-            case LevelUpActionKind.EarnAttribute:
-                ApplyAttribute(state, rule, random, winners, catalog, attributeBaselines);
-                break;
+            ApplyAttribute(state, rule, random, winners, catalog, attributeBaselines);
         }
     }
 

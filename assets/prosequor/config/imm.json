@@ -26,46 +26,57 @@
     },
     {
       "ConfigFile": "prosequor/server.json",
-      "ConfigLabel": "prosequor:imm-leveling-label",
-      "Description": "prosequor:imm-leveling-desc",
+      "ConfigLabel": "prosequor:imm-preset-label",
+      "Description": "prosequor:imm-preset-desc",
       "ConfigSource": "ModConfig",
       "ConfigSide": "Server",
       "Settings": [
         {
-          "Type": "Slider",
-          "Label": "prosequor:imm-skill-levels-per-point",
-          "Description": "prosequor:imm-skill-levels-per-point-desc",
-          "Map": "SkillLevelsPerPoint",
-          "Min": 0,
-          "Max": 1000,
-          "Step": 1
-        },
-        {
-          "Type": "Slider",
-          "Label": "prosequor:imm-skill-point-every",
-          "Description": "prosequor:imm-skill-point-every-desc",
-          "Map": "SkillPointEvery",
-          "Min": 1,
-          "Max": 1000,
-          "Step": 1
+          "Type": "Dropdown",
+          "Label": "prosequor:imm-preset",
+          "Description": "prosequor:imm-preset-setting-desc",
+          "Map": "preset",
+          "Options": [
+            { "Label": "prosequor:imm-preset-multiplayer", "Value": "prosequor:multiplayer" },
+            { "Label": "prosequor:imm-preset-singleplayer", "Value": "prosequor:singleplayer" },
+            { "Label": "prosequor:imm-preset-mmo", "Value": "prosequor:mmo" }
+          ]
         },
         {
           "Type": "Slider",
           "Label": "prosequor:imm-max-player-level",
           "Description": "prosequor:imm-max-player-level-desc",
-          "Map": "MaxPlayerLevel",
+          "Map": "maxPlayerLevel",
           "Min": 1,
           "Max": 1000,
           "Step": 1
         },
         {
           "Type": "Slider",
-          "Label": "prosequor:imm-xp-scale",
-          "Description": "prosequor:imm-xp-scale-desc",
-          "Map": "XpScale",
+          "Label": "prosequor:imm-xp-gain",
+          "Description": "prosequor:imm-xp-gain-desc",
+          "Map": "xpGain",
           "Min": 0,
           "Max": 1000,
           "Step": 0.1
+        },
+        {
+          "Type": "Text",
+          "Label": "prosequor:imm-skill-points-per-player-level",
+          "Description": "prosequor:imm-skill-points-per-player-level-desc",
+          "Map": "skillPointsPerPlayerLevel"
+        },
+        {
+          "Type": "Text",
+          "Label": "prosequor:imm-skill-points-per-skill-level",
+          "Description": "prosequor:imm-skill-points-per-skill-level-desc",
+          "Map": "skillPointsPerSkillLevel"
+        },
+        {
+          "Type": "Text",
+          "Label": "prosequor:imm-specialization-levels",
+          "Description": "prosequor:imm-specialization-levels-desc",
+          "Map": "specializationLevels"
         }
       ]
     }

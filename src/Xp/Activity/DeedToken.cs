@@ -42,7 +42,10 @@ public enum DeedToken
     Reinforced,
 
     /// <summary>Healing item successfully applied (bandage / poultice).</summary>
-    Healed
+    Healed,
+
+    /// <summary>Pan finished and handed out items. Quantity is the stacks received.</summary>
+    Panned
 }
 
 /// <summary>String forms for <see cref="DeedToken"/> (JSON <c>when.tags</c> / fact tokens).</summary>
@@ -117,6 +120,9 @@ public static class DeedTokenTags
     /// <summary>Healing item successfully applied (bandage / poultice).</summary>
     public const string Healed = "healed";
 
+    /// <summary>Pan finished and handed out items.</summary>
+    public const string Panned = "panned";
+
     /// <summary>Caller identity for pit kilns.</summary>
     public const string PitKiln = "pit-kiln";
 
@@ -146,6 +152,7 @@ public static class DeedTokenTags
         DeedToken.CementationFired => CementationFired,
         DeedToken.Reinforced => Reinforced,
         DeedToken.Healed => Healed,
+        DeedToken.Panned => Panned,
         _ => token.ToString().ToLowerInvariant()
     };
 
@@ -283,6 +290,12 @@ public static class DeedTokenTags
         if (t.Equals(Healed, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Healed;
+            return true;
+        }
+
+        if (t.Equals(Panned, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Panned;
             return true;
         }
 

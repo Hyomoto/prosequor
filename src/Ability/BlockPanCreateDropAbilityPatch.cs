@@ -2,6 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using Prosequor.Ability.Hooks;
 using Prosequor.Player;
+using Prosequor.Xp.Adapters;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
@@ -11,7 +12,8 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Thin BlockPan.CreateDrop adapter into the shared drops station (no rate XP — panning uses Effort.Emit).
+/// Thin BlockPan.CreateDrop adapter into the shared drops station.
+/// Completion XP is a panned deed; sift XP stays on Effort.Emit.
 /// </summary>
 [HarmonyPatch(typeof(BlockPan), "CreateDrop")]
 public static class BlockPanCreateDropAbilityPatch
@@ -96,6 +98,8 @@ public static class BlockPanCreateDropAbilityPatch
             pos,
             dropTable,
             HookIds.ItemInteraction).ToList();
+
+        PanningXp.NotifyComplete(world.Api, player, __instance, fromBlockCode, stacks);
 
         foreach (ItemStack stack in stacks)
         {
