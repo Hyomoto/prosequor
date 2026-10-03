@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -26,6 +27,38 @@ def md_fragment(text: str) -> str:
 def unwrap_single_p(html: str) -> str:
     m = re.fullmatch(r"<p>(.*)</p>", html, flags=re.DOTALL)
     return m.group(1).strip() if m else html
+
+
+IMG_P_RE = re.compile(
+    r"^<p>\s*(<img\b[^>]*>)\s*</p>\s*(.*)$",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def render_notice(body: str) -> str:
+    """A leading image becomes a seal beside the copy, vertically centered."""
+    html = md_fragment(body).strip()
+    match = IMG_P_RE.match(html)
+    if not match:
+        return f'<div class="notice">\n{unwrap_single_p(html)}\n</div>'
+    img = match.group(1)
+    if re.search(r"\bclass=", img, re.IGNORECASE):
+        img = re.sub(
+            r"\bclass=(['\"])",
+            r"class=\1atlas-seal ",
+            img,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    else:
+        img = re.sub(r"<img\b", '<img class="atlas-seal"', img, count=1, flags=re.IGNORECASE)
+    copy = unwrap_single_p(match.group(2).strip())
+    return (
+        '<div class="notice">\n'
+        f"{img}\n"
+        f'<div class="notice-copy">\n{copy}\n</div>\n'
+        "</div>"
+    )
 
 
 def render_mods(summary: str, body: str) -> str:
@@ -76,7 +109,7 @@ def expand_blocks(source: str) -> str:
         if kind == "lead":
             return f'<p class="lead">\n{unwrap_single_p(md_fragment(body))}\n</p>'
         if kind == "notice":
-            return f'<div class="notice">\n{unwrap_single_p(md_fragment(body))}\n</div>'
+            return render_notice(body)
         if kind == "muted":
             return f'<p class="muted">\n{unwrap_single_p(md_fragment(body))}\n</p>'
         if kind == "details":
@@ -100,7 +133,14 @@ def main() -> int:
     expanded = expand_blocks(source)
     body = md_fragment(expanded)
     html = template.replace("{body}", body)
-    result = transform(html, remove_classes=False, keep_style_tags=False)
+    # cssutils only knows CSS 2.1, so flex/align-items log as invalid even though
+    # they are kept on the elements.
+    result = transform(
+        html,
+        remove_classes=False,
+        keep_style_tags=False,
+        cssutils_logging_level=logging.CRITICAL,
+    )
     OUT_HTML.write_text(result, encoding="utf-8")
     print(f"Wrote {OUT_HTML.name}")
     return 0
