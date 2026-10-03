@@ -18,6 +18,14 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
 
     public IReadOnlyList<LevelUpRuleDef> Rules => rules;
 
+    /// <summary>Replace the compiled list. Used after the content fingerprint is stored.</summary>
+    internal void Install(IReadOnlyList<LevelUpRuleDef> next)
+    {
+        ArgumentNullException.ThrowIfNull(next);
+        rules.Clear();
+        rules.AddRange(next);
+    }
+
     /// <summary>
     /// Compiles a draft rule map (last-win by id preserves the later row's source order).
     /// </summary>
@@ -35,6 +43,14 @@ public sealed class LevelUpRegistry : ILevelUpRegistry
         foreach (KeyValuePair<string, LevelUpRuleJson> kv in drafts
                      .OrderBy(d => d.Key, StringComparer.OrdinalIgnoreCase))
         {
+            if (LevelUpRuleCompiler.IsRetiredGrant(kv.Value.action))
+            {
+                warn?.Invoke(
+                    $"[prosequor] Level-up rule '{kv.Key}' action '{kv.Value.action}' no longer grants. "
+                    + "Skill points and specialization slots come from the progression table.");
+                continue;
+            }
+
             List<string> errors = new();
             LevelUpRuleDef? def = LevelUpRuleCompiler.Compile(kv.Value, ref sourceOrder, errors, catalog);
             if (def == null)

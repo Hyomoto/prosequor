@@ -53,8 +53,6 @@ public static class HookIds
     public static readonly PhaseId Default = new("default");
     public static readonly PhaseId Quantity = new("quantity");
     public static readonly PhaseId Output = new("output");
-    /// <summary>Legacy list-pre phase id; mutate-drops no longer registers it.</summary>
-    public static readonly PhaseId DropList = new("drops");
     /// <summary>Per-stack ItemStack fold under mutate-drops (after quantity).</summary>
     public static readonly PhaseId Stack = new("stack");
     public static readonly PhaseId Stacks = new("stacks");
@@ -62,6 +60,14 @@ public static class HookIds
     public static readonly PhaseId Cap = new("cap");
     /// <summary>Heartseeker threat gate percent (seed 0).</summary>
     public static readonly PhaseId Threshold = new("threshold");
+    /// <summary>Tracker mark distance in meters (seed 0).</summary>
+    public static readonly PhaseId Range = new("range");
+    /// <summary>Tracker aim time in seconds before a mark lands (seed 0).</summary>
+    public static readonly PhaseId Focus = new("focus");
+    /// <summary>Tracker mark drops when the body is past this many degrees from look (seed 0).</summary>
+    public static readonly PhaseId Angle = new("angle");
+    /// <summary>Focus Shot bow-draw seconds required before the damage fold (seed 0).</summary>
+    public static readonly PhaseId Hold = new("hold");
     public static readonly PhaseId Size = new("size");
     public static readonly PhaseId AssistRadius = new("assist-radius");
     public static readonly PhaseId AutoFinish = new("auto-finish");
@@ -75,11 +81,6 @@ public static class HookIds
     public static readonly PhaseId MeleeDamage = new("melee-damage");
     public static readonly PhaseId TurnSpeed = new("turn-speed");
     public static readonly PhaseId RatlineStamina = new("ratline-stamina");
-    /// <summary>
-    /// Response-rate fold under animal-flee / animal-seek (seed = vanilla ExecutionChance).
-    /// Distinct from <see cref="HookIds.Chance"/> so husbandry flee-reduction can keep seed 0.
-    /// </summary>
-    public static readonly PhaseId Response = new("response");
     public static readonly PhaseId Chance = new("chance");
     public static readonly PhaseId Multiplier = new("multiplier");
     public static readonly PhaseId AddDurability = new("add-durability");
@@ -183,6 +184,10 @@ public static class VerbIds
     public static readonly VerbId BasicSlots = new("prosequor:basic-slots");
     public static readonly VerbId RangedSpeed = new("prosequor:ranged-speed");
     public static readonly VerbId RangedAcc = new("prosequor:ranged-acc");
+    /// <summary>Signed ranged damage percent (vanilla <c>rangedWeaponsDamage</c>).</summary>
+    public static readonly VerbId RangedDamage = new("prosequor:ranged-damage");
+    /// <summary>Signed ranged distance percent (vanilla <c>bowDrawingStrength</c>).</summary>
+    public static readonly VerbId RangedDistance = new("prosequor:ranged-distance");
     public static readonly VerbId FallDamageFactor = new("prosequor:fall-damage-factor");
     public static readonly VerbId FallDamageThreshold = new("prosequor:fall-damage-threshold");
     public static readonly VerbId TemporalRecoverRate = new("prosequor:temporal-recover-rate");
@@ -193,6 +198,10 @@ public static class VerbIds
     public static readonly VerbId SwimSpeed = new("prosequor:swim-speed");
     /// <summary>On-foot sneak speed bonus fraction (seed 0).</summary>
     public static readonly VerbId SneakSpeed = new("prosequor:sneak-speed");
+    /// <summary>Signed base walk-speed percent (vanilla <c>walkspeed</c>).</summary>
+    public static readonly VerbId WalkSpeed = new("prosequor:walk-speed");
+    /// <summary>Signed hunger-rate percent (vanilla <c>hungerrate</c>; higher is worse).</summary>
+    public static readonly VerbId HungerRate = new("prosequor:hunger-rate");
     public static readonly VerbId AnimalThreat = new("prosequor:animal-threat");
     /// <summary>Sneak-only animal sense-range multiplier (seed 1).</summary>
     public static readonly VerbId AnimalSenseRange = new("prosequor:animal-sense-range");
@@ -202,9 +211,17 @@ public static class VerbIds
     public static readonly VerbId ArrowBreak = new("prosequor:arrow-break");
     /// <summary>Outgoing damage vs low-threat animals (amount / threshold phases).</summary>
     public static readonly VerbId UnawareDamage = new("prosequor:unaware-damage");
+    /// <summary>Tracker mark parameters (range / focus / angle phases).</summary>
+    public static readonly VerbId TrackMark = new("prosequor:track-mark");
+    /// <summary>Bow draw damage fold (hold / amount phases).</summary>
+    public static readonly VerbId FocusShot = new("prosequor:focus-shot");
     public static readonly VerbId CritChance = new("prosequor:crit-chance");
+    /// <summary>Outgoing crit damage multiplier (seed 2).</summary>
+    public static readonly VerbId CritDamage = new("prosequor:crit-damage");
     /// <summary>Intact cracked-vessel chance percent (vanilla <c>wholeVesselLootChance</c>).</summary>
     public static readonly VerbId WholeVesselLootChance = new("prosequor:whole-vessel-loot-chance");
+    /// <summary>Signed damage vs mechanicals percent (vanilla <c>mechanicalsDamage</c>).</summary>
+    public static readonly VerbId MechanicalsDamage = new("prosequor:mechanicals-damage");
     public static readonly VerbId VoxelCopy = new("prosequor:voxel-copy");
     public static readonly VerbId VoxelRefill = new("prosequor:voxel-refill");
 

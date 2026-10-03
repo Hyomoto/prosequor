@@ -143,7 +143,7 @@ public class CharacterSkillsTab
             return;
         }
 
-        tabIndex = dlg.Tabs.Count;
+        tabIndex = dlg.RenderTabHandlers.Count;
         dlg.Tabs.Add(new GuiTab
         {
             Name = Lang.Get("prosequor:charactertab-skills"),
@@ -738,6 +738,9 @@ public class CharacterSkillsTab
         RequestRecompose();
         return true;
     }
+
+    /// <summary>Refresh an open tree after the server progression packet updates slot capacity.</summary>
+    public void RefreshAfterProgressionSync() => RequestRecompose();
 
     /// <summary>
     /// The dialog owns the composer (title bar, tabs, background), so switching views means asking it

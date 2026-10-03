@@ -111,6 +111,153 @@ public static class AbilityFormulas
         return fromValue + t * (toValue - fromValue);
     }
 
+    /// <summary>
+    /// Score → value over a <paramref name="from"/> span and <paramref name="to"/> list.
+    /// Below the span → 0; above → last <paramref name="to"/> entry.
+    /// <paramref name="curve"/> <c>linear</c> (default): even knots through every entry.
+    /// <c>ease</c> / <c>bezier</c>: Bernstein with first/last values repeated (smoothstep for two entries).
+    /// </summary>
+    public static float AttributeCurveFloat(
+        int score,
+        int fromLow,
+        int fromHigh,
+        IReadOnlyList<float> to,
+        string curve)
+    {
+        if (to == null || to.Count < 2)
+        {
+            return 0f;
+        }
+
+        if (score < fromLow)
+        {
+            return 0f;
+        }
+
+        if (score > fromHigh)
+        {
+            return to[to.Count - 1];
+        }
+
+        if (fromHigh == fromLow)
+        {
+            return to[0];
+        }
+
+        if (IsEaseCurve(curve))
+        {
+            float t = (score - fromLow) / (float)(fromHigh - fromLow);
+            return BernsteinWithRepeatedEnds(to, t);
+        }
+
+        return Xp.AmountTableMath.LerpAmount(to, score, fromLow, fromHigh);
+    }
+
+    /// <summary>Same as <see cref="AttributeCurveFloat"/> then named round.</summary>
+    public static int AttributeCurveInt(
+        int score,
+        int fromLow,
+        int fromHigh,
+        IReadOnlyList<float> to,
+        string curve,
+        string roundMode)
+    {
+        float raw = AttributeCurveFloat(score, fromLow, fromHigh, to, curve);
+        return roundMode.ToLowerInvariant() switch
+        {
+            "floor" => (int)Math.Floor(raw),
+            "round" => (int)Math.Round(raw, MidpointRounding.AwayFromZero),
+            _ => (int)Math.Ceiling(raw)
+        };
+    }
+
+    static bool IsEaseCurve(string? curve) =>
+        string.Equals(curve, "ease", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(curve, "bezier", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Bernstein polynomial after repeating the first and last authored values.
+    /// Two entries → cubic smoothstep controls.
+    /// </summary>
+    public static float BernsteinWithRepeatedEnds(IReadOnlyList<float> authored, float t)
+    {
+        if (authored == null || authored.Count == 0)
+        {
+            return 0f;
+        }
+
+        if (authored.Count == 1)
+        {
+            return authored[0];
+        }
+
+        t = Math.Clamp(t, 0f, 1f);
+        int nAuthored = authored.Count;
+        // Controls: first, first, …middle…, last, last → length nAuthored + 2
+        int n = nAuthored + 1; // degree
+        float[] controls = new float[nAuthored + 2];
+        controls[0] = authored[0];
+        controls[1] = authored[0];
+        for (int i = 1; i < nAuthored - 1; i++)
+        {
+            controls[i + 1] = authored[i];
+        }
+
+        controls[nAuthored] = authored[nAuthored - 1];
+        controls[nAuthored + 1] = authored[nAuthored - 1];
+
+        float sum = 0f;
+        float oneMinus = 1f - t;
+        for (int i = 0; i <= n; i++)
+        {
+            sum += Binomial(n, i) * Pow(oneMinus, n - i) * Pow(t, i) * controls[i];
+        }
+
+        return sum;
+    }
+
+    static float Binomial(int n, int k)
+    {
+        if (k < 0 || k > n)
+        {
+            return 0f;
+        }
+
+        if (k == 0 || k == n)
+        {
+            return 1f;
+        }
+
+        if (k > n - k)
+        {
+            k = n - k;
+        }
+
+        long result = 1;
+        for (int i = 1; i <= k; i++)
+        {
+            result = result * (n - k + i) / i;
+        }
+
+        return result;
+    }
+
+    static float Pow(float baseValue, int exp)
+    {
+        if (exp == 0)
+        {
+            return 1f;
+        }
+
+        float result = 1f;
+        for (int i = 0; i < exp; i++)
+        {
+            result *= baseValue;
+        }
+
+        return result;
+    }
+
     /// <summary>Rounds expected quantity with a fractional chance of +1.</summary>
     public static int StochasticRound(double expected, Random rand)
     {

@@ -58,7 +58,11 @@ public static class SkillTreeCompilerFixtures
             || SkillTreeCompiler.DefaultUnlockNameLang("mymod:alchemy", "transmutation")
                 != "mymod:unlock-alchemy-transmutation"
             || SkillTreeCompiler.DefaultSkillNameLang("digging") != "skill-digging"
-            || SkillTreeCompiler.DefaultSkillNameLang("mymod:alchemy") != "mymod:skill-alchemy")
+            || SkillTreeCompiler.DefaultSkillNameLang("mymod:alchemy") != "mymod:skill-alchemy"
+            || SkillTreeCompiler.DefaultSkillDescriptionLang("digging") != "skilldesc-digging"
+            || SkillTreeCompiler.DefaultSkillDescriptionLang("mymod:alchemy") != "mymod:skilldesc-alchemy"
+            || SkillTreeCompiler.DefaultSkillIcon("digging") != "textures/icons/digging-skill.svg"
+            || SkillTreeCompiler.DefaultSkillIcon("mymod:alchemy") != "textures/icons/alchemy-skill.svg")
         {
             Assert.Fail("[prosequor] Skill-tree compiler fixture failed (namespaced default nameLang).");
         }
@@ -719,6 +723,8 @@ public static class SkillTreeCompilerFixtures
             Assert.Fail("[prosequor] Skill-tree compiler fixture failed (startup description sums and formats).");
         }
 
+        VerifyQualityPercentDescriptions(hooks, actions, collections, ref order);
+
         // Skill-list descriptionParams: progress-aware root + owned node coefficients.
         AbilityEffectJson[] listRootEffects =
         [
@@ -1051,4 +1057,207 @@ public static class SkillTreeCompilerFixtures
                 "[prosequor] Orphan-repair fixture failed (strict compile must still reject four-downward).");
         }
     }
+
+    static void VerifyQualityPercentDescriptions(
+        HookRegistry hooks,
+        AbilityActionRegistry actions,
+        CollectionIndex collections,
+        ref int order)
+    {
+        SkillTreeJson knots = new()
+        {
+            nodes =
+            [
+                new SkillTreeNodeJson
+                {
+                    id = "knot",
+                    descriptionLang = "knot-desc",
+                    descriptionParams =
+                    [
+                        new Newtonsoft.Json.Linq.JObject
+                        {
+                            ["table"] = "0.table",
+                            ["end"] = "min",
+                            ["format"] = "qualityPercent"
+                        },
+                        new Newtonsoft.Json.Linq.JObject
+                        {
+                            ["table"] = "0.table",
+                            ["format"] = "qualityPercent"
+                        }
+                    ],
+                    tiers =
+                    [
+                        new SkillTreeTierJson
+                        {
+                            effects =
+                            [
+                                QualityTableEffect(0, 0.2)
+                            ]
+                        },
+                        new SkillTreeTierJson
+                        {
+                            effects =
+                            [
+                                new AbilityEffectJson
+                                {
+                                    replicate = 0,
+                                    @params = QualityTable(0.1, 0.4)
+                                }
+                            ]
+                        },
+                        new SkillTreeTierJson
+                        {
+                            effects =
+                            [
+                                new AbilityEffectJson
+                                {
+                                    replicate = 0,
+                                    @params = QualityTable(0.04, 0.03)
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+        SkillTreeCompiler.CompileResult compiled = SkillTreeCompiler.Compile(
+            "fixture-quality-percent",
+            100,
+            knots,
+            hooks,
+            actions,
+            collections,
+            ref order);
+        SkillTreeNodeDef? node = compiled.Tree?.ById["knot"];
+        if (!compiled.Success
+            || node == null
+            || !IsFractionPercent(node.TierAt(1).DescriptionArgs, 0m, 0.2m)
+            || !IsFractionPercent(node.TierAt(2).DescriptionArgs, 0.1m, 0.4m)
+            || !IsFractionPercent(node.TierAt(3).DescriptionArgs, 0.04m, 0.03m))
+        {
+            Assert.Fail(
+                "[prosequor] Skill-tree compiler fixture failed (qualityPercent knots): "
+                + string.Join("; ", compiled.Errors));
+        }
+
+        SkillDef hover = new()
+        {
+            Id = "fixture-quality-percent",
+            Tree = compiled.Tree,
+            DescriptionParamSpecs =
+            [
+                new Newtonsoft.Json.Linq.JObject
+                {
+                    ["table"] = "knot.0.table",
+                    ["format"] = "qualityPercent"
+                }
+            ]
+        };
+        List<string> hoverErrors = new();
+        if (!SkillDescriptionResolver.TryValidate(
+                hover.Id,
+                hover.DescriptionParamSpecs,
+                hover.RootEffectSnapshots,
+                hover.Tree,
+                hoverErrors))
+        {
+            Assert.Fail(
+                "[prosequor] Skill-list qualityPercent fixture failed (validate): "
+                + string.Join("; ", hoverErrors));
+        }
+
+        IReadOnlyList<object> unowned = SkillDescriptionResolver.Resolve(hover, progress: null);
+        if (unowned.Count != 1 || unowned[0] is not "")
+        {
+            Assert.Fail("[prosequor] Skill-list qualityPercent fixture failed (unowned should be empty).");
+        }
+
+        ActionTestProgress owned = new();
+        owned.SetUnlockTier(hover.Id, "knot", 2);
+        IReadOnlyList<object> ownedArgs = SkillDescriptionResolver.Resolve(hover, owned);
+        if (ownedArgs.Count != 1
+            || ownedArgs[0] is not FormattedDescriptionArg { Value: 0.4m, Format: "fractionPercent" })
+        {
+            Assert.Fail("[prosequor] Skill-list qualityPercent fixture failed (owned tier-2 last knot).");
+        }
+
+        collections.EnsureKey("prosequor:resin");
+        SkillTreeJson stringTable = new()
+        {
+            nodes =
+            [
+                new SkillTreeNodeJson
+                {
+                    id = "string-table",
+                    descriptionParams =
+                    [
+                        new Newtonsoft.Json.Linq.JObject
+                        {
+                            ["table"] = "0.table",
+                            ["format"] = "qualityPercent"
+                        }
+                    ],
+                    tiers =
+                    [
+                        new SkillTreeTierJson
+                        {
+                            effects =
+                            [
+                                new AbilityEffectJson
+                                {
+                                    hook = "prosequor:block-interaction",
+                                    verb = "prosequor:interaction-speed",
+                                    action = "prosequor:number",
+                                    @params = new Newtonsoft.Json.Linq.JObject
+                                    {
+                                        ["op"] = "scale",
+                                        ["table"] = "prosequor:resin"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+        SkillTreeCompiler.CompileResult rejected = SkillTreeCompiler.Compile(
+            "fixture-quality-percent-string",
+            100,
+            stringTable,
+            hooks,
+            actions,
+            collections,
+            ref order);
+        if (rejected.Success
+            || !rejected.Errors.Exists(error => error.Contains("number array", StringComparison.Ordinal)))
+        {
+            Assert.Fail(
+                "[prosequor] Skill-tree compiler fixture failed (string quality table should reject): "
+                + string.Join("; ", rejected.Errors));
+        }
+    }
+
+    static AbilityEffectJson QualityTableEffect(double first, double last) =>
+        new()
+        {
+            hook = "prosequor:block-interaction",
+            verb = "prosequor:interaction-speed",
+            action = "prosequor:number",
+            @params = QualityTable(first, last)
+        };
+
+    static Newtonsoft.Json.Linq.JObject QualityTable(double first, double last) =>
+        new()
+        {
+            ["op"] = "scale",
+            ["table"] = new Newtonsoft.Json.Linq.JArray(first, last)
+        };
+
+    static bool IsFractionPercent(IReadOnlyList<object> args, decimal min, decimal max) =>
+        args.Count == 2
+        && args[0] is FormattedDescriptionArg { Format: "fractionPercent" } low
+        && args[1] is FormattedDescriptionArg { Format: "fractionPercent" } high
+        && low.Value == min
+        && high.Value == max;
 }

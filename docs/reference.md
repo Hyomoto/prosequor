@@ -1,6 +1,6 @@
 # Skill JSON reference
 
-User-facing field catalog for Prosequor JSON. Explains what each key does and, where it matters, what accepted values do. No engine internals or design rationale.
+User-facing field catalog for Prosequor JSON. Explains what each key does and, where it matters, what accepted values do. No engine internals or design rationale. To build a skill, fit existing content, or call Prosequor from code, start with [modding.md](modding.md).
 
 **Paths:** `assets/<moddomain>/config/prosequor/…`
 
@@ -57,8 +57,11 @@ excludes  →  who you cannot also own
 - [Affix lists](#affix-lists)
 - [Attribute stats](#attribute-stats)
 - [Trait attributes](#trait-attributes)
+- [Character classes](#character-classes)
+- [Progression](#progression)
 - [Level-ups](#level-ups)
 - [Contributions](#contributions)
+- [Options](#options)
 
 ---
 
@@ -70,9 +73,9 @@ Path: `skills/<id>.json` (one object per file).
 | --- | --- |
 | `id` | Stable skill id (required) |
 | `nameLang` | List title lang key (default `skill-{id}`) |
-| `descriptionLang` | Optional C-menu list-hover blurb |
+| `descriptionLang` | C-menu list-hover blurb (default `skilldesc-{id}`) |
 | `descriptionParams` | Optional `{0}`… args for `descriptionLang` (same grammar as [nodes](#description-params)) |
-| `icon` | Texture path (bare paths resolve under `prosequor:`) |
+| `icon` | Texture path (default `textures/icons/{id}-skill.svg`; bare paths resolve under `prosequor:`) |
 | `hobby` | `true` = hobby skill (see [kind](#kind--level-caps)) |
 | `optional` | `true` = omitted from the shared class skill set (trait `skills` can still grant it). Default `false` |
 | `maxLevel` | Ignored if present; caps are derived |
@@ -134,7 +137,7 @@ Duplicate ids last-win. Omitted or empty = no fill.
 | `icon` | Texture path |
 | `cost` | Unlock points (global for normal skills; hobby spendable for hobbies; tier can override; default `1`) |
 | `minSkillLevel` | Floor for first tier (tier can override; default `0`) |
-| `specialization` | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [level-ups](#level-ups) `earn-specialization-point` rules |
+| `specialization` | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [progression](#progression) `specializationLevels` |
 | `tiers` | Ranks; later tiers usually `replicate` earlier effects |
 | `layout` | Visual grid hints |
 | `requires` / `excludes` | Prerequisites and mutual exclusion |
@@ -224,6 +227,7 @@ Array of positional args for `descriptionLang` (`{0}`, `{1}`, …).
 | `"prev.0.base"` | Previous tier (nodes only; missing treated as 0 in sums) |
 | `"axeexpert.0.perLevel"` | Skill hover only: owned tier of node `axeexpert` (0 if unowned) |
 | `{ "sum": ["0.base", "prev.0.base"], "format": "percent" }` | Sum selectors; `format` optional: `percent` \| `fractionPercent`. A negative value prints as its magnitude in red |
+| `{ "table": "0.table", "end": "max", "format": "qualityPercent" }` | One knot from a number-array param. `end` is `min` (first entry) or `max` (last entry); omit `end` for `max`. Prints as `fractionPercent`. Does not use `sum`. A missing array, an empty array, or a non-number entry is a compile error |
 
 Bare `"base"` resolves across all current-tier effects (ambiguous if several share the key) — prefer scoped `index.param`.
 
@@ -387,6 +391,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `cementation-fired` | Cementation complete |
 | `reinforced` | Block reinforced with the plumb and square |
 | `healed` | Healing item successfully applied (bandage / poultice) |
+| `panned` | Pan finished; quantity is items received |
 | `saddle-break` / `saddle-tame` | Riding progress |
 | `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
 | `milked` | Successful milking |
@@ -557,20 +562,33 @@ Fact `target` = animal / mount / boat code.
 
 | Verb | Phase | Contract |
 | --- | --- | --- |
-| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` | `default` | number |
-| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` | `default` | number |
+| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `ranged-damage` / `ranged-distance` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `walk-speed` / `hunger-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` / `mechanicals-damage` | `default` | number |
+| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` / `crit-damage` | `default` | number |
 | `unaware-damage` | `amount` | number |
 | | `threshold` | number |
+| `track-mark` | `range` | number |
+| | `focus` | number |
+| | `angle` | number |
+| `focus-shot` | `hold` | number |
+| | `amount` | number |
 | `cat-eyes` | `default` | number |
 | `on-damage` | `amount` | number |
 | | `last-stand` | number |
 | `bleed-out` | `rate` | number |
 
-`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. The meter owns player-flee eligibility (`CanSensePlayer` false until panic, then true for the alert target); creature TaskAI still runs `fleeentity` / seek / melee.
+`animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. Passive prey (ungated flee from the player, and no ungated player seek or melee) flee for as long as the meter is committed; vanilla player-flee on those animals does not run. Creatures that hunt the player keep vanilla AI.
+
+`ranged-damage` / `ranged-distance` / `walk-speed` / `hunger-rate` / `mechanicals-damage`: signed percent folds written onto vanilla entity stats as `pct/100` additives (`rangedWeaponsDamage`, `bowDrawingStrength`, `walkspeed`, `hungerrate`, `mechanicalsDamage`). Neutral mid is `0` except walk-speed (no mid; score 10 is the display neutral).
 
 `animal-sense-range`: sneak-only sense-range multiplier (seed 1). `animal-threat-sneak`: sneak-only threat-emission multiplier (seed 1). `arrow-break`: arrow break chance 0–1 (seed = current break chance).
 
 `unaware-damage` / `amount`: outgoing damage multiplier (seed 1) when the victim's alert-meter threat is below `unaware-damage` / `threshold` (seed 0, percent).
+
+`track-mark` / `range`: meters (seed 0). `track-mark` / `focus`: seconds the animal closest to the cursor must stay there before it is marked (seed 0). A nearby animal does not replace it until that animal is clearly more centered. A gap shorter than 0.4s holds that progress; after that it drains at 2 seconds of progress per second away. `track-mark` / `angle`: the mark drops when the body is further than this many degrees from the look direction (seed 0). One mark. It remains through death while the body is still loaded, inside `range`, and within `angle`, and drops when the body is gone or another animal is marked.
+
+`focus-shot` / `hold`: seconds a bow must stay drawn (seed 0). `focus-shot` / `amount`: damage multiplier (seed 1) on that arrow when the draw lasts at least `hold` seconds. A shorter draw keeps the vanilla power. Thrown spears are unchanged.
+
+`crit-chance`: percent chance a player weapon hit (blunt, slashing, or piercing) is a critical hit (seed 0). `crit-damage`: multiplier applied to that hit after the roll succeeds (seed 2).
 
 `on-damage`: match `damage:frost` / `damage:weather`.
 
@@ -623,12 +641,15 @@ NumberSpec. Surface: block / plant-crop / `default`.
 
 | Param | |
 | --- | --- |
-| `fromScore` / `fromValue` / `toScore` / `toValue` | Linear map endpoints |
-| `midScore` / `midValue` | Optional hinge |
-| `op` | `add` (default) or `scale` (`value * mapped`) |
+| `from` | Two-number score span `[low, high]` |
+| `to` | Value list (≥ 2 numbers) across that span |
+| `curve` | Optional `linear` (default) or `ease` |
+| `op` | `add` (default) or `multiply` (`value * mapped`) |
 | `round` | Optional `ceil` \| `floor` \| `round`; omit for fractional |
 
-Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`.
+`linear` spaces `to` evenly across `from` (value passes through every entry). `ease` repeats the first and last `to` values, then evaluates one Bernstein polynomial (two entries → smoothstep ease-in/out). A score below `from[0]` maps to `0`; a score above `from[1]` maps to the last `to` entry.
+
+Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`; block-interaction interaction-speed/`default`.
 
 ### Contract: bool / none / refund
 
@@ -933,7 +954,7 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 
 ```json
 {
-  "id": "constitution",
+  "id": "resilience",
   "rules": [
     {
       "id": "prosequor:con-health",
@@ -942,10 +963,8 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
       "verb": "prosequor:health",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": -5,
-        "toScore": 18,
-        "toValue": 5,
+        "from": [0, 18],
+        "to": [-5, 5],
         "round": "ceil"
       }
     }
@@ -956,6 +975,9 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 | Field | Meaning |
 | --- | --- |
 | `id` | Attribute id (the file defines this attribute; last-win across mods) |
+| `nameLang` | Display name lang key (default `attribute-{id}`) |
+| `descriptionLang` | Tooltip flavor quote lang key (default `attribute-flavor-{id}`) |
+| `icon` | Texture path (default `textures/icons/{id}-attribute.svg`; bare paths resolve under `prosequor:`) |
 | `rules[].id` | Optional rule id |
 | `rules[].minScore` | Inactive below this score (default `0`) |
 | `rules[].maxScore` | Optional inclusive upper gate |
@@ -966,6 +988,9 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 ## Trait attributes
 
 Path: `trait-attributes.json` (JSON array). Maps vanilla class traits to attribute score deltas.
+Those deltas form the live **baseline** for a class (plus `extraTraits`). Player growth is stored
+separately; effective score is baseline + growth (clamped 0–18). Changing class reevaluates the
+baseline without wiping growth.
 
 ```json
 [
@@ -984,7 +1009,100 @@ Path: `trait-attributes.json` (JSON array). Maps vanilla class traits to attribu
 
 Valid attribute keys: any loaded stat id (`config/prosequor/stats/`). Last-win by `code`.
 
-Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set.
+Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set. A character class [`prosequor.skills`](#character-classes) list is unioned the same way.
+
+---
+
+## Character classes
+
+On each object in `config/characterclasses.json` (any domain), optional object `prosequor`. Omitted means no class profile. `enabled: false` skips that class. Last-win by class `code` (asset domain, then path). An entry with no `prosequor` key does not clear a profile already stored for that code.
+
+```json
+"prosequor": {
+  "attributes": { "strength": 12 },
+  "skills": ["prosequor:some-optional"],
+  "traits": ["soldier", "-claustrophobic"],
+  "unlocks": [
+    { "skill": "prosequor:hunting", "nodes": ["tracker"] }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `attributes` | Attribute id → absolute starting score. Omitted ids are `10`. Empty `{}` or a missing `attributes` key is all `10`s. Unknown ids are skipped with a warning |
+| `skills` | Skill ids added to this class's skill set. Unknown ids are skipped with a warning. Ids already in the non-optional base are ignored |
+| `traits` | Trait codes added to this class. A leading `-` removes that trait (`"-claustrophobic"`). Applied in order, before trait-attribute deltas and before mapped traits are taken off the class. Adding a code already on the class does nothing. Removing a code that is not on the class does nothing. Unknown trait codes are skipped with a warning |
+| `unlocks` | Starting nodes, grouped by skill. Each node is owned at tier 1 when the character is created. Does not spend unlock points. Unknown skills, skills outside the class set, and unknown nodes are skipped with a warning. Extra keys on an unlock object are ignored |
+
+Trait-attribute deltas are added to these scores afterward. Each resulting score is clamped to 0–18.
+
+---
+
+## Progression
+
+Path: `progression.json`. One object. Last-win across mods.
+
+```json
+{
+  "maxPlayerLevel": 50,
+  "skillPointsPerPlayerLevel": "1..50",
+  "skillPointsPerSkillLevel": "20,40,60,80,100",
+  "specializationLevels": "10,20,30,40,50"
+}
+```
+
+Level lists are comma-separated pieces. A piece is a whole number or a range. `X..Y` is X through Y inclusive. `..Y` starts at 1. `X..` and `..` end at the cap for that list. `^Z` on a range keeps every Zth level from the range start (`1..11^3` is 1, 4, 7, 10). The end level is included when it lands on that step.
+
+A missing end stops at the level before the next piece starts. A missing start begins at the level after the previous piece ends (`1..,20..50^2` is 1–19, then 20, 22, 24, … 50). `10..20,..,40..50` fills 21 through 39. `1..,..50` and `..,..` have no meeting point and are rejected. A range that runs backwards, a step below 1, an empty piece, and a list wider than 10000 levels are rejected. Empty text is an empty list.
+
+On a player list, an omitted end uses `maxPlayerLevel` from the same file. When that key is absent, the end is the cap already in effect. On `skillPointsPerSkillLevel`, an omitted end is 100.
+
+A listed level grants one point, or one specialization slot, when that level is reached. A new character is already player level 1, so player level 1 in `skillPointsPerPlayerLevel` does not grant at creation.
+
+| Field | Meaning |
+| --- | --- |
+| `maxPlayerLevel` | Player level cap. Whole number ≥ 1. Default 50 |
+| `skillPointsPerPlayerLevel` | Player levels that grant one skill point |
+| `skillPointsPerSkillLevel` | Skill levels that grant one skill point. Hobbies do not use this list |
+| `specializationLevels` | Player levels that grant one specialization slot |
+
+### Presets
+
+Path: `presets/<name>.json`. One object. `id` is the preset id. Other keys are the same as `progression.json`, plus `xpGain`. Only keys that are present replace the baseline. Same id: last asset wins, then a file in `ModConfig/prosequor/presets/` wins over assets.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Preset id. If omitted, the file name is the id |
+| `xpGain` | Number ≥ 0. Multiplies skill XP earned from play. Default 1. Admin grant modes are not multiplied |
+
+Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xpGain` 2), `prosequor:mmo` (`specializationLevels` `"20,40"`).
+
+### Server config
+
+File: `ModConfig/prosequor/server.json`. Every progression key is stored.
+
+```json
+{
+  "preset": "prosequor:multiplayer",
+  "maxPlayerLevel": 50,
+  "skillPointsPerPlayerLevel": "1..50",
+  "skillPointsPerSkillLevel": "20,40,60,80,100",
+  "specializationLevels": "10,20,30,40,50",
+  "xpGain": 1,
+  "appliedPreset": "prosequor:multiplayer"
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `preset` | Preset id. Missing key is read as `prosequor:multiplayer` |
+| other progression keys | The value in effect. A missing key is filled from the selected preset when the file is loaded |
+| `appliedPreset` | Preset id the stored values were last aligned to. Set to the current `preset` when the file is loaded |
+
+When `preset` and `appliedPreset` differ, a stored value that still matches `appliedPreset` is replaced with the new preset's value. A stored value that differs is kept. When `appliedPreset` is missing, values already in the file are treated as written for the current `preset`, and missing keys are filled from that preset.
+
+An unknown preset id keeps the id and uses the baseline table. Keys in the file still apply.
 
 ---
 
@@ -992,13 +1110,16 @@ Every character class starts with every non-`optional` skill. Trait `skills` ent
 
 Path: `level-ups.json` or `level-ups/*.json`.
 
+Skill points and specialization slots are [progression](#progression) fields. `prosequor:earn-skill-point` and `prosequor:earn-specialization-point` do not grant; a rule that uses either action is skipped.
+
 ```json
 {
   "rules": [
     {
-      "id": "prosequor:earn-skill-point",
-      "every": 1,
-      "action": "prosequor:earn-skill-point"
+      "id": "prosequor:earn-attribute",
+      "levels": [5, 10],
+      "action": "prosequor:earn-attribute",
+      "params": { "key": "buckets", "value": 1 }
     }
   ]
 }
@@ -1015,9 +1136,7 @@ Path: `level-ups.json` or `level-ups/*.json`.
 
 | Action | Params |
 | --- | --- |
-| `prosequor:earn-skill-point` | Optional `value` (default 1) — add unlock points |
-| `prosequor:earn-specialization-point` | Optional `value` (default 1) — specialization slot capacity |
-| `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to score (cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
+| `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to growth (effective = class/trait baseline + growth, cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
 
 ---
 
@@ -1089,3 +1208,20 @@ Removes the named node, rewrites every other node’s `requires` / `excludes` fr
 ```
 
 Omit `disable` and `replaces` to append nodes via `requires`. Unmet prerequisites are deferred across contribution files; still missing after all files → skipped with a warning.
+
+---
+
+## Options
+
+Path: `options.json` or `options/*.json`. One object per file.
+
+```json
+{ "traitsTab": true }
+```
+
+| Field | Meaning |
+| --- | --- |
+| `traitsTab` | `true` leaves the vanilla character traits tab visible. Any applied file that sets `true` wins. Omitted or `false` is not a request and does not cancel another file's `true` |
+| `dependsOn` | `{ "modid", "invert"? }[]` — skip the whole file if unmet. A skipped file is not a request |
+
+`ModConfig/prosequor/client.json` key `ShowVanillaTraitsTab` (`true` / `false`, default `false`) also leaves that tab visible. The tab stays visible when the player setting is `true` or any applied options file sets `traitsTab` to `true`. Otherwise the tab button is hidden. Prosequor's Status tab lists traits only while the vanilla traits tab is hidden.

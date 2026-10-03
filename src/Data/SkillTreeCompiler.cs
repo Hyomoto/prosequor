@@ -703,6 +703,27 @@ public static class SkillTreeCompiler
             }
 
             string format = expression.Value<string>("format")?.Trim() ?? "";
+            if (format == SkillDescriptionResolver.QualityPercentFormat)
+            {
+                if (!TryResolveQualityPercent(
+                        skillId,
+                        nodeId,
+                        tierIndex,
+                        expression,
+                        rootEffects,
+                        previousEffects,
+                        effects,
+                        errors,
+                        out FormattedDescriptionArg? qualityArg))
+                {
+                    valid = false;
+                    continue;
+                }
+
+                args.Add(qualityArg!);
+                continue;
+            }
+
             JArray? sum = expression["sum"] as JArray;
             if (sum == null || sum.Count == 0)
             {
@@ -772,6 +793,56 @@ public static class SkillTreeCompiler
         }
 
         return valid ? args : null;
+    }
+
+    static bool TryResolveQualityPercent(
+        string skillId,
+        string nodeId,
+        int tierIndex,
+        JObject expression,
+        IReadOnlyList<AbilityEffectJson> rootEffects,
+        IReadOnlyList<AbilityEffectJson> previousEffects,
+        IReadOnlyList<AbilityEffectJson> effects,
+        List<string> errors,
+        out FormattedDescriptionArg? arg)
+    {
+        arg = null;
+        if (!SkillDescriptionResolver.TryReadQualityPercent(
+                expression,
+                out string selector,
+                out bool useMin,
+                out string? readError))
+        {
+            errors.Add(
+                $"Skill '{skillId}' node '{nodeId}' tier {tierIndex + 1}: {readError}");
+            return false;
+        }
+
+        if (!TryResolveDescriptionValue(
+                skillId,
+                nodeId,
+                tierIndex,
+                selector,
+                rootEffects,
+                previousEffects,
+                effects,
+                allowMissingPrevious: false,
+                errors,
+                out JToken? table)
+            || table == null)
+        {
+            return false;
+        }
+
+        if (!SkillDescriptionResolver.TryReduceQualityTable(table, useMin, out decimal knot, out string? reduceError))
+        {
+            errors.Add(
+                $"Skill '{skillId}' node '{nodeId}' tier {tierIndex + 1}: description param '{selector}' {reduceError}");
+            return false;
+        }
+
+        arg = new FormattedDescriptionArg { Value = knot, Format = "fractionPercent" };
+        return true;
     }
 
     static bool TryResolveDescriptionValue(
@@ -1783,6 +1854,27 @@ public static class SkillTreeCompiler
         SplitId(skillId, out string? domain, out string local);
         string path = "skill-" + local;
         return domain == null ? path : domain + ":" + path;
+    }
+
+    /// <summary>
+    /// Omitted skill <c>descriptionLang</c>: <c>skilldesc-{local}</c>, same domain rules as
+    /// <see cref="DefaultSkillNameLang"/>.
+    /// </summary>
+    internal static string DefaultSkillDescriptionLang(string skillId)
+    {
+        SplitId(skillId, out string? domain, out string local);
+        string path = "skilldesc-" + local;
+        return domain == null ? path : domain + ":" + path;
+    }
+
+    /// <summary>
+    /// Omitted skill <c>icon</c>: <c>textures/icons/{local}-skill.svg</c> (bare path →
+    /// <c>prosequor</c> domain at resolve time).
+    /// </summary>
+    internal static string DefaultSkillIcon(string skillId)
+    {
+        SplitId(skillId, out _, out string local);
+        return "textures/icons/" + local + "-skill.svg";
     }
 
     static void SplitId(string id, out string? domain, out string local)

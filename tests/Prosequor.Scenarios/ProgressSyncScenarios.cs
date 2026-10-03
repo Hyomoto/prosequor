@@ -101,7 +101,12 @@ public class ProgressSyncScenarios : AtlasScenarioBase
 
         ProgressSyncInspect afterAttrs = ProgressSyncInspect.Capture(player, registry);
         afterAttrs.AssertPublicParity("set attributes");
-        Assert.Equal(14, afterAttrs.PublicMirror.GetAttribute(AttributeIds.Strength));
+        Assert.Equal(14, afterAttrs.LiveBehavior.GetAttribute(AttributeIds.Strength));
+        Assert.Equal(
+            14,
+            afterAttrs.PublicMirror.Attributes.TryGetValue(AttributeIds.Strength, out int mirrored)
+                ? mirrored
+                : -1);
         Assert.Equal(1, afterAttrs.PublicMirror.GetOrCreateSkill(Farming).GetTier(Repotting));
         // Buckets stay private until ModData flush; live has them.
         Assert.Equal(2.5f, live.GetAttributeBucket(AttributeIds.Perception), 3);

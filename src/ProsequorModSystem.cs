@@ -4,6 +4,7 @@ using Prosequor.Ability;
 using Prosequor.Ability.Hooks;
 using Prosequor.Client;
 using Prosequor.Client.CatEyes;
+using Prosequor.Client.Tracker;
 using Prosequor.Commands;
 using Prosequor.Data;
 using Prosequor.Inventory;
@@ -16,6 +17,7 @@ using Prosequor.Xp.Adapters;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -39,19 +41,22 @@ public class ProsequorModSystem : ModSystem
     public AttributeStatRegistry AttributeStats { get; } = new();
     public TraitAttributeRegistry TraitAttributes { get; } = new();
     public LevelUpRegistry LevelUps { get; } = new();
+    public ProgressionProfile Progression { get; private set; } = ProgressionProfile.Baseline;
+
+    public void SetProgression(ProgressionProfile? profile) =>
+        Progression = profile ?? ProgressionProfile.Baseline;
     public PhaseRefreshRegistry PhaseRefresh { get; } = new();
     public AttributeEffectService? AttributeEffects { get; private set; }
     public ProgressEventBus ProgressEvents { get; } = new();
     public XpRuleRegistry XpRules { get; } = new();
-    public ActivityWrapperRegistry ActivityWrappers { get; } = new();
     public HookRegistry Hooks { get; } = new();
     public AbilityActionRegistry Actions { get; }
     public CollectionRegistry Collections { get; } = new();
     public CollectibleVariantTable VariantTable { get; } = new();
     public OutputPoolRegistry OutputPools { get; } = new();
     public AffixListRegistry AffixLists { get; } = new();
+    public OptionsRegistry Options { get; } = new();
     public AbilityPipeline? Pipeline { get; private set; }
-    public XpActionDispatcher? XpDispatcher { get; private set; }
     public CraftXpAdapter? CraftXp { get; private set; }
     public ClayFormXpAdapter? ClayFormXp { get; private set; }
     public ActivityWatchService? ActivityWatch { get; private set; }
@@ -73,8 +78,10 @@ public class ProsequorModSystem : ModSystem
     ICoreServerAPI? sapi;
     ICoreClientAPI? capi;
     CharacterSkillsTab? skillsTab;
+    CharacterStatusTab? statusTab;
     CharacterStatsPanel? statsPanel;
     CatEyesController? catEyes;
+    TrackerOutlineRenderer? trackerOutline;
     LevelUpHudController? levelUpHud;
     HudElementLevelUp? levelUpHudElement;
     SkillWaitingHudController? skillWaitingHud;
@@ -83,10 +90,12 @@ public class ProsequorModSystem : ModSystem
     Action<LevelUpHudPacket>? levelUpHudHandler;
     Action? skillWaitingDumpHandler;
     Action<ContentFingerprintMismatchPacket>? contentMismatchHandler;
+    Action? progressionProfileHandler;
     BlockBreakXpAdapter? blockBreakXpAdapter;
     FishingCatchXpAdapter? fishingCatchXpAdapter;
     CraftXpAdapter? craftXpAdapter;
     ClayFormXpAdapter? clayFormXpAdapter;
+    EventBusListenerDelegate? immConfigListener;
     long activityWatchListenerId;
     long progressFlushListenerId;
     long animalAlertListenerId;
@@ -115,6 +124,11 @@ public class ProsequorModSystem : ModSystem
     public override void Start(ICoreAPI api)
     {
         ProgressEvents.SetLogger(api.Logger);
+        if (!AiTaskRegistry.TaskTypes.ContainsKey(AiTaskThreatFlee.TaskCode))
+        {
+            AiTaskRegistry.Register<AiTaskThreatFlee>(AiTaskThreatFlee.TaskCode);
+        }
+
         api.RegisterEntityBehaviorClass(EntityBehaviorProgress.Code, typeof(EntityBehaviorProgress));
         api.RegisterBlockEntityClass(
             BlockEntityProsequorPedigree.ClassName,
@@ -193,11 +207,23 @@ public class ProsequorModSystem : ModSystem
         AttributeStats.LoadFromAssets(api, Hooks, Actions, Collections.Index);
         Registry.LoadFromAssets(api, Hooks, Actions, Collections.Index, AttributeStats);
         TraitAttributes.LoadFromAssets(api, AttributeStats);
+        TraitAttributes.LoadClassProfiles(api, AttributeStats, Registry);
         LevelUps.LoadFromAssets(api, AttributeStats);
+        Options.LoadFromAssets(api);
         AttributeEffects = new AttributeEffectService(AttributeStats.EffectIndex, PhaseRefresh);
         Pipeline = new AbilityPipeline(Actions, Registry, AttributeStats);
         XpRules.LoadFromSkills(api, Registry);
-        TraitAttributes.RebuildClassSkillSets(Registry, api);
+        // Character classes may have loaded before stats: an empty catalog used to clear the
+        // score cache and abort mutate. Re-mutate only when that cache is still empty so we
+        // never rebuild scores from already-stripped leftover traits.
+        if (TraitAttributes.ClassStartingScores.Count == 0)
+        {
+            CharacterTraitAttributePatches.MutateAndRebuildSkillSets(api, this);
+        }
+        else
+        {
+            TraitAttributes.RebuildClassSkillSets(Registry, api);
+        }
 
         Fingerprint = ContentFingerprint.Compute(
             Registry,
@@ -208,6 +234,21 @@ public class ProsequorModSystem : ModSystem
             TraitAttributes,
             LevelUps);
         Network.SetFingerprint(Fingerprint);
+
+        ProgressionProfile baseline = ProgressionLoader.LoadBaseline(api);
+        if (api.Side == EnumAppSide.Server)
+        {
+            Dictionary<string, ProgressionProfile> presets = ProgressionLoader.LoadPresets(api, baseline);
+            Progression = ProgressionLoader.ApplyServerSelection(api, baseline, presets);
+            if (ProgressPark != null)
+            {
+                ProgressPark.MaxPlayerLevel = Progression.MaxPlayerLevel;
+            }
+        }
+        else
+        {
+            Progression = baseline;
+        }
         api.Logger.Notification(
             "[{0}] Content fingerprint v{1} {2}",
             ModId,
@@ -234,16 +275,11 @@ public class ProsequorModSystem : ModSystem
     {
         sapi = api;
         Network.StartServer(api);
-        XpDispatcher = new XpActionDispatcher(api, XpRules);
-        blockBreakXpAdapter = new BlockBreakXpAdapter(api, XpDispatcher);
-        blockBreakXpAdapter.Start();
-        fishingCatchXpAdapter = new FishingCatchXpAdapter(api, XpDispatcher);
-        fishingCatchXpAdapter.Start();
-        craftXpAdapter = new CraftXpAdapter(api, XpDispatcher);
-        craftXpAdapter.Start();
+        blockBreakXpAdapter = new BlockBreakXpAdapter(api);
+        fishingCatchXpAdapter = new FishingCatchXpAdapter(api);
+        craftXpAdapter = new CraftXpAdapter(api);
         CraftXp = craftXpAdapter;
-        clayFormXpAdapter = new ClayFormXpAdapter(api, XpDispatcher);
-        clayFormXpAdapter.Start();
+        clayFormXpAdapter = new ClayFormXpAdapter(api);
         ClayFormXp = clayFormXpAdapter;
 
         Effort.RegisterPoll(Effort.PollIdMount, EffortMountEmitter.TryPoll);
@@ -333,14 +369,16 @@ public class ProsequorModSystem : ModSystem
         CraftMutateOutputStation.RegisterServer(api);
         FatherXp = new FatherXp(api, Registry);
         FatherXp.Load();
-        ProgressPark = new ProgressPark();
+        ProgressPark = new ProgressPark { MaxPlayerLevel = Progression.MaxPlayerLevel };
         TryPreloadProgressPark();
         api.Event.SaveGameLoaded += OnSaveGameLoaded;
         api.Event.GameWorldSave += OnFatherXpWorldSave;
         api.Event.PlayerJoin += OnPlayerJoin;
         api.Event.PlayerNowPlaying += OnPlayerNowPlaying;
         api.Event.PlayerDisconnect += OnPlayerDisconnect;
-        ActivityWatch = new ActivityWatchService(api, ActivityWrappers, XpRules);
+        immConfigListener = OnImmServerConfig;
+        api.Event.RegisterEventBusListener(immConfigListener, 0.5, "imm." + ModId);
+        ActivityWatch = new ActivityWatchService(api, XpRules);
         // Host (and anyone already spawned) inited before this listener existed.
         foreach (IServerPlayer player in api.World.AllOnlinePlayers.OfType<IServerPlayer>())
         {
@@ -348,6 +386,8 @@ public class ProsequorModSystem : ModSystem
             {
                 AdmitInitialized(player, progress);
             }
+
+            PushProgression(player);
         }
 
         activityWatchListenerId = api.Event.RegisterGameTickListener(
@@ -368,28 +408,14 @@ public class ProsequorModSystem : ModSystem
             CarryInventoryDialogPatch.RequestRecomposeIfOpen;
         Network.StartClient(api);
         catEyes = new CatEyesController(api);
-        animalAlertOverlay = new AnimalAlertOverlayRenderer(api);
-        api.ChatCommands
-            .Create("alertviz")
-            .WithDescription("Toggle Prosequor animal alert/threat overlay bars")
-            .HandleWith(_ =>
-            {
-                if (animalAlertOverlay == null)
-                {
-                    return TextCommandResult.Error("Alert overlay not ready.");
-                }
-
-                animalAlertOverlay.Enabled = !animalAlertOverlay.Enabled;
-                return TextCommandResult.Success(
-                    animalAlertOverlay.Enabled
-                        ? "Animal alert overlay on (thick=alert, thin=threat; cyan/amber/red)."
-                        : "Animal alert overlay off.");
-            });
+        trackerOutline = new TrackerOutlineRenderer(api);
+        animalAlertOverlay = new AnimalAlertOverlayRenderer(api, trackerOutline);
         levelUpHud = new LevelUpHudController(api);
         levelUpHudElement = new HudElementLevelUp(api, levelUpHud);
         levelUpHudHandler = packet => levelUpHud?.Enqueue(packet);
         Network.LevelUpHudReceived += levelUpHudHandler;
         skillsTab = new CharacterSkillsTab(api, Network);
+        statusTab = new CharacterStatusTab(api);
         skillWaitingHud = new SkillWaitingHudController(
             api,
             Network,
@@ -416,7 +442,10 @@ public class ProsequorModSystem : ModSystem
 
         contentMismatchHandler = OnContentMismatch;
         Network.ContentMismatchReceived += contentMismatchHandler;
+        progressionProfileHandler = () => skillsTab?.RefreshAfterProgressionSync();
+        Network.ProgressionProfileReceived += progressionProfileHandler;
 
+#if DEBUG
         api.ChatCommands
             .GetOrCreate("prosequor")
             .WithDescription("Prosequor client tools")
@@ -433,11 +462,15 @@ public class ProsequorModSystem : ModSystem
                         $"v{Fingerprint.Version} {Fingerprint.Hash}");
                 })
             .EndSubCommand();
+#endif
 
         // Character dialog exists after BlockTexturesLoaded / gui load.
         // Stats compose is a Harmony postfix on Essentials ComposeStatsGui.
         api.Event.BlockTexturesLoaded += () =>
         {
+            bool suppressVanillaTraits = VanillaTraitsTab.ShouldSuppress(api, Options);
+            VanillaTraitsTab.HideIfSuppressed(api, suppressVanillaTraits);
+            statusTab?.Start(CharacterStatusTab.IncludeTraits(suppressVanillaTraits));
             skillsTab?.Start();
             skillWaitingHud?.AttachCharacterDialog(
                 api.Gui.LoadedGuis.Find(g => g is GuiDialogCharacterBase) as GuiDialogCharacterBase);
@@ -458,6 +491,11 @@ public class ProsequorModSystem : ModSystem
             sapi.Event.PlayerJoin -= OnPlayerJoin;
             sapi.Event.PlayerNowPlaying -= OnPlayerNowPlaying;
             sapi.Event.PlayerDisconnect -= OnPlayerDisconnect;
+            if (immConfigListener != null)
+            {
+                sapi.Event.UnregisterEventBusListener(immConfigListener);
+                immConfigListener = null;
+            }
             if (activityWatchListenerId != 0)
             {
                 sapi.Event.UnregisterGameTickListener(activityWatchListenerId);
@@ -482,27 +520,25 @@ public class ProsequorModSystem : ModSystem
             Effort.UnregisterPoll(Effort.PollIdTemporalDrain);
         }
 
-        blockBreakXpAdapter?.Dispose();
         blockBreakXpAdapter = null;
-        fishingCatchXpAdapter?.Dispose();
         fishingCatchXpAdapter = null;
-        craftXpAdapter?.Dispose();
         craftXpAdapter = null;
         CraftXp = null;
-        clayFormXpAdapter?.Dispose();
         clayFormXpAdapter = null;
         ClayFormXp = null;
         ActivityWatch = null;
-        XpDispatcher = null;
         Pipeline = null;
 
         catEyes?.Dispose();
         catEyes = null;
+        trackerOutline?.Dispose();
+        trackerOutline = null;
         skillsTab?.Dispose();
         skillsTab = null;
+        statusTab?.Dispose();
+        statusTab = null;
         statsPanel?.Dispose();
         statsPanel = null;
-        CharacterTraitsTabPatches.Dispose();
         if (levelUpHudHandler != null)
         {
             Network.LevelUpHudReceived -= levelUpHudHandler;
@@ -519,6 +555,12 @@ public class ProsequorModSystem : ModSystem
         {
             Network.ContentMismatchReceived -= contentMismatchHandler;
             contentMismatchHandler = null;
+        }
+
+        if (progressionProfileHandler != null)
+        {
+            Network.ProgressionProfileReceived -= progressionProfileHandler;
+            progressionProfileHandler = null;
         }
 
         Network.Stop();
@@ -593,7 +635,8 @@ public class ProsequorModSystem : ModSystem
             Registry,
             Pipeline?.RuleIndex,
             TraitAttributes.BaseSkillSet,
-            AttributeStats);
+            AttributeStats,
+            TraitAttributes);
         if (loaded > 0)
         {
             sapi.Logger.Notification("[{0}] Parked progress for {1} player(s).", ModId, loaded);
@@ -621,6 +664,39 @@ public class ProsequorModSystem : ModSystem
         {
             AdmitInitialized(byPlayer, progress);
         }
+
+        PushProgression(byPlayer);
+    }
+
+    void OnImmServerConfig(string eventName, ref EnumHandling handling, IAttribute data)
+    {
+        if (sapi == null)
+        {
+            return;
+        }
+
+        ProgressionProfile baseline = ProgressionLoader.LoadBaseline(sapi);
+        Dictionary<string, ProgressionProfile> presets = ProgressionLoader.LoadPresets(sapi, baseline);
+        Progression = ProgressionLoader.ApplyServerSelection(sapi, baseline, presets);
+        if (ProgressPark != null)
+        {
+            ProgressPark.MaxPlayerLevel = Progression.MaxPlayerLevel;
+        }
+
+        if (sapi.World?.AllOnlinePlayers == null)
+        {
+            return;
+        }
+
+        foreach (IServerPlayer player in sapi.World.AllOnlinePlayers.OfType<IServerPlayer>())
+        {
+            PushProgression(player);
+        }
+    }
+
+    void PushProgression(IServerPlayer player)
+    {
+        Network.SendProgressionProfile(player, Progression);
     }
 
     void OnPlayerDisconnect(IServerPlayer byPlayer)
@@ -628,7 +704,12 @@ public class ProsequorModSystem : ModSystem
         ActivityWatch?.ForgetPlayer(byPlayer.PlayerUID);
         EntityBehaviorProgress? progress = TryGetLiveProgress(byPlayer);
         progress?.FlushSave();
-        ProgressPark?.ParkLive(byPlayer.PlayerUID, progress, Pipeline?.RuleIndex, Registry);
+        ProgressPark?.ParkLive(
+            byPlayer.PlayerUID,
+            progress,
+            Pipeline?.RuleIndex,
+            Registry,
+            TraitAttributes);
     }
 
     /// <summary>
@@ -687,12 +768,6 @@ public class ProsequorModSystem : ModSystem
             }
         }
     }
-
-    /// <summary>Register a thin activity wrapper (other mods). Last register for the same id wins.
-    /// Deprecated for rate XP — prefer <see cref="RegisterEffortPoll"/> or <see cref="EmitEffort"/>.
-    /// </summary>
-    public void RegisterActivityWrapper(IActivityWrapper wrapper) =>
-        ActivityWrappers.Register(wrapper);
 
     /// <summary>
     /// Register a watcher poll for continuous <c>prosequor:effort</c> when there is no natural

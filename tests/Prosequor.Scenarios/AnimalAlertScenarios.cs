@@ -113,9 +113,8 @@ public class AnimalAlertScenarios : AtlasScenarioBase
     }
 
     /// <summary>
-    /// Chickens have a high-priority fleeentity gated on fleeondamage. Panic must drive
-    /// the unrestricted fleeentity (ShouldExecute true) and must not force the gated one
-    /// while calm — otherwise they stand still in "panic."
+    /// Chickens have a high-priority fleeentity gated on fleeondamage. Panic must arm
+    /// the owned threat-flee task and must not start vanilla player-flee.
     /// </summary>
     [AtlasScenario(FreshWorld = true)]
     [Trait("Layer", "Action")]
@@ -138,23 +137,8 @@ public class AnimalAlertScenarios : AtlasScenarioBase
             "Expected an unrestricted player fleeentity (not emotion-gated).");
 
         AnimalAlertService.ForcePanicForTests(chicken, player.Entity);
-        Assert.True(AnimalAlertService.IsCommitted(chicken), "Chicken should be panicked.");
-
-        // Drive TaskAI explicitly — Atlas world ticks alone may not path entities.
-        EntityBehaviorTaskAI? taskAi = chicken.GetBehavior<EntityBehaviorTaskAI>();
-        Assert.NotNull(taskAi);
-        for (int i = 0; i < 10; i++)
-        {
-            Assert.True(
-                AnimalAlertService.TryProbePanicFlee(
-                    chicken,
-                    out int ungatedReady,
-                    out int gatedForced),
-                $"Chicken panic flee probe failed. ungatedReady={ungatedReady} gatedForcedWhileCalm={gatedForced}.");
-            taskAi!.OnGameTick(0.05f);
-            AnimalAlertService.TickEntity(chicken, AnimalAlertService.TickMs / 1000f);
-            await World.Ticks(1);
-        }
+        AssertOwnedFleeArmed(chicken, "Chicken");
+        await World.Ticks(1);
     }
 
     [AtlasScenario(FreshWorld = true)]
@@ -175,14 +159,110 @@ public class AnimalAlertScenarios : AtlasScenarioBase
         AssertSensesPlayers(hare);
 
         AnimalAlertService.ForcePanicForTests(hare, player.Entity);
-        Assert.True(AnimalAlertService.IsCommitted(hare), "Hare should be panicked.");
+        AssertOwnedFleeArmed(hare, "Hare");
+        await World.Ticks(1);
+    }
+
+    /// <summary>
+    /// Out of characteristic range, incoming threat hits 0 and the committed latch
+    /// clears, which ends the owned flee task.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task PanickedHare_Should_CoolOff_WhenPlayerLeavesRange()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertHareCoolOff");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        Entity hare = SpawnPreyNear(joined, PreyHareCodes);
+        EnsureTracked(hare);
+        AnimalAlertService.ForcePanicForTests(hare, player.Entity);
+        AssertOwnedFleeArmed(hare, "Hare before cool-off");
+
+        double far = hare.Pos.X + 80;
+        player.Entity.TeleportToDouble(far, hare.Pos.Y, hare.Pos.Z);
+        await World.Ticks(1);
+
+        Assert.True(AnimalAlertService.TryGet(hare, out AnimalAlertState? state) && state != null);
+        bool cooled = false;
+        for (int i = 0; i < 45; i++)
+        {
+            AnimalAlertService.TickEntity(hare, 1f);
+            if (state.CurrentThreat <= AnimalAlertMath.IncomingEpsilon && !state.Committed)
+            {
+                cooled = true;
+                break;
+            }
+        }
 
         Assert.True(
-            AnimalAlertService.TryProbePanicFlee(hare, out int ungatedReady, out int gatedForced),
-            $"Hare panic flee probe failed. ungatedReady={ungatedReady} gatedForcedWhileCalm={gatedForced}.");
-        Assert.True(ungatedReady > 0);
-        Assert.Equal(0, gatedForced);
+            cooled,
+            FormatState("Expected incoming 0 and committed clear after leaving range", hare, player, state));
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(hare);
+        Assert.NotNull(threat);
+        Assert.False(threat!.ShouldExecute(), "Threat flee must stop once the latch clears.");
+    }
 
+    /// <summary>
+    /// A committed latch starts flee again with no new rising-threat roll and no integrate.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task PanickedHare_Should_ResumeFlee_WithoutNewRoll()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertHareResume");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        Entity hare = SpawnPreyNear(joined, PreyHareCodes);
+        EnsureTracked(hare);
+        AnimalAlertService.ForcePanicForTests(hare, player.Entity);
+
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(hare);
+        Assert.NotNull(threat);
+        Assert.True(threat!.ShouldExecute(), "Committed hare should flee.");
+        Assert.True(
+            threat.ShouldExecute(),
+            "A second check must still flee without integrating or rolling again.");
+        await World.Ticks(1);
+    }
+
+    /// <summary>
+    /// Drifters flee sunlight and hunt the player. That ungated flee must not put
+    /// them on the prey meter.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task Drifter_Should_NotJoinPreyMeter()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertDrifter");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        Entity drifter = World.SpawnEntity("game:drifter-normal", joined.Position.AddCopy(2, 0, 0));
+        EntityBehaviorTaskAI? taskAi = drifter.GetBehavior<EntityBehaviorTaskAI>();
+        Assert.NotNull(taskAi);
+        AnimalAlertService.ConsiderTracking(taskAi!);
+
+        Assert.True(AnimalAlertService.TryGet(drifter, out AnimalAlertState? state) && state != null);
+        Assert.False(state.SensesPlayers, "A drifter hunts the player and must not be metered.");
+        Assert.Null(AnimalAlertService.FindThreatFlee(drifter));
         await World.Ticks(1);
     }
 
@@ -222,11 +302,22 @@ public class AnimalAlertScenarios : AtlasScenarioBase
             "Expected ungated flee after panic.");
         Assert.True(after, "After panic, alert target must be sensed (fused eligibility).");
 
-        Assert.True(
-            AnimalAlertService.TryProbePanicFlee(hare, out int ungatedReady, out int gatedForced),
-            $"After panic flee ShouldExecute failed. ungatedReady={ungatedReady} gatedForced={gatedForced}.");
+        AssertOwnedFleeArmed(hare, "Hare after panic");
 
         await World.Ticks(1);
+    }
+
+    static void AssertOwnedFleeArmed(Entity animal, string label)
+    {
+        Assert.True(AnimalAlertService.IsCommitted(animal), label + " should be panicked.");
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(animal);
+        Assert.NotNull(threat);
+        Assert.True(threat!.ShouldExecute(), label + " threat-flee ShouldExecute should be true.");
+        Assert.True(
+            AnimalAlertService.TryProbePanicFlee(animal, out int ungatedReady, out int vanillaStarted),
+            $"{label} panic flee probe failed. threatReady={ungatedReady} vanillaPlayerFleeStarted={vanillaStarted}.");
+        Assert.True(ungatedReady > 0);
+        Assert.Equal(0, vanillaStarted);
     }
 
     static readonly string[] PreyHareCodes =

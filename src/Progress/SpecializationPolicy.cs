@@ -3,14 +3,13 @@ using Prosequor.Data;
 namespace Prosequor.Progress;
 
 /// <summary>
-/// Derived specialization capacity from compiled level-up rules
-/// (<see cref="LevelUpActionKind.EarnSpecializationPoint"/>).
+/// Specialization capacity from the progression table.
 /// Owned specializations are counted across every registered skill tree.
 /// </summary>
 public static class SpecializationPolicy
 {
-    public static int AllowedSlots(int playerLevel, IReadOnlyList<LevelUpRuleDef>? rules) =>
-        LevelUpRules.SpecializationSlots(rules ?? Array.Empty<LevelUpRuleDef>(), playerLevel);
+    public static int AllowedSlots(int playerLevel, LevelSet levels) =>
+        playerLevel < XpCurves.PlayerMinLevel ? 0 : levels.CountAtMost(playerLevel);
 
     public static int OwnedCount(IPlayerProgress progress, ISkillRegistry registry)
     {
@@ -37,6 +36,6 @@ public static class SpecializationPolicy
     public static bool HasAvailableSlot(
         IPlayerProgress progress,
         ISkillRegistry registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules) =>
-        OwnedCount(progress, registry) < AllowedSlots(progress.PlayerLevel, levelUpRules);
+        LevelSet levels) =>
+        OwnedCount(progress, registry) < AllowedSlots(progress.PlayerLevel, levels);
 }

@@ -67,13 +67,17 @@ public static class AttributeIds
     public static bool IsKnown(string id, IReadOnlyList<string> catalog) =>
         Canonicalize(id, catalog) != null;
 
-    /// <summary>Ordered attribute ids from a loaded stat registry.</summary>
+    /// <summary>
+    /// Ordered attribute ids from a loaded stat registry.
+    /// When stats have not loaded yet, returns <see cref="All"/> so early class mutate
+    /// does not clear the trait score cache against an empty catalog.
+    /// </summary>
     public static IReadOnlyList<string> CatalogIds(IAttributeStatRegistry stats)
     {
         ArgumentNullException.ThrowIfNull(stats);
         if (stats.All.Count == 0)
         {
-            return Array.Empty<string>();
+            return All;
         }
 
         string[] ids = new string[stats.All.Count];

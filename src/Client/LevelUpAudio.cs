@@ -73,11 +73,8 @@ public static class LevelUpAudio
 
             JObject root = loaded?.Token as JObject ?? new JObject();
             bool dirty = Normalize(root, out int percent);
-            if (loaded == null)
-            {
-                api.StoreModConfig(new ClientAudioConfig { LevelUpVolume = percent }, ConfigFileName);
-            }
-            else if (dirty)
+            dirty |= VanillaTraitsTab.Normalize(root, out _);
+            if (loaded == null || dirty)
             {
                 api.StoreModConfig(new JsonObject(root), ConfigFileName);
             }
@@ -95,8 +92,3 @@ public static class LevelUpAudio
     }
 }
 
-/// <summary>Shape of <c>ModConfig/prosequor/client.json</c>.</summary>
-public sealed class ClientAudioConfig
-{
-    public int LevelUpVolume { get; set; } = LevelUpAudio.DefaultPercent;
-}

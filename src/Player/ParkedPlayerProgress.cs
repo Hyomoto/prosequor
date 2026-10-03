@@ -17,16 +17,31 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     readonly ActiveAbilityRuleCache? abilityCache;
     readonly ISkillRegistry? registry;
     readonly SkillAccess skillAccess;
+    readonly int maxPlayerLevel;
+    readonly Dictionary<string, int>? attributeBaselines;
 
     public ParkedPlayerProgress(
         PlayerProgressState state,
         AbilityRuleIndex? ruleIndex = null,
         ISkillRegistry? registry = null,
-        SkillAccess? skillAccess = null)
+        SkillAccess? skillAccess = null,
+        int maxPlayerLevel = XpCurves.PlayerMaxLevel,
+        ITraitAttributeRegistry? traits = null)
     {
         this.state = state ?? throw new ArgumentNullException(nameof(state));
         this.registry = registry;
         this.skillAccess = skillAccess ?? new SkillAccess();
+        this.maxPlayerLevel = maxPlayerLevel < XpCurves.PlayerMinLevel
+            ? XpCurves.PlayerMaxLevel
+            : maxPlayerLevel;
+        if (traits != null)
+        {
+            attributeBaselines = TraitAttributeConverter.ResolveBaseline(
+                state.CharacterClass,
+                state.ExtraTraits,
+                traits);
+        }
+
         if (ruleIndex != null)
         {
             abilityCache = ActiveAbilityRuleCache.Rebuild(ruleIndex, this);
@@ -50,7 +65,7 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
     public int UnlockPoints => state.UnlockPoints;
 
     public float PlayerXpUntilNext =>
-        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
+        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel, maxPlayerLevel);
 
     public bool HasSkillAccess(string skillId) =>
         skillAccess.IsUnbound || skillAccess.Contains(skillId);
@@ -110,15 +125,38 @@ public sealed class ParkedPlayerProgress : IPlayerProgress, IAbilityComposeCache
         return s.GetTier(nodeId);
     }
 
-    public int GetAttribute(string id) => state.GetAttribute(id);
+    public int GetAttribute(string id)
+    {
+        IReadOnlyList<string> catalog = AttributeIds.All;
+        string? canonical = AttributeIds.Canonicalize(id, catalog);
+        if (canonical == null)
+        {
+            return AttributeGrowth.DefaultScore;
+        }
+
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            return state.Attributes.TryGetValue(canonical, out int absolute)
+                ? absolute
+                : AttributeGrowth.DefaultScore;
+        }
+
+        int baseline = AttributeGrowth.DefaultScore;
+        if (attributeBaselines != null && attributeBaselines.TryGetValue(canonical, out int resolved))
+        {
+            baseline = resolved;
+        }
+
+        return AttributeScoreMath.Effective(baseline, state.GetAttributeDelta(canonical, catalog));
+    }
 
     public float GetAttributeBucket(string id) => state.GetAttributeBucket(id);
 
     public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
     {
         level = state.PlayerLevel;
-        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level);
-        needForNext = XpCurves.XpToNextPlayerLevel(level);
+        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level, maxPlayerLevel);
+        needForNext = XpCurves.XpToNextPlayerLevel(level, maxPlayerLevel);
         if (needForNext <= 0)
         {
             intoLevel = 1f;

@@ -124,14 +124,15 @@ public class GuiElementSkillTreeViewport : GuiElement
         {
             return;
         }
-        ISkillRegistry? registry = ProsequorModSystem.For(capi)?.Registry;
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules = ProsequorModSystem.For(capi)?.LevelUps.Rules;
+        ProsequorModSystem? mod = ProsequorModSystem.For(capi);
+        ISkillRegistry? registry = mod?.Registry;
+        LevelSet specializationLevels = mod?.Progression.SpecializationLevels ?? LevelSet.Empty;
         foreach (NodeVisual node in nodes)
         {
-            node.State = ResolveState(skill, progress, registry, levelUpRules, node.Def, out int tier);
+            node.State = ResolveState(skill, progress, registry, specializationLevels, node.Def, out int tier);
             node.Tier = tier;
             node.Label = EnsureTierLabel(tier, node.Def.MaxTier);
-            node.Tooltip = BuildTooltip(skill, node.Def, tier, node.State, progress, registry, levelUpRules);
+            node.Tooltip = BuildTooltip(skill, node.Def, tier, node.State, progress, registry, specializationLevels);
         }
         foreach (LinkVisual link in links)
         {
@@ -291,8 +292,9 @@ public class GuiElementSkillTreeViewport : GuiElement
 
         UpdateTreeFitScale();
 
-        ISkillRegistry? registry = ProsequorModSystem.For(capi)?.Registry;
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules = ProsequorModSystem.For(capi)?.LevelUps.Rules;
+        ProsequorModSystem? mod = ProsequorModSystem.For(capi);
+        ISkillRegistry? registry = mod?.Registry;
+        LevelSet specializationLevels = mod?.Progression.SpecializationLevels ?? LevelSet.Empty;
         foreach (SkillTreeNodeDef node in tree.Nodes)
         {
             double x = node.GridColumn * GridStep;
@@ -302,12 +304,12 @@ public class GuiElementSkillTreeViewport : GuiElement
                 Def = node,
                 WorldX = x,
                 WorldY = y,
-                State = ResolveState(skill, progress, registry, levelUpRules, node, out int tier),
+                State = ResolveState(skill, progress, registry, specializationLevels, node, out int tier),
                 Tier = tier,
                 Icon = EnsureNodeIcon(node),
                 Label = EnsureTierLabel(tier, node.MaxTier)
             };
-            visual.Tooltip = BuildTooltip(skill, node, tier, visual.State, progress, registry, levelUpRules);
+            visual.Tooltip = BuildTooltip(skill, node, tier, visual.State, progress, registry, specializationLevels);
             nodes.Add(visual);
             nodesById[node.Id] = visual;
         }
@@ -757,7 +759,7 @@ public class GuiElementSkillTreeViewport : GuiElement
         SkillDef skill,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules,
+        LevelSet specializationLevels,
         SkillTreeNodeDef node,
         out int tier)
     {
@@ -767,7 +769,7 @@ public class GuiElementSkillTreeViewport : GuiElement
             return NodeVisualState.Unlocked;
         }
 
-        return SkillTreeEligibility.IsEligible(skill, progress, registry, levelUpRules, node.Id)
+        return SkillTreeEligibility.IsEligible(skill, progress, registry, specializationLevels, node.Id)
             ? NodeVisualState.Eligible
             : NodeVisualState.Locked;
     }
@@ -779,7 +781,7 @@ public class GuiElementSkillTreeViewport : GuiElement
         NodeVisualState state,
         IPlayerProgress? progress,
         ISkillRegistry? registry,
-        IReadOnlyList<LevelUpRuleDef>? levelUpRules)
+        LevelSet specializationLevels)
     {
         StringBuilder sb = new();
         sb.Append("<font family=\"")
@@ -878,7 +880,7 @@ public class GuiElementSkillTreeViewport : GuiElement
             if (node.IsSpecialization && progress != null && registry != null)
             {
                 int used = SpecializationPolicy.OwnedCount(progress, registry);
-                int allowed = SpecializationPolicy.AllowedSlots(progress.PlayerLevel, levelUpRules);
+                int allowed = SpecializationPolicy.AllowedSlots(progress.PlayerLevel, specializationLevels);
                 sb.Append("<font color=\"#85A9C4\">-  ")
                     .Append(EscapeVtml(Lang.Get(
                         "prosequor:skilltree-specialization-slots",

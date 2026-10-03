@@ -1,5 +1,3 @@
-using System.Reflection;
-using HarmonyLib;
 using Prosequor.Ability.Hooks;
 using Prosequor.Inventory;
 using Prosequor.Player;
@@ -39,6 +37,12 @@ public static class PlayerInteractionStation
     public static int ResolveRangedAccPercent(IPlayer player) =>
         RunInt(player, VerbIds.RangedAcc);
 
+    public static int ResolveRangedDamagePercent(IPlayer player) =>
+        RunInt(player, VerbIds.RangedDamage);
+
+    public static int ResolveRangedDistancePercent(IPlayer player) =>
+        RunInt(player, VerbIds.RangedDistance);
+
     public static int ResolveFallDamageFactorPercent(IPlayer player) =>
         RunInt(player, VerbIds.FallDamageFactor);
 
@@ -50,6 +54,12 @@ public static class PlayerInteractionStation
 
     public static int ResolveTemporalDrainRatePercent(IPlayer player) =>
         RunInt(player, VerbIds.TemporalDrainRate);
+
+    public static int ResolveWalkSpeedPercent(IPlayer player) =>
+        RunInt(player, VerbIds.WalkSpeed);
+
+    public static int ResolveHungerRatePercent(IPlayer player) =>
+        RunInt(player, VerbIds.HungerRate);
 
     /// <summary>Sprint speed bonus fraction (0 = no change). Applied only while sprinting on foot.</summary>
     public static float ResolveSprintSpeedBonus(IPlayer player) =>
@@ -82,6 +92,26 @@ public static class PlayerInteractionStation
     /// <summary>Heartseeker threat threshold percent (seed 0).</summary>
     public static float ResolveUnawareDamageThreshold(IPlayer player) =>
         Math.Max(0f, RunFloat(player, VerbIds.UnawareDamage, HookIds.Threshold, seed: 0f));
+
+    /// <summary>Tracker mark range in meters (seed 0). 0 when the node is not owned.</summary>
+    public static float ResolveTrackRange(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Range, seed: 0f));
+
+    /// <summary>Seconds of crosshair aim before a tracker mark lands (seed 0).</summary>
+    public static float ResolveTrackFocusSeconds(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Focus, seed: 0f));
+
+    /// <summary>Degrees from look direction past which a tracker mark drops (seed 0).</summary>
+    public static float ResolveTrackLoseAngle(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.TrackMark, HookIds.Angle, seed: 0f));
+
+    /// <summary>Seconds a bow must stay drawn before Focus Shot scales that shot (seed 0).</summary>
+    public static float ResolveFocusShotHoldSeconds(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.FocusShot, HookIds.Hold, seed: 0f));
+
+    /// <summary>Focus Shot damage multiplier (seed 1) once the draw meets the hold.</summary>
+    public static float ResolveFocusShotDamageFactor(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.FocusShot, HookIds.Amount, seed: 1f));
 
     /// <summary>
     /// Which on-foot locomotion bonus applies. Liquid wins over sprint/sneak.
@@ -153,12 +183,20 @@ public static class PlayerInteractionStation
     public static int ResolveCritChancePercent(IPlayer player) =>
         RunInt(player, VerbIds.CritChance);
 
+    /// <summary>Crit damage multiplier (seed 2). Applied only after a successful crit roll.</summary>
+    public static float ResolveCritDamageMultiplier(IPlayer player) =>
+        Math.Max(0f, RunFloat(player, VerbIds.CritDamage, seed: 2f));
+
     public static int ResolveWholeVesselLootChancePercent(IPlayer player) =>
         RunInt(player, VerbIds.WholeVesselLootChance);
 
+    public static int ResolveMechanicalsDamagePercent(IPlayer player) =>
+        RunInt(player, VerbIds.MechanicalsDamage);
+
     /// <summary>
     /// Per-hit roll for Inconspicuity crits. Runs after Strength/ranged stat multipliers
-    /// are already baked into <paramref name="damage"/>; success doubles it.
+    /// are already baked into <paramref name="damage"/>; success multiplies by
+    /// <see cref="ResolveCritDamageMultiplier"/>.
     /// </summary>
     public static void TryApplyCrit(DamageSource damageSource, Entity victim, ref float damage)
     {
@@ -198,30 +236,14 @@ public static class PlayerInteractionStation
             return;
         }
 
-        damage *= 2f;
+        damage *= ResolveCritDamageMultiplier(attacker.Player);
     }
 
-    static readonly FieldInfo FleeSeekingRangeField =
-        AccessTools.Field(typeof(AiTaskFleeEntity), "seekingRange");
-    static readonly FieldInfo SeekSeekingRangeField =
-        AccessTools.Field(typeof(AiTaskSeekEntity), "seekingRange");
-    static readonly FieldInfo TargetCodesExactField =
-        AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntityCodesExact");
-    static readonly FieldInfo TargetCodesBeginsWithField =
-        AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntityCodesBeginsWith");
-    static readonly FieldInfo TargetFirstLettersField =
-        AccessTools.Field(typeof(AiTaskBaseTargetable), "targetEntityFirstLetters");
-
-    /// <summary>
-    /// Harmony target: raw flee <c>ExecutionChance</c> for non-player search.
-    /// Player awareness is owned by the alert meter.
-    /// </summary>
+    /// <summary>Harmony target: vanilla flee <c>ExecutionChance</c>.</summary>
     public static double GetScaledFleeExecutionChance(AiTaskFleeEntity self) =>
         ReadExecutionChance(self);
 
-    /// <summary>
-    /// Harmony target: raw seek <c>ExecutionChance</c> for non-player search.
-    /// </summary>
+    /// <summary>Harmony target: vanilla seek <c>ExecutionChance</c>.</summary>
     public static double GetScaledSeekExecutionChance(AiTaskSeekEntity self) =>
         ReadExecutionChance(self);
 
@@ -236,103 +258,13 @@ public static class PlayerInteractionStation
         };
     }
 
-    /// <summary>
-    /// Non-player flee radius keeps vanilla generation fear. Friendliness / skill calm
-    /// now scale ordinary alert threat instead of shrinking this radius.
-    /// </summary>
+    /// <summary>Harmony target: returns <paramref name="vanillaFactor"/>.</summary>
     public static float AdjustFleeFearReductionFactor(AiTaskFleeEntity self, float vanillaFactor) =>
         vanillaFactor;
 
-    /// <summary>
-    /// Non-player melee reach keeps vanilla generation fear.
-    /// </summary>
+    /// <summary>Harmony target: returns <paramref name="vanillaFactor"/>.</summary>
     public static float AdjustMeleeFearReductionFactor(AiTaskMeleeAttack self, float vanillaFactor) =>
         vanillaFactor;
-
-    static readonly FieldInfo MeleeAttackRangeField =
-        AccessTools.Field(typeof(AiTaskMeleeAttack), "attackRange");
-
-    /// <summary>
-    /// Non-player task chance helper. Player awareness is owned by the alert meter.
-    /// </summary>
-    public static float GetScaledExecutionChance(AiTaskBaseTargetable task, float chance, float range) =>
-        chance;
-
-    static bool TaskCanTargetPlayer(AiTaskBaseTargetable task)
-    {
-        string firstLetters = TargetFirstLettersField.GetValue(task) as string ?? "";
-        if (firstLetters.Length == 0)
-        {
-            return true;
-        }
-
-        if (TargetCodesExactField.GetValue(task) is string[] exact)
-        {
-            for (int i = 0; i < exact.Length; i++)
-            {
-                if (exact[i] == "player")
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (TargetCodesBeginsWithField.GetValue(task) is string[] begins)
-        {
-            for (int i = 0; i < begins.Length; i++)
-            {
-                string prefix = begins[i];
-                if (prefix.Length == 0 || "player".StartsWith(prefix, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    internal static IPlayer? FindNearestSurvivalPlayer(EntityAgent entity, float range)
-    {
-        IPlayer[]? players = entity.World?.AllOnlinePlayers;
-        if (players == null || players.Length == 0 || range <= 0f)
-        {
-            return null;
-        }
-
-        double rangeSq = range * (double)range;
-        IPlayer? best = null;
-        double bestDistSq = rangeSq;
-
-        for (int i = 0; i < players.Length; i++)
-        {
-            IPlayer player = players[i];
-            if (player?.Entity is not EntityPlayer ep || !ep.Alive)
-            {
-                continue;
-            }
-
-            if (ep.Pos.Dimension != entity.Pos.Dimension)
-            {
-                continue;
-            }
-
-            EnumGameMode mode = player.WorldData.CurrentGameMode;
-            if (mode == EnumGameMode.Creative || mode == EnumGameMode.Spectator)
-            {
-                continue;
-            }
-
-            double distSq = entity.Pos.SquareDistanceTo(ep.Pos);
-            if (distSq <= bestDistSq)
-            {
-                bestDistSq = distSq;
-                best = player;
-            }
-        }
-
-        return best;
-    }
 
     public const double VanillaTemporalRecoverDivisor = 200.0;
     public const double VanillaTemporalDrainDivisor = 800.0;
@@ -384,11 +316,16 @@ public static class PlayerInteractionStation
     public const string StatMeleeDamageKey = "prosequor-attr-str-melee";
     public const string StatRangedSpeedKey = "prosequor-attr-per-ranged-speed";
     public const string StatRangedAccKey = "prosequor-attr-per-ranged-acc";
+    public const string StatRangedDamageKey = "prosequor-attr-per-ranged-damage";
+    public const string StatRangedDistanceKey = "prosequor-attr-per-ranged-distance";
     public const string StatBowQualityAccKey = "prosequor-bow-quality-acc";
     public const string StatFallDamageFactorKey = "prosequor-attr-res-fall-factor";
     public const string StatFallDamageThresholdKey = "prosequor-attr-res-fall-threshold";
+    public const string StatWalkSpeedKey = "prosequor-attr-con-walk-speed";
+    public const string StatHungerRateKey = "prosequor-attr-res-hunger-rate";
     public const string StatAnimalSeekingRangeKey = "prosequor-attr-inc-animal-seek";
     public const string StatWholeVesselLootChanceKey = "prosequor-attr-inc-vessel-loot";
+    public const string StatMechanicalsDamageKey = "prosequor-attr-inc-mechanicals";
 
     /// <summary>
     /// Writes absolute pipeline percent onto <c>armorWalkSpeedAffectedness</c>
@@ -524,6 +461,69 @@ public static class PlayerInteractionStation
     }
 
     /// <summary>
+    /// Writes signed pipeline percent onto <c>rangedWeaponsDamage</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyRangedDamage(Entity entity) =>
+        ApplySignedPercentStat(entity, "rangedWeaponsDamage", StatRangedDamageKey, ResolveRangedDamagePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>bowDrawingStrength</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyRangedDistance(Entity entity) =>
+        ApplySignedPercentStat(entity, "bowDrawingStrength", StatRangedDistanceKey, ResolveRangedDistancePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>walkspeed</c>
+    /// as an additive offset (<c>pct/100</c>). Stacks under sprint/swim/sneak multipliers.
+    /// </summary>
+    public static void ApplyWalkSpeed(Entity entity) =>
+        ApplySignedPercentStat(entity, "walkspeed", StatWalkSpeedKey, ResolveWalkSpeedPercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>hungerrate</c>
+    /// as an additive offset (<c>pct/100</c>). Stacks with riding hunger reduction.
+    /// </summary>
+    public static void ApplyHungerRate(Entity entity) =>
+        ApplySignedPercentStat(entity, "hungerrate", StatHungerRateKey, ResolveHungerRatePercent);
+
+    /// <summary>
+    /// Writes signed pipeline percent onto <c>mechanicalsDamage</c>
+    /// as an additive offset (<c>pct/100</c>).
+    /// </summary>
+    public static void ApplyMechanicalsDamage(Entity entity) =>
+        ApplySignedPercentStat(entity, "mechanicalsDamage", StatMechanicalsDamageKey, ResolveMechanicalsDamagePercent);
+
+    static void ApplySignedPercentStat(
+        Entity entity,
+        string entityStat,
+        string key,
+        System.Func<IPlayer, int> resolvePercent)
+    {
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        if (entity is not EntityPlayer entityPlayer || entityPlayer.Player == null || entity.Stats == null)
+        {
+            return;
+        }
+
+        int pct = resolvePercent(entityPlayer.Player);
+        float offset = pct / 100f;
+        if (Math.Abs(offset) < 0.0001f)
+        {
+            entity.Stats.Remove(entityStat, key);
+        }
+        else
+        {
+            entity.Stats.Set(entityStat, key, offset, false);
+        }
+    }
+
+    /// <summary>
     /// Writes absolute pipeline percent onto <c>fallDamageThreshold</c>
     /// as an additive offset (<c>pct/100 - 1</c>).
     /// </summary>
@@ -579,10 +579,7 @@ public static class PlayerInteractionStation
         }
     }
 
-    /// <summary>
-    /// Clears any legacy Prosequor write to vanilla <c>animalSeekingRange</c>.
-    /// Inconspicuity now scales alert-meter threat via <see cref="ResolveAnimalThreatPercent"/>.
-    /// </summary>
+    /// <summary>Removes the Prosequor <c>animalSeekingRange</c> stat key.</summary>
     public static void ClearLegacyAnimalSeekingRange(Entity entity)
     {
         if (entity.World.Side != EnumAppSide.Server)

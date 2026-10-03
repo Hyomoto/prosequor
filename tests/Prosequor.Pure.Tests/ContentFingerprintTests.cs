@@ -98,6 +98,46 @@ public class ContentFingerprintTests
         Assert.Equal(ContentFingerprint.HashText(text), ContentFingerprint.Compute(skills).Hash);
     }
 
+    [Fact]
+    [Trait("Layer", "Data")]
+    public void ClassProfile_ChangesHash()
+    {
+        SkillRegistry skills = new();
+        TraitAttributeRegistry plain = new();
+        TraitAttributeRegistry withProfile = new();
+        ClassProfile? profile = ClassProfile.Compile(
+            "scout",
+            new ClassProfileJson
+            {
+                attributes = new Dictionary<string, int> { ["strength"] = 12 },
+                unlocks = [new ClassUnlockJson { skill = "hunting", nodes = ["tracker"] }]
+            },
+            AttributeIds.All,
+            skills: null,
+            warn: null);
+        withProfile.RegisterClassProfile(profile!);
+
+        Assert.NotEqual(
+            ContentFingerprint.Compute(skills, traits: plain).Hash,
+            ContentFingerprint.Compute(skills, traits: withProfile).Hash);
+
+        TraitAttributeRegistry removed = new();
+        ClassProfile? withoutTrait = ClassProfile.Compile(
+            "scout",
+            new ClassProfileJson
+            {
+                attributes = new Dictionary<string, int> { ["strength"] = 12 },
+                traits = ["-claustrophobic"]
+            },
+            AttributeIds.All,
+            skills: null,
+            warn: null);
+        removed.RegisterClassProfile(withoutTrait!);
+        Assert.NotEqual(
+            ContentFingerprint.Compute(skills, traits: withProfile).Hash,
+            ContentFingerprint.Compute(skills, traits: removed).Hash);
+    }
+
     static SkillDef NodeSkill(string skillId, string nodeId, int cost)
     {
         SkillTreeNodeDef node = new()

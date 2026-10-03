@@ -112,7 +112,15 @@ public class SkillProgressState
 public class PlayerProgressState
 {
     /// <summary>Schema 5 remaps unlock node ids once (see <see cref="UnlockIdRemap"/>).</summary>
-    public const int CurrentSchema = 5;
+    public const int UnlockRemapSchema = 5;
+
+    /// <summary>
+    /// Schema 6 stores <see cref="Attributes"/> as growth deltas from the live class/trait
+    /// baseline (effective = clamp(baseline + delta)), not absolute scores.
+    /// </summary>
+    public const int AttributeDeltaSchema = 6;
+
+    public const int CurrentSchema = AttributeDeltaSchema;
 
     public int Schema { get; set; } = CurrentSchema;
     public int PlayerLevel { get; set; } = XpCurves.PlayerMinLevel;
@@ -120,7 +128,10 @@ public class PlayerProgressState
     public int UnlockPoints { get; set; }
     public Dictionary<string, SkillProgressState> Skills { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Attribute scores (Strength, Perception, …). Missing keys are filled on load.</summary>
+    /// <summary>
+    /// Schema ≥ 6: growth deltas per attribute (default 0). Schema &lt; 6 on load: absolute scores
+    /// until <see cref="AttributeScoreMath.ConvertAbsoluteToDeltas"/> runs.
+    /// </summary>
     public Dictionary<string, int> Attributes { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -128,6 +139,12 @@ public class PlayerProgressState
     /// Mirrored for the stats-panel ticks.
     /// </summary>
     public Dictionary<string, float> AttributeBuckets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Character class code from the entity. Absent means the default attribute baseline.</summary>
+    public string? CharacterClass { get; set; }
+
+    /// <summary>Extra trait codes from the entity, applied on top of <see cref="CharacterClass"/>.</summary>
+    public string[]? ExtraTraits { get; set; }
 
     public static PlayerProgressState CreateNew(
         ISkillRegistry registry,
@@ -163,15 +180,18 @@ public class PlayerProgressState
     }
 
     /// <summary>
-    /// Ensure every catalog attribute has a score and bucket entry.
-    /// Does not wipe existing values; missing keys get defaults.
+    /// Ensure every catalog attribute has a delta/score and bucket entry.
+    /// Schema ≥ 6 missing deltas default to 0; pre-delta blobs default missing abs scores to 10.
     /// </summary>
     public static void EnsureAttributeEntries(
         PlayerProgressState state,
         IReadOnlyList<string>? catalog = null)
     {
         IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
-        NormalizeAttributeDictionary(state.Attributes, AttributeGrowth.DefaultScore, ids);
+        int defaultDeltaOrScore = state.Schema >= AttributeDeltaSchema
+            ? 0
+            : AttributeGrowth.DefaultScore;
+        NormalizeAttributeDictionary(state.Attributes, defaultDeltaOrScore, ids);
         NormalizeAttributeDictionary(state.AttributeBuckets, 0f, ids);
     }
 
@@ -189,6 +209,15 @@ public class PlayerProgressState
         }
     }
 
+    /// <summary>Stored growth delta (schema ≥ 6), or raw absolute before migration.</summary>
+    public int GetAttributeDelta(string id, IReadOnlyList<string>? catalog = null) =>
+        AttributeScoreMath.ReadDelta(this, id, catalog);
+
+    /// <summary>
+    /// Absolute score when schema &lt; 6; otherwise treat stored value as delta over
+    /// <see cref="AttributeGrowth.DefaultScore"/> (fixtures / no baseline). Prefer
+    /// <see cref="Player.EntityBehaviorProgress.GetAttribute"/> for live baseline.
+    /// </summary>
     public int GetAttribute(string id, IReadOnlyList<string>? catalog = null)
     {
         string? canonical = AttributeIds.Canonicalize(id, catalog ?? AttributeIds.All);
@@ -197,9 +226,18 @@ public class PlayerProgressState
             return AttributeGrowth.DefaultScore;
         }
 
-        return Attributes.TryGetValue(canonical, out int score)
-            ? score
-            : AttributeGrowth.DefaultScore;
+        if (!Attributes.TryGetValue(canonical, out int stored))
+        {
+            return AttributeGrowth.DefaultScore;
+        }
+
+        // Schema ≥ 6 without a live baseline: treat DefaultScore as baseline (fixtures).
+        if (Schema >= AttributeDeltaSchema)
+        {
+            return AttributeScoreMath.Effective(AttributeGrowth.DefaultScore, stored);
+        }
+
+        return stored;
     }
 
     public float GetAttributeBucket(string id, IReadOnlyList<string>? catalog = null)
@@ -214,9 +252,9 @@ public class PlayerProgressState
     }
 
     /// <summary>XP is truth; recompute cached levels from lifetime XP.</summary>
-    public void ReconcileLevelsFromXp()
+    public void ReconcileLevelsFromXp(int maxPlayerLevel = XpCurves.PlayerMaxLevel)
     {
-        PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(PlayerXp);
+        PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(PlayerXp, maxPlayerLevel);
         foreach (KeyValuePair<string, SkillProgressState> kv in Skills)
         {
             kv.Value.Level = XpCurves.SkillLevelFromLifetimeXp(kv.Value.Xp);

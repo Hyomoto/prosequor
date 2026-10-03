@@ -85,6 +85,14 @@ public static class LevelUpRuleCompiler
             actionRaw = "prosequor:" + actionRaw;
         }
 
+        if (IsRetiredGrant(actionRaw))
+        {
+            errors.Add(
+                $"level-up rule '{id}' action '{actionRaw}' no longer grants. "
+                + "Skill points and specialization slots come from the progression table.");
+            return null;
+        }
+
         if (!TryParseAction(actionRaw, out LevelUpActionKind kind))
         {
             errors.Add($"level-up rule '{id}' unknown action '{row.action}'.");
@@ -171,20 +179,29 @@ public static class LevelUpRuleCompiler
         };
     }
 
+    /// <summary>
+    /// <c>earn-skill-point</c> and <c>earn-specialization-point</c> are retired.
+    /// The progression table owns those grants.
+    /// </summary>
+    public static bool IsRetiredGrant(string? action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+        {
+            return false;
+        }
+
+        string raw = action.Trim();
+        if (!raw.Contains(':'))
+        {
+            raw = "prosequor:" + raw;
+        }
+
+        return string.Equals(raw, ActionEarnSkillPoint, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, ActionEarnSpecializationPoint, StringComparison.OrdinalIgnoreCase);
+    }
+
     static bool TryParseAction(string action, out LevelUpActionKind kind)
     {
-        if (string.Equals(action, ActionEarnSkillPoint, StringComparison.OrdinalIgnoreCase))
-        {
-            kind = LevelUpActionKind.EarnSkillPoint;
-            return true;
-        }
-
-        if (string.Equals(action, ActionEarnSpecializationPoint, StringComparison.OrdinalIgnoreCase))
-        {
-            kind = LevelUpActionKind.EarnSpecializationPoint;
-            return true;
-        }
-
         if (string.Equals(action, ActionEarnAttribute, StringComparison.OrdinalIgnoreCase))
         {
             kind = LevelUpActionKind.EarnAttribute;

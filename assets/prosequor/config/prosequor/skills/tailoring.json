@@ -286,6 +286,10 @@
         "cost": 1,
         "minSkillLevel": 20,
         "descriptionLang": "unlockdesc-tailoring-cool-garments",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -334,6 +338,10 @@
         "cost": 1,
         "minSkillLevel": 20,
         "descriptionLang": "unlockdesc-tailoring-warm-garments",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -467,6 +475,10 @@
         "cost": 1,
         "minSkillLevel": 10,
         "descriptionLang": "unlockdesc-tailoring-clothingproficiency",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [
@@ -567,6 +579,10 @@
         "cost": 1,
         "minSkillLevel": 20,
         "descriptionLang": "unlockdesc-tailoring-armorproficiency",
+        "descriptionParams": [
+          { "table": "0.table", "end": "min", "format": "qualityPercent" },
+          { "table": "0.table", "format": "qualityPercent" }
+        ],
         "tiers": [
           {
             "effects": [

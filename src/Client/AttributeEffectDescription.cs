@@ -1,4 +1,3 @@
-using Prosequor.Ability;
 using Prosequor.Ability.Actions;
 using Prosequor.Ability.Hooks;
 using Prosequor.Data;
@@ -44,22 +43,34 @@ public static class AttributeEffectDescription
         ["prosequor:str-armor-walk"] = new(false, AttributeEffectDisplayKind.Tiered),
         ["prosequor:str-melee-damage"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:str-basic-slots"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:str-break-speed"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:per-cat-eyes-capacity"] = new(true, AttributeEffectDisplayKind.Binary),
         ["prosequor:per-ranged-speed"] = new(
             true,
             AttributeEffectDisplayKind.Tiered,
             BlendedStatDescription.RangedWeaponsSpeed),
         ["prosequor:per-ranged-acc"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:per-ranged-damage"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:per-ranged-distance"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:con-health"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:con-satiety"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:con-hunger-delay"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:con-walk-speed"] = new(
+            true,
+            AttributeEffectDisplayKind.Tiered,
+            BlendedStatDescription.WalkSpeed),
         ["prosequor:inc-animal-threat"] = new(false, AttributeEffectDisplayKind.Tiered),
         ["prosequor:inc-whole-vessel-loot"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:inc-crit-chance"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:inc-mechanicals-damage"] = new(true, AttributeEffectDisplayKind.Tiered),
         ["prosequor:res-frost-damage"] = new(false, AttributeEffectDisplayKind.Tiered),
         ["prosequor:res-last-stand"] = new(true, AttributeEffectDisplayKind.Binary),
         ["prosequor:res-fall-factor"] = new(false, AttributeEffectDisplayKind.Tiered),
-        ["prosequor:res-fall-threshold"] = new(true, AttributeEffectDisplayKind.Tiered)
+        ["prosequor:res-fall-threshold"] = new(true, AttributeEffectDisplayKind.Tiered),
+        ["prosequor:res-hunger-rate"] = new(
+            false,
+            AttributeEffectDisplayKind.Tiered,
+            BlendedStatDescription.HungerRate)
     };
 
     public static IEnumerable<(string Text, bool Positive)> EnumerateActiveLines(
@@ -69,21 +80,75 @@ public static class AttributeEffectDescription
     {
         foreach (AttributeStatDef def in registry.All)
         {
-            int score = progress?.GetAttribute(def.Id) ?? AttributeGrowth.DefaultScore;
-            foreach (AbilityRule rule in def.Rules)
+            foreach ((string text, bool positive) in EnumerateActiveLinesFor(
+                         def, progress, emittedBlendedStats))
             {
-                if (IsCoveredByEmittedBlendedStat(rule.RuleId, emittedBlendedStats))
-                {
-                    continue;
-                }
-
-                if (!TryDescribe(rule, score, out string? text, out bool positive) || text == null)
-                {
-                    continue;
-                }
-
                 yield return (text, positive);
             }
+        }
+    }
+
+    /// <summary>Active qualitative lines for a single attribute id at an explicit score.</summary>
+    public static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        IAttributeStatRegistry registry,
+        string attributeId,
+        int score,
+        IReadOnlySet<string>? emittedBlendedStats = null)
+    {
+        if (!registry.TryGet(attributeId, out AttributeStatDef def))
+        {
+            yield break;
+        }
+
+        foreach ((string text, bool positive) in EnumerateActiveLinesFor(
+                     def, score, emittedBlendedStats))
+        {
+            yield return (text, positive);
+        }
+    }
+
+    /// <summary>Active qualitative lines for a single attribute id.</summary>
+    public static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        IAttributeStatRegistry registry,
+        string attributeId,
+        IPlayerProgress? progress,
+        IReadOnlySet<string>? emittedBlendedStats = null)
+    {
+        int score = progress?.GetAttribute(attributeId) ?? AttributeGrowth.DefaultScore;
+        foreach ((string text, bool positive) in EnumerateActiveLinesFor(
+                     registry, attributeId, score, emittedBlendedStats))
+        {
+            yield return (text, positive);
+        }
+    }
+
+    static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        AttributeStatDef def,
+        IPlayerProgress? progress,
+        IReadOnlySet<string>? emittedBlendedStats)
+    {
+        int score = progress?.GetAttribute(def.Id) ?? AttributeGrowth.DefaultScore;
+        return EnumerateActiveLinesFor(def, score, emittedBlendedStats);
+    }
+
+    static IEnumerable<(string Text, bool Positive)> EnumerateActiveLinesFor(
+        AttributeStatDef def,
+        int score,
+        IReadOnlySet<string>? emittedBlendedStats)
+    {
+        foreach (AbilityRule rule in def.Rules)
+        {
+            if (IsCoveredByEmittedBlendedStat(rule.RuleId, emittedBlendedStats))
+            {
+                continue;
+            }
+
+            if (!TryDescribe(rule, score, out string? text, out bool positive) || text == null)
+            {
+                continue;
+            }
+
+            yield return (text, positive);
         }
     }
 
@@ -129,37 +194,25 @@ public static class AttributeEffectDescription
             return false;
         }
 
-        if (!TryReadParams(rule, out int fromScore, out float fromValue, out int toScore, out float toValue,
-                out int? midScore, out float? midValue, out string? round))
+        if (rule.Parameters is not MappedNumberParams mapped)
         {
             return false;
         }
 
-        // Curve starts above default score: inactive until fromScore (mapped clamp would lie).
-        if (fromScore > AttributeGrowth.DefaultScore && score < fromScore)
+        // Curve starts above default score: inactive until span start (mapped clamp would lie).
+        if (mapped.SpanStart > AttributeGrowth.DefaultScore && score < mapped.SpanStart)
         {
             return false;
         }
 
-        if (!TryMap(score, fromScore, fromValue, toScore, toValue, midScore, midValue, round, out float current))
-        {
-            return false;
-        }
-
-        float neutral = ResolveNeutral(
-            fromScore,
-            fromValue,
-            toScore,
-            toValue,
-            midScore,
-            midValue,
-            round);
+        float current = mapped.Evaluate(score);
+        float neutral = ResolveNeutral(mapped);
 
         if (display.Kind == AttributeEffectDisplayKind.Binary)
         {
-            // Gated posters: once past minScore / fromScore, show a single phrase.
+            // Gated posters: once past minScore / span start, show a single phrase.
             if (rule.Source.MinAttributeScore > AttributeGrowth.DefaultScore
-                || fromScore > AttributeGrowth.DefaultScore)
+                || mapped.SpanStart > AttributeGrowth.DefaultScore)
             {
                 positive = true;
                 text = LangLine(rule.RuleId, AttributeEffectSign.Positive, null);
@@ -185,16 +238,7 @@ public static class AttributeEffectDescription
         }
 
         positive = IsPositive(display.HigherIsBetter, current, neutral);
-        AttributeEffectTier tier = ResolveTier(
-            current,
-            neutral,
-            fromScore,
-            fromValue,
-            toScore,
-            toValue,
-            midScore,
-            midValue,
-            round);
+        AttributeEffectTier tier = ResolveTier(mapped, current, neutral);
         text = LangLine(
             rule.RuleId,
             positive ? AttributeEffectSign.Positive : AttributeEffectSign.Negative,
@@ -202,37 +246,21 @@ public static class AttributeEffectDescription
         return text != null;
     }
 
-    static float ResolveNeutral(
-        int fromScore,
-        float fromValue,
-        int toScore,
-        float toValue,
-        int? midScore,
-        float? midValue,
-        string? round)
+    static float ResolveNeutral(MappedNumberParams mapped)
     {
-        if (midScore is int midS && midValue is float midV)
+        // Legacy hinged curves: hinge value is the authored neutral.
+        if (!mapped.UsesCurve && mapped.MidScore is int && mapped.MidValue is float midV)
         {
             return midV;
         }
 
         // Additive / unlock curves that only begin above default: no-effect baseline is 0.
-        if (fromScore > AttributeGrowth.DefaultScore)
+        if (mapped.SpanStart > AttributeGrowth.DefaultScore)
         {
             return 0f;
         }
 
-        TryMap(
-            AttributeGrowth.DefaultScore,
-            fromScore,
-            fromValue,
-            toScore,
-            toValue,
-            midScore,
-            midValue,
-            round,
-            out float atDefault);
-        return atDefault;
+        return mapped.Evaluate(AttributeGrowth.DefaultScore);
     }
 
     static bool IsPositive(bool higherIsBetter, float current, float neutral)
@@ -242,25 +270,13 @@ public static class AttributeEffectDescription
     }
 
     static AttributeEffectTier ResolveTier(
+        MappedNumberParams mapped,
         float current,
-        float neutral,
-        int fromScore,
-        float fromValue,
-        int toScore,
-        float toValue,
-        int? midScore,
-        float? midValue,
-        string? round)
+        float neutral)
     {
-        float endpoint;
-        if (current > neutral)
-        {
-            TryMap(toScore, fromScore, fromValue, toScore, toValue, midScore, midValue, round, out endpoint);
-        }
-        else
-        {
-            TryMap(fromScore, fromScore, fromValue, toScore, toValue, midScore, midValue, round, out endpoint);
-        }
+        float endpoint = current > neutral
+            ? mapped.Evaluate(mapped.SpanEnd)
+            : mapped.Evaluate(mapped.SpanStart);
 
         float span = Math.Abs(endpoint - neutral);
         if (span < 0.0001f)
@@ -280,77 +296,6 @@ public static class AttributeEffectDescription
         }
 
         return AttributeEffectTier.Great;
-    }
-
-    static bool TryReadParams(
-        AbilityRule rule,
-        out int fromScore,
-        out float fromValue,
-        out int toScore,
-        out float toValue,
-        out int? midScore,
-        out float? midValue,
-        out string? round)
-    {
-        fromScore = 0;
-        fromValue = 0;
-        toScore = 0;
-        toValue = 0;
-        midScore = null;
-        midValue = null;
-        round = null;
-
-        switch (rule.Parameters)
-        {
-            case MappedNumberParams mapped:
-                fromScore = mapped.FromScore;
-                fromValue = mapped.FromValue;
-                toScore = mapped.ToScore;
-                toValue = mapped.ToValue;
-                midScore = mapped.MidScore;
-                midValue = mapped.MidValue;
-                round = mapped.Round;
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
-    static bool TryMap(
-        int score,
-        int fromScore,
-        float fromValue,
-        int toScore,
-        float toValue,
-        int? midScore,
-        float? midValue,
-        string? round,
-        out float value)
-    {
-        if (round != null)
-        {
-            value = AbilityFormulas.AttributeMappedInt(
-                score,
-                fromScore,
-                fromValue,
-                toScore,
-                toValue,
-                round,
-                midScore,
-                midValue);
-            return true;
-        }
-
-        value = AbilityFormulas.AttributeMappedFloat(
-            score,
-            fromScore,
-            fromValue,
-            toScore,
-            toValue,
-            midScore,
-            midValue);
-        return true;
     }
 
     static string? LangLine(string ruleId, AttributeEffectSign sign, AttributeEffectTier? tier)

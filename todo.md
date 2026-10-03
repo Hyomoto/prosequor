@@ -23,6 +23,15 @@ Sourced from ModDB comments around 2026-09-15. Items already shipped or declined
 
 
 
+## Code review
+
+- [ ] **Hunting tracker and Animal Sense are node-id gates.** The outline requires `hunting` / `tracker`, and Animal Sense tiers ship with empty effects. A contribution that grants the same fold on another node never draws. Acceptable for now.
+- [ ] **`prosequorUnlock` on grid recipes is only a key check.** The node id is ignored, so one `recipe-available` `set-true` unlocks every tagged recipe.
+- [ ] **Player-interaction percents use two units.** The apply method chooses: some treat 100 as vanilla (`pct/100 - 1`), others treat 0 as vanilla (`pct/100`). The JSON does not say which.
+- [ ] **Flee/seek execution chance should be suppressed only when the task targets the player.** The current patches return the vanilla chance for every target.
+- [ ] **Tracker aim walks every loaded entity every frame** (`TrackerOutlineRenderer`).
+- [ ] **Alert integration is animals × players every 200 ms** (`AnimalAlertService`).
+
 ## Wishlist
 
 - [ ] **Respec.** Admins have `/prosequor revoke` (one node) and `/prosequor clear` (full wipe). No player- or admin-facing respec that refunds a tree or redistributes attributes.

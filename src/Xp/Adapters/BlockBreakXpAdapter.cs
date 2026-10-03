@@ -12,29 +12,11 @@ namespace Prosequor.Xp.Adapters;
 /// </summary>
 public class BlockBreakXpAdapter
 {
-    /// <summary>Legacy dig activity id (no longer emitted).</summary>
-    public const string VerbDig = "prosequor:dig";
-
-    /// <summary>Legacy chop activity id (no longer emitted).</summary>
-    public const string VerbChop = "prosequor:chop";
-
-    /// <summary>Legacy mine activity id (no longer emitted).</summary>
-    public const string VerbMine = "prosequor:mine";
-
     readonly ICoreServerAPI sapi;
 
-    public BlockBreakXpAdapter(ICoreServerAPI sapi, XpActionDispatcher dispatcher)
+    public BlockBreakXpAdapter(ICoreServerAPI sapi)
     {
         this.sapi = sapi;
-        _ = dispatcher;
-    }
-
-    public void Start()
-    {
-    }
-
-    public void Dispose()
-    {
     }
 
     public void NotifyBlockBroken(IPlayer byPlayer, Block broken, BlockPos pos) =>

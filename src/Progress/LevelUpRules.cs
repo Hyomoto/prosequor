@@ -10,7 +10,7 @@ public static class LevelUpRules
     /// <summary>
     /// For each level in (beforeLevel, afterLevel], run every matching rule in priority then
     /// source-order. Returns attribute ids that received a point (one entry per successful grant).
-    /// Specialization rules are capacity-only and do not mutate state here.
+    /// Skill points and specialization slots come from the progression table, not these rules.
     /// </summary>
     public static IReadOnlyList<string> Apply(
         PlayerProgressState state,
@@ -18,7 +18,8 @@ public static class LevelUpRules
         int beforeLevel,
         int afterLevel,
         Random random,
-        IReadOnlyList<string>? catalog = null)
+        IReadOnlyList<string>? catalog = null,
+        IReadOnlyDictionary<string, int>? attributeBaselines = null)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(rules);
@@ -44,43 +45,11 @@ public static class LevelUpRules
                     continue;
                 }
 
-                ApplyOne(state, rule, random, winners, catalog);
+                ApplyOne(state, rule, random, winners, catalog, attributeBaselines);
             }
         }
 
         return winners;
-    }
-
-    /// <summary>
-    /// Derived specialization slot capacity: sum of matching
-    /// <see cref="LevelUpActionKind.EarnSpecializationPoint"/> grants from level 1..playerLevel.
-    /// </summary>
-    public static int SpecializationSlots(IReadOnlyList<LevelUpRuleDef> rules, int playerLevel)
-    {
-        ArgumentNullException.ThrowIfNull(rules);
-        if (playerLevel < XpCurves.PlayerMinLevel || rules.Count == 0)
-        {
-            return 0;
-        }
-
-        int slots = 0;
-        foreach (LevelUpRuleDef rule in rules)
-        {
-            if (rule.Action != LevelUpActionKind.EarnSpecializationPoint)
-            {
-                continue;
-            }
-
-            for (int level = XpCurves.PlayerMinLevel; level <= playerLevel; level++)
-            {
-                if (rule.Matches(level))
-                {
-                    slots += rule.Value;
-                }
-            }
-        }
-
-        return Math.Max(0, slots);
     }
 
     static void ApplyOne(
@@ -88,21 +57,12 @@ public static class LevelUpRules
         LevelUpRuleDef rule,
         Random random,
         List<string> winners,
-        IReadOnlyList<string>? catalog)
+        IReadOnlyList<string>? catalog,
+        IReadOnlyDictionary<string, int>? attributeBaselines)
     {
-        switch (rule.Action)
+        if (rule.Action == LevelUpActionKind.EarnAttribute)
         {
-            case LevelUpActionKind.EarnSkillPoint:
-                state.UnlockPoints = Math.Max(0, state.UnlockPoints + rule.Value);
-                break;
-
-            case LevelUpActionKind.EarnSpecializationPoint:
-                // Capacity is derived; nothing to store.
-                break;
-
-            case LevelUpActionKind.EarnAttribute:
-                ApplyAttribute(state, rule, random, winners, catalog);
-                break;
+            ApplyAttribute(state, rule, random, winners, catalog, attributeBaselines);
         }
     }
 
@@ -111,15 +71,21 @@ public static class LevelUpRules
         LevelUpRuleDef rule,
         Random random,
         List<string> winners,
-        IReadOnlyList<string>? catalog)
+        IReadOnlyList<string>? catalog,
+        IReadOnlyDictionary<string, int>? attributeBaselines)
     {
         IReadOnlyList<string> ids = catalog ?? AttributeIds.All;
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            state.Schema = PlayerProgressState.AttributeDeltaSchema;
+        }
+
         PlayerProgressState.EnsureAttributeEntries(state, ids);
         if (string.Equals(rule.AttributeKey, LevelUpRuleDef.BucketsKey, StringComparison.OrdinalIgnoreCase))
         {
             for (int i = 0; i < rule.Value; i++)
             {
-                string? winner = AttributeGrowth.TryGrow(state, random, ids);
+                string? winner = AttributeGrowth.TryGrow(state, random, ids, attributeBaselines);
                 if (winner != null)
                 {
                     winners.Add(winner);
@@ -130,21 +96,28 @@ public static class LevelUpRules
         }
 
         string attrId = rule.AttributeKey!;
-        if (!state.Attributes.TryGetValue(attrId, out int current))
+        string? canonical = AttributeIds.Canonicalize(attrId, ids);
+        if (canonical == null)
         {
-            current = AttributeGrowth.DefaultScore;
+            return;
         }
 
+        int baseline = attributeBaselines != null
+            && attributeBaselines.TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = state.Attributes.TryGetValue(canonical, out int d) ? d : 0;
+        int current = AttributeScoreMath.Effective(baseline, delta);
         int next = Math.Min(AttributeGrowth.MaxScore, current + rule.Value);
         if (next == current)
         {
             return;
         }
 
-        state.Attributes[attrId] = next;
+        state.Attributes[canonical] = AttributeScoreMath.DeltaFromEffective(baseline, next);
         for (int i = current; i < next; i++)
         {
-            winners.Add(attrId);
+            winners.Add(canonical);
         }
     }
 }

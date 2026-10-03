@@ -12,15 +12,6 @@ public sealed class AttributeIcons : IDisposable
     readonly ICoreClientAPI capi;
     readonly Dictionary<string, LoadedTexture> textures = new(StringComparer.OrdinalIgnoreCase);
 
-    static readonly Dictionary<string, AssetLocation> Locations = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [AttributeIds.Strength] = new("prosequor", "textures/icons/strength-attribute.svg"),
-        [AttributeIds.Perception] = new("prosequor", "textures/icons/perception-attribute.svg"),
-        [AttributeIds.Constitution] = new("prosequor", "textures/icons/constitution-attribute.svg"),
-        [AttributeIds.Inconspicuity] = new("prosequor", "textures/icons/inconspicuity-attribute.svg"),
-        [AttributeIds.Resilience] = new("prosequor", "textures/icons/resiliance-attribute.svg")
-    };
-
     public AttributeIcons(ICoreClientAPI capi)
     {
         this.capi = capi;
@@ -28,12 +19,13 @@ public sealed class AttributeIcons : IDisposable
 
     public LoadedTexture? Get(string attrId, double size)
     {
-        if (!Locations.TryGetValue(attrId, out AssetLocation? loc) || loc == null)
+        AssetLocation? loc = ResolveLocation(attrId);
+        if (loc == null)
         {
             return null;
         }
 
-        string cacheKey = attrId + "@" + (int)size;
+        string cacheKey = loc + "@" + (int)size;
         if (textures.TryGetValue(cacheKey, out LoadedTexture? existing))
         {
             return existing.TextureId > 0 ? existing : null;
@@ -43,6 +35,7 @@ public sealed class AttributeIcons : IDisposable
         if (asset == null)
         {
             capi.Logger.Warning("[prosequor] Missing attribute icon {0}.", loc);
+            textures[cacheKey] = new LoadedTexture(capi);
             return null;
         }
 
@@ -62,6 +55,22 @@ public sealed class AttributeIcons : IDisposable
             ctx.Dispose();
             surface.Dispose();
         }
+    }
+
+    AssetLocation? ResolveLocation(string attrId)
+    {
+        if (string.IsNullOrWhiteSpace(attrId))
+        {
+            return null;
+        }
+
+        IAttributeStatRegistry? stats = ProsequorModSystem.For(capi)?.AttributeStats;
+        if (stats != null && stats.TryGet(attrId, out AttributeStatDef def))
+        {
+            return AttributeStatRegistry.IconLocation(def);
+        }
+
+        return new AssetLocation("prosequor", AttributeStatRegistry.DefaultIcon(attrId.Trim()));
     }
 
     public void Dispose()

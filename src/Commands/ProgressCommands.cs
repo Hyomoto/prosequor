@@ -9,6 +9,10 @@ using Prosequor.Progress;
 using Prosequor.Xp;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+#if DEBUG
+using Vintagestory.API.Config;
+using Vintagestory.API.MathTools;
+#endif
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
 
@@ -22,20 +26,16 @@ public static class ProgressCommands
     {
         api.ChatCommands
             .Create("prosequor")
-            .WithDescription("Prosequor progress debug (show / clear / emptybuckets / setlevel / addxp / points / addbucket / setattr / unlock / revoke / setfriendliness / addfriendliness / satiety / finishbarrel / pedigree / skillhint / fingerprint)")
+            .WithDescription("Prosequor progress debug (show / clear / emptybuckets / setlevel / addxp / points / addbucket / setattr / unlock / revoke / setfriendliness / addfriendliness / pedigree"
+#if DEBUG
+                + " / satiety / finishbarrel / skillhint / fingerprint / reproharvest"
+#endif
+                + ")")
             .RequiresPrivilege(Privilege.controlserver)
             .BeginSubCommand("show")
                 .WithDescription("Show progress for a player (default: you)")
                 .WithArgs(api.ChatCommands.Parsers.OptionalWord("player"))
                 .HandleWith(args => OnShow(api, args))
-            .EndSubCommand()
-            .BeginSubCommand("skillhint")
-                .WithDescription("Dump client skill-waiting HUD status (armed / draw / textures / rect)")
-                .HandleWith(args => OnSkillHint(api, args))
-            .EndSubCommand()
-            .BeginSubCommand("fingerprint")
-                .WithDescription("Show the server compiled-content fingerprint")
-                .HandleWith(_ => OnFingerprint(api))
             .EndSubCommand()
             .BeginSubCommand("setlevel")
                 .WithDescription("Set player or skill level")
@@ -98,11 +98,6 @@ public static class ProgressCommands
                 .WithArgs(api.ChatCommands.Parsers.OptionalWord("player"))
                 .HandleWith(args => OnEmptyBuckets(api, args))
             .EndSubCommand()
-            .BeginSubCommand("satiety")
-                .WithDescription("Set hunger satiety to 0 so food can be eaten immediately (default: you)")
-                .WithArgs(api.ChatCommands.Parsers.OptionalWord("player"))
-                .HandleWith(args => OnSatiety(api, args))
-            .EndSubCommand()
             .BeginSubCommand("setfriendliness")
                 .WithDescription("Set animal friendliness (pedigree contributor total) on the looked-at entity (or entity id)")
                 .WithArgs(
@@ -117,16 +112,37 @@ public static class ProgressCommands
                     api.ChatCommands.Parsers.OptionalLong("entityId"))
                 .HandleWith(args => OnAddFriendliness(api, args))
             .EndSubCommand()
+            .BeginSubCommand("pedigree")
+                .WithDescription("Dump pedigree on the held item, or the looked-at entity/block when the hand is empty")
+                .HandleWith(args => OnPedigree(api, args))
+            .EndSubCommand()
+#if DEBUG
+            .BeginSubCommand("satiety")
+                .WithDescription("Set hunger satiety to 0 so food can be eaten immediately (default: you)")
+                .WithArgs(api.ChatCommands.Parsers.OptionalWord("player"))
+                .HandleWith(args => OnSatiety(api, args))
+            .EndSubCommand()
             .BeginSubCommand("finishbarrel")
                 .WithDescription("Finish processing on the looked-at sealed barrel")
                 .HandleWith(args => OnFinishBarrel(api, args))
             .EndSubCommand()
-            .BeginSubCommand("pedigree")
-                .WithDescription("Dump pedigree on the held item, or the looked-at entity/block when the hand is empty")
-                .HandleWith(args => OnPedigree(api, args))
-            .EndSubCommand();
+            .BeginSubCommand("skillhint")
+                .WithDescription("Dump client skill-waiting HUD status (armed / draw / textures / rect)")
+                .HandleWith(args => OnSkillHint(api, args))
+            .EndSubCommand()
+            .BeginSubCommand("fingerprint")
+                .WithDescription("Show the server compiled-content fingerprint")
+                .HandleWith(_ => OnFingerprint(api))
+            .EndSubCommand()
+            .BeginSubCommand("reproharvest")
+                .WithDescription("Spawn a drifter and harvest five stacks so a client can reproduce the carcass slot crash")
+                .HandleWith(args => OnReproHarvest(api, args))
+            .EndSubCommand()
+#endif
+            ;
     }
 
+#if DEBUG
     static TextCommandResult OnFingerprint(ICoreServerAPI api)
     {
         ContentFingerprint? fingerprint = ProsequorModSystem.For(api)?.Fingerprint;
@@ -154,6 +170,7 @@ public static class ProgressCommands
         mod.Network.RequestSkillWaitingDump(player);
         return TextCommandResult.Success("Requested skill-waiting HUD dump (see client chat).");
     }
+#endif
 
     static TextCommandResult OnShow(ICoreServerAPI api, TextCommandCallingArgs args)
     {
@@ -463,6 +480,7 @@ public static class ProgressCommands
         return TextCommandResult.Success($"Emptied XP buckets for {player.PlayerName}.");
     }
 
+#if DEBUG
     static TextCommandResult OnSatiety(ICoreServerAPI api, TextCommandCallingArgs args)
     {
         if (!TryResolvePlayer(api, args, optionalIndex: 0, out IServerPlayer player, out string? err))
@@ -481,6 +499,7 @@ public static class ProgressCommands
         return TextCommandResult.Success(
             $"Set satiety to 0 for {player.PlayerName} (was {before.ToString("0.#", CultureInfo.InvariantCulture)} / {hunger.MaxSaturation.ToString("0.#", CultureInfo.InvariantCulture)}).");
     }
+#endif
 
     static TextCommandResult OnSetFriendliness(ICoreServerAPI api, TextCommandCallingArgs args)
     {
@@ -585,6 +604,7 @@ public static class ProgressCommands
         return true;
     }
 
+#if DEBUG
     static TextCommandResult OnFinishBarrel(ICoreServerAPI api, TextCommandCallingArgs args)
     {
         if (args.Caller.Player is not IServerPlayer)
@@ -610,6 +630,7 @@ public static class ProgressCommands
 
         return TextCommandResult.Success("Finished barrel processing.");
     }
+#endif
 
     static TextCommandResult OnPedigree(ICoreServerAPI api, TextCommandCallingArgs args)
     {
@@ -864,4 +885,106 @@ public static class ProgressCommands
         error = $"Player '{name}' not online.";
         return false;
     }
+
+#if DEBUG
+    const int ReproHarvestDelayMs = 1000;
+    const int ReproHarvestDropCount = 5;
+    static readonly AssetLocation ReproHarvestEntityCode = new("game", "drifter-normal");
+    static readonly AssetLocation ReproHarvestDropCode = new("game", "stick");
+    static readonly FieldInfo? HarvestJsonDrops =
+        AccessTools.Field(typeof(EntityBehaviorHarvestable), "jsonDrops");
+
+    static TextCommandResult OnReproHarvest(ICoreServerAPI api, TextCommandCallingArgs args)
+    {
+        if (args.Caller.Player is not IServerPlayer player || player.Entity == null)
+        {
+            return TextCommandResult.Error("reproharvest must be run by a player.");
+        }
+
+        if (HarvestJsonDrops == null)
+        {
+            return TextCommandResult.Error("Could not find EntityBehaviorHarvestable.jsonDrops.");
+        }
+
+        EntityProperties? type = api.World.GetEntityType(ReproHarvestEntityCode);
+        if (type == null)
+        {
+            return TextCommandResult.Error($"Entity type {ReproHarvestEntityCode} is not loaded.");
+        }
+
+        Entity? entity = api.World.ClassRegistry.CreateEntity(type);
+        if (entity == null)
+        {
+            return TextCommandResult.Error($"Could not create {ReproHarvestEntityCode}.");
+        }
+
+        EntityPos pos = player.Entity.Pos.Copy();
+        pos.X += 1.5;
+        entity.Pos.SetPos(pos);
+        api.World.SpawnEntity(entity);
+
+        long entityId = entity.EntityId;
+        string playerUid = player.PlayerUID;
+        api.Event.RegisterCallback(
+            _ => FinishReproHarvest(api, playerUid, entityId),
+            ReproHarvestDelayMs);
+
+        return TextCommandResult.Success(
+            "Spawned a drifter. Five-stack harvest runs in one second.");
+    }
+
+    static void FinishReproHarvest(ICoreServerAPI api, string playerUid, long entityId)
+    {
+        if (api.World.PlayerByUid(playerUid) is not IServerPlayer player)
+        {
+            return;
+        }
+
+        try
+        {
+            Entity? entity = api.World.GetEntityById(entityId);
+            EntityBehaviorHarvestable? harvestable = entity?.GetBehavior<EntityBehaviorHarvestable>();
+            if (entity == null || harvestable?.Inventory == null)
+            {
+                Tell(player, "Harvest repro failed: drifter or harvest inventory is gone.");
+                return;
+            }
+
+            if (HarvestJsonDrops == null)
+            {
+                Tell(player, "Harvest repro failed: jsonDrops field is missing.");
+                return;
+            }
+
+            BlockDropItemStack[] drops = new BlockDropItemStack[ReproHarvestDropCount];
+            for (int i = 0; i < drops.Length; i++)
+            {
+                drops[i] = new BlockDropItemStack
+                {
+                    Type = EnumItemClass.Item,
+                    Code = ReproHarvestDropCode,
+                    Quantity = NatFloat.One
+                };
+            }
+
+            HarvestJsonDrops.SetValue(harvestable, drops);
+            harvestable.GenerateDrops(player);
+            player.InventoryManager.OpenInventory(harvestable.Inventory);
+            Tell(
+                player,
+                $"Harvested {harvestable.Inventory.InventoryID} into {harvestable.Inventory.Count} slots. "
+                + "If you are still here, the client did not crash.");
+        }
+        catch (Exception ex)
+        {
+            Tell(player, "Harvest repro failed: " + ex.Message);
+            api.Logger.Error("[prosequor] reproharvest failed: {0}", ex);
+        }
+    }
+
+    static void Tell(IServerPlayer player, string message)
+    {
+        player.SendMessage(GlobalConstants.GeneralChatGroup, "[prosequor] " + message, EnumChatType.Notification);
+    }
+#endif
 }

@@ -21,5 +21,5 @@ if defined VINTAGESTORYDATA (
   set "MODS=%APPDATA%\VintagestoryData\Mods"
 )
 
-python "%VSPYTHONTK%\build.py" "%~dp0." --copy-to "%MODS%\prosequor.zip"
+python "%VSPYTHONTK%\build.py" "%~dp0." --force --copy-to "%MODS%\prosequor.zip"
 exit /b %ERRORLEVEL%

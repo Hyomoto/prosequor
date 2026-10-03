@@ -8,10 +8,8 @@
       "verb": "prosequor:cat-eyes",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 14,
-        "fromValue": 0.05555556,
-        "toScore": 18,
-        "toValue": 0.27777778
+        "from": [14, 18],
+        "to": [0.05555556, 0.27777778]
       }
     },
     {
@@ -21,12 +19,8 @@
       "verb": "prosequor:ranged-speed",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": 70,
-        "midScore": 10,
-        "midValue": 100,
-        "toScore": 18,
-        "toValue": 120,
+        "from": [0, 18],
+        "to": [70, 100, 120],
         "round": "ceil"
       }
     },
@@ -37,12 +31,20 @@
       "verb": "prosequor:ranged-acc",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": 30,
-        "midScore": 10,
-        "midValue": 100,
-        "toScore": 18,
-        "toValue": 140,
+        "from": [0, 18],
+        "to": [30, 100, 140],
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:per-ranged-distance",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:ranged-distance",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "from": [0, 18],
+        "to": [-15, 0, 10],
         "round": "ceil"
       }
     }

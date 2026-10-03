@@ -73,8 +73,11 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 : null,
             StringComparison.Ordinal);
 
+    ProgressionProfile ActiveProgression =>
+        ProsequorModSystem.For(entity.Api)?.Progression ?? ProgressionProfile.Baseline;
+
     public float PlayerXpUntilNext =>
-        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel);
+        XpCurves.XpUntilNextPlayerLevel(state.PlayerXp, state.PlayerLevel, ActiveProgression.MaxPlayerLevel);
 
     public bool HasSkillAccess(string skillId) =>
         skillAccess.IsUnbound || skillAccess.Contains(skillId);
@@ -94,6 +97,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         TryLoadFromPlayer();
+        entity.WatchedAttributes.RegisterModifiedListener("characterClass", OnClassProfileChanged);
+        entity.WatchedAttributes.RegisterModifiedListener("extraTraits", OnClassProfileChanged);
     }
 
     public override void AfterInitialized(bool onFirstSpawn)
@@ -119,6 +124,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
         else
         {
+            entity.WatchedAttributes.UnregisterListener(OnClassProfileChanged);
             FlushPendingWire(forceChannelSnapshot: false);
             FlushSave();
             if (entity is EntityPlayer eplr && !string.IsNullOrEmpty(eplr.PlayerUID))
@@ -128,6 +134,29 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         base.OnEntityDespawn(despawn);
+    }
+
+    /// <summary>
+    /// Class / extras changed: rebind skill access and remirror effective scores; deltas stay.
+    /// </summary>
+    void OnClassProfileChanged()
+    {
+        if (entity.World.Side != EnumAppSide.Server || !loaded)
+        {
+            return;
+        }
+
+        ISkillRegistry? registry = ProsequorModSystem.For(entity.Api)?.Registry;
+        IServerPlayer? player = entity is EntityPlayer eplr ? eplr.Player as IServerPlayer : null;
+        if (registry != null)
+        {
+            BindClassSkillAccess(player, registry);
+        }
+
+        RemirrorAttributeScores();
+        RebuildAbilityCache();
+        NotifyAttributeEffectsApplied();
+        BumpProgressRevision();
     }
 
     void OnMirrorChanged()
@@ -227,7 +256,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         Dictionary<string, int> snapshot = new(StringComparer.OrdinalIgnoreCase);
         foreach (string id in catalog)
         {
-            snapshot[id] = progress.GetAttribute(id, catalog);
+            // Client mirror stores effective scores in Attributes.
+            snapshot[id] = progress.Attributes.TryGetValue(id, out int score)
+                ? score
+                : AttributeGrowth.DefaultScore;
         }
 
         return snapshot;
@@ -241,7 +273,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         foreach (string id in catalog)
         {
             before.TryGetValue(id, out int previous);
-            if (previous != after.GetAttribute(id, catalog))
+            int next = after.Attributes.TryGetValue(id, out int score)
+                ? score
+                : AttributeGrowth.DefaultScore;
+            if (previous != next)
             {
                 return true;
             }
@@ -321,24 +356,62 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         {
             PlayerProgressState.EnsureSkillEntries(state, registry);
             RefreshAllSkillCaps();
+            ConvertAttributeDeltasIfNeeded();
             BindClassSkillAccess(player, registry);
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            ProgressStore.MirrorUnlocks(entity, state);
             RebuildAbilityCache();
             NotifyAttributeEffectsApplied();
             SendOwnerSnapshot();
             return;
         }
 
-        state = ProgressStore.Load(player, registry, ProsequorModSystem.For(entity.Api)?.AttributeStats);
+        state = ProgressStore.Load(
+            player,
+            registry,
+            ProsequorModSystem.For(entity.Api)?.AttributeStats,
+            ActiveProgression.MaxPlayerLevel);
         loaded = true;
         dirty = false;
         RefreshAllSkillCaps();
+        ConvertAttributeDeltasIfNeeded();
         BindClassSkillAccess(player, registry);
-        ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+        ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
         RebuildAbilityCache();
         BumpProgressRevision();
         NotifyAttributeEffectsApplied();
         SendOwnerSnapshot();
+    }
+
+    /// <summary>Rewrite public WA attribute scores from live baselines + stored deltas.</summary>
+    public void RemirrorAttributeScores()
+    {
+        if (entity.World.Side != EnumAppSide.Server || !loaded)
+        {
+            return;
+        }
+
+        ProgressStore.MirrorAttributeScores(entity, state, AttributeCatalog(), GetAttribute);
+    }
+
+    void ConvertAttributeDeltasIfNeeded()
+    {
+        if (!AttributeScoreMath.NeedsAbsoluteToDeltaMigration(state))
+        {
+            return;
+        }
+
+        IReadOnlyList<string> catalog = AttributeCatalog();
+        Dictionary<string, int> baselines = CurrentAttributeBaselines(catalog);
+        AttributeScoreMath.ConvertAbsoluteToDeltas(state, baselines, catalog);
+        MarkPersistDirty();
+        RemirrorAttributeScores();
+    }
+
+    Dictionary<string, int> CurrentAttributeBaselines(IReadOnlyList<string>? catalog = null)
+    {
+        IReadOnlyList<string> ids = catalog ?? AttributeCatalog();
+        ITraitAttributeRegistry? traits = ProsequorModSystem.For(entity.Api)?.TraitAttributes;
+        return TraitAttributeConverter.ResolveBaseline(entity, traits, ids);
     }
 
     /// <summary>
@@ -378,6 +451,12 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             });
             BumpProgressRevision();
         }
+
+        // Skill set changed with class/extras; remirror when WA listener did not already.
+        RemirrorAttributeScores();
+        RebuildAbilityCache();
+        NotifyAttributeEffectsApplied();
+        BumpProgressRevision();
     }
 
     void NotifyAttributeScoreChanged(string attributeId)
@@ -438,9 +517,62 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         EnsureLoaded(splr, registry);
     }
 
+    /// <summary>
+    /// Copy <c>characterClass</c> and <c>extraTraits</c> onto <see cref="State"/> so parked
+    /// scores use the same baseline as live progress. Marks the blob dirty when they change.
+    /// </summary>
+    public void CaptureClassProfile()
+    {
+        if (entity.World?.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        string? classCode = entity.WatchedAttributes?.GetString("characterClass");
+        string[]? extras = entity.WatchedAttributes?.GetStringArray("extraTraits");
+        if (string.Equals(state.CharacterClass, classCode, StringComparison.Ordinal)
+            && TraitsEqual(state.ExtraTraits, extras))
+        {
+            return;
+        }
+
+        state.CharacterClass = classCode;
+        state.ExtraTraits = extras == null ? null : (string[])extras.Clone();
+        MarkPersistDirty();
+    }
+
+    static bool TraitsEqual(string[]? left, string[]? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left == null || right == null || left.Length != right.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < left.Length; i++)
+        {
+            if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public void FlushSave()
     {
-        if (entity.World.Side != EnumAppSide.Server || !dirty)
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        CaptureClassProfile();
+        if (!dirty)
         {
             return;
         }
@@ -507,11 +639,16 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         {
             if (pending.Unlocks.Count > 1 || (pending.AttributeScores && pending.Unlocks.Count > 0))
             {
-                ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+                ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
             }
             else
             {
-                ProgressStore.ApplyVisibleMirror(entity, state, pending.ToPublicChange(), AttributeCatalog());
+                ProgressStore.ApplyVisibleMirror(
+                    entity,
+                    state,
+                    pending.ToPublicChange(),
+                    AttributeCatalog(),
+                    GetAttribute);
             }
         }
 
@@ -555,6 +692,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         syncSeq++;
+        network.SendProgressionProfile(splr, ActiveProgression);
         network.SendProgressSnapshot(splr, ProgressChannelCodec.BuildSnapshot(state, syncSeq, AttributeCatalog()));
     }
 
@@ -665,14 +803,15 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         if (entity is EntityPlayer eplr && eplr.Player is IServerPlayer splr)
         {
             pending.Clear();
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            CaptureClassProfile();
+            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
             ProgressStore.WriteModData(splr, state);
             dirty = false;
             SendOwnerSnapshot();
         }
         else
         {
-            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog());
+            ProgressStore.MirrorToEntity(entity, state, AttributeCatalog(), GetAttribute);
         }
 
         Changed?.Invoke();
@@ -710,15 +849,46 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         return s.GetTier(nodeId);
     }
 
-    public int GetAttribute(string id) => state.GetAttribute(id, AttributeCatalog());
+    public int GetAttribute(string id)
+    {
+        IReadOnlyList<string> catalog = AttributeCatalog();
+        string? canonical = CanonicalAttribute(id);
+        if (canonical == null)
+        {
+            return AttributeGrowth.DefaultScore;
+        }
+
+        // Client: WA merge stores effective scores in Attributes (not deltas).
+        if (entity.World.Side != EnumAppSide.Server)
+        {
+            return state.Attributes.TryGetValue(canonical, out int effective)
+                ? effective
+                : AttributeGrowth.DefaultScore;
+        }
+
+        // Server pre-migration: still absolute until ConvertAttributeDeltasIfNeeded.
+        if (state.Schema < PlayerProgressState.AttributeDeltaSchema)
+        {
+            return state.Attributes.TryGetValue(canonical, out int abs)
+                ? abs
+                : AttributeGrowth.DefaultScore;
+        }
+
+        int baseline = CurrentAttributeBaselines(catalog).TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = state.GetAttributeDelta(canonical, catalog);
+        return AttributeScoreMath.Effective(baseline, delta);
+    }
 
     public float GetAttributeBucket(string id) => state.GetAttributeBucket(id, AttributeCatalog());
 
     public void GetPlayerBar(out float intoLevel, out int needForNext, out int level)
     {
         level = state.PlayerLevel;
-        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level);
-        needForNext = XpCurves.XpToNextPlayerLevel(level);
+        int cap = ActiveProgression.MaxPlayerLevel;
+        intoLevel = XpCurves.InLevelPlayerXp(state.PlayerXp, level, cap);
+        needForNext = XpCurves.XpToNextPlayerLevel(level, cap);
         if (needForNext <= 0)
         {
             intoLevel = 1f;
@@ -778,6 +948,11 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         amount = ApplySkillXpModifiers(skillId, amount, fact);
+        if (mode == XpAwardMode.Earn)
+        {
+            amount = ActiveProgression.ScaleEarn(amount);
+        }
+
         if (amount <= 0f)
         {
             return;
@@ -813,7 +988,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     {
         float playerXpBefore = state.PlayerXp;
         int playerLevelBefore = state.PlayerLevel;
-        float barFillBefore = LevelUpHudMath.PlayerBarFill(playerXpBefore, playerLevelBefore);
+        float barFillBefore = PlayerBarFill(playerXpBefore, playerLevelBefore);
         if (!TryApplyPlayerXp(amount, out int beforeLevel, out float applied, out IReadOnlyList<string> attributeGains))
         {
             MarkPersistDirty();
@@ -844,7 +1019,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             playerLevelBefore: beforeLevel,
             playerLevelAfter: state.PlayerLevel,
             playerBarFillBefore: barFillBefore,
-            playerBarFillAfter: LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+            playerBarFillAfter: PlayerBarFill(state.PlayerXp, state.PlayerLevel),
             attributeGains: attributeGains);
     }
 
@@ -921,7 +1096,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         float skillBeforeXp = skill.Xp;
         float playerXpBefore = state.PlayerXp;
         int playerLevelBeforeCommit = state.PlayerLevel;
-        float playerBarFillBefore = LevelUpHudMath.PlayerBarFill(playerXpBefore, playerLevelBeforeCommit);
+        float playerBarFillBefore = PlayerBarFill(playerXpBefore, playerLevelBeforeCommit);
         skill.Xp += amount;
         skill.Level = Math.Min(max, XpCurves.SkillLevelFromLifetimeXp(skill.Xp));
         float skillCapFloor = XpCurves.LifetimeXpForSkillLevel(max);
@@ -954,7 +1129,10 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         IReadOnlyList<string> attributeGains = Array.Empty<string>();
         if (skillLeveled)
         {
-            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(skillBefore, skill.Level);
+            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(
+                skillBefore,
+                skill.Level,
+                ActiveProgression.SkillPointsPerSkillLevel);
             if (milestonePoints > 0)
             {
                 state.UnlockPoints += milestonePoints;
@@ -999,7 +1177,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 playerLevelBeforeCommit,
                 state.PlayerLevel,
                 playerBarFillBefore,
-                LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+                PlayerBarFill(state.PlayerXp, state.PlayerLevel),
                 attributeGains);
         }
     }
@@ -1014,18 +1192,20 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         beforeLevel = state.PlayerLevel;
         applied = 0f;
         attributeGains = Array.Empty<string>();
-        if (amount <= 0f || state.PlayerLevel >= XpCurves.PlayerMaxLevel)
+        int playerCap = ActiveProgression.MaxPlayerLevel;
+        if (amount <= 0f || state.PlayerLevel >= playerCap)
         {
             return false;
         }
 
         float beforeXp = state.PlayerXp;
-        float capFloor = XpCurves.LifetimeXpForPlayerLevel(XpCurves.PlayerMaxLevel);
+        float capFloor = XpCurves.LifetimeXpForPlayerLevel(playerCap, playerCap);
         state.PlayerXp = Math.Min(capFloor, state.PlayerXp + amount);
-        state.PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(state.PlayerXp);
+        state.PlayerLevel = XpCurves.PlayerLevelFromLifetimeXp(state.PlayerXp, playerCap);
         int gained = state.PlayerLevel - beforeLevel;
         if (gained > 0)
         {
+            state.UnlockPoints += ActiveProgression.SkillPointsForPlayerLevel(beforeLevel, state.PlayerLevel);
             IReadOnlyList<LevelUpRuleDef> levelUpRules =
                 ProsequorModSystem.For(entity.Api)?.LevelUps.Rules
                 ?? Array.Empty<LevelUpRuleDef>();
@@ -1035,7 +1215,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 beforeLevel,
                 state.PlayerLevel,
                 entity.World.Rand,
-                AttributeCatalog());
+                AttributeCatalog(),
+                CurrentAttributeBaselines());
             attributeGains = winners;
             foreach (string winner in winners)
             {
@@ -1062,15 +1243,17 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     public void SetPlayerLevel(int level)
     {
         EnsureServer();
-        level = Math.Clamp(level, XpCurves.PlayerMinLevel, XpCurves.PlayerMaxLevel);
+        int playerCap = ActiveProgression.MaxPlayerLevel;
+        level = Math.Clamp(level, XpCurves.PlayerMinLevel, playerCap);
         int before = state.PlayerLevel;
-        float barFillBefore = LevelUpHudMath.PlayerBarFill(state.PlayerXp, before);
+        float barFillBefore = PlayerBarFill(state.PlayerXp, before);
         state.PlayerLevel = level;
-        state.PlayerXp = XpCurves.LifetimeXpForPlayerLevel(level);
+        state.PlayerXp = XpCurves.LifetimeXpForPlayerLevel(level, playerCap);
         int gained = level - before;
         IReadOnlyList<string> attributeGains = Array.Empty<string>();
         if (gained > 0)
         {
+            state.UnlockPoints += ActiveProgression.SkillPointsForPlayerLevel(before, state.PlayerLevel);
             IReadOnlyList<LevelUpRuleDef> levelUpRules =
                 ProsequorModSystem.For(entity.Api)?.LevelUps.Rules
                 ?? Array.Empty<LevelUpRuleDef>();
@@ -1080,7 +1263,8 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 before,
                 state.PlayerLevel,
                 entity.World.Rand,
-                AttributeCatalog());
+                AttributeCatalog(),
+                CurrentAttributeBaselines());
             foreach (string winner in attributeGains)
             {
                 NotifyAttributeScoreChanged(winner);
@@ -1109,7 +1293,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             playerLevelBefore: before,
             playerLevelAfter: state.PlayerLevel,
             playerBarFillBefore: barFillBefore,
-            playerBarFillAfter: LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel),
+            playerBarFillAfter: PlayerBarFill(state.PlayerXp, state.PlayerLevel),
             attributeGains: attributeGains);
     }
 
@@ -1138,14 +1322,19 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
 
         IReadOnlyList<string> catalog = AttributeCatalog();
+        ConvertAttributeDeltasIfNeeded();
         PlayerProgressState.EnsureAttributeEntries(state, catalog);
         score = Math.Clamp(score, 0, AttributeGrowth.MaxScore);
-        if (state.Attributes[canonical] == score)
+        int baseline = CurrentAttributeBaselines(catalog).TryGetValue(canonical, out int b)
+            ? b
+            : AttributeGrowth.DefaultScore;
+        int delta = AttributeScoreMath.DeltaFromEffective(baseline, score);
+        if (state.Attributes[canonical] == delta)
         {
             return;
         }
 
-        state.Attributes[canonical] = score;
+        state.Attributes[canonical] = delta;
         NotifyVisibleProgress(VisibleProgressChange.AttributeScores());
         NotifyAttributeScoreChanged(canonical);
     }
@@ -1189,14 +1378,17 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         level = Math.Clamp(level, XpCurves.SkillMinLevel, max);
         SkillProgressState skill = state.GetOrCreateSkill(skillId);
         int before = skill.Level;
-        float playerBarFill = LevelUpHudMath.PlayerBarFill(state.PlayerXp, state.PlayerLevel);
+        float playerBarFill = PlayerBarFill(state.PlayerXp, state.PlayerLevel);
         skill.Level = level;
         skill.Xp = XpCurves.LifetimeXpForSkillLevel(level);
         RefreshSkillCap(skillId);
         int milestonePoints = 0;
         if (level > before)
         {
-            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(before, level);
+            milestonePoints = UnlockPointPolicy.PointsForSkillLevelGain(
+                before,
+                level,
+                ActiveProgression.SkillPointsPerSkillLevel);
             if (milestonePoints > 0)
             {
                 state.UnlockPoints += milestonePoints;
@@ -1253,7 +1445,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
                 registered,
                 this,
                 ProsequorModSystem.For(entity.Api)?.Registry,
-                ProsequorModSystem.For(entity.Api)?.LevelUps.Rules,
+                ActiveProgression.SpecializationLevels,
                 code,
                 out SkillTreeNodeDef? node,
                 out tier,
@@ -1291,6 +1483,50 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         return true;
     }
 
+    /// <summary>
+    /// Own tier 1 of a tree node without spending points or running purchase checks.
+    /// No-op when the node is already owned, the skill is inaccessible, or the node is unknown.
+    /// </summary>
+    public bool StampStartingNode(string skillId, string nodeId)
+    {
+        EnsureServer();
+        if (string.IsNullOrWhiteSpace(skillId) || string.IsNullOrWhiteSpace(nodeId))
+        {
+            return false;
+        }
+
+        if (ProsequorModSystem.For(entity.Api)?.Registry.TryGet(skillId, out SkillDef? registered) != true
+            || registered == null)
+        {
+            return false;
+        }
+
+        skillId = registered.Id;
+        if (!HasSkillAccess(skillId))
+        {
+            return false;
+        }
+
+        if (registered.Tree == null || !registered.Tree.TryGet(nodeId, out SkillTreeNodeDef node))
+        {
+            return false;
+        }
+
+        if (GetUnlockTier(skillId, node.Id) > 0)
+        {
+            return false;
+        }
+
+        SkillProgressState skill = state.GetOrCreateSkill(skillId);
+        skill.SetTier(node.Id, 1);
+        RefreshSkillCap(skillId);
+        NotifyVisibleProgress(VisibleProgressChange.Unlock(skillId, node.Id));
+        RebuildAbilityCache();
+        BumpProgressRevision();
+        RefreshOpenCraftGrid(skillId, node.Id);
+        return true;
+    }
+
     public UnlockPurchaseStatus TryPurchaseNode(string skillId, string nodeId)
     {
         EnsureServer();
@@ -1318,7 +1554,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             registered,
             this,
             ProsequorModSystem.For(entity.Api)?.Registry,
-            ProsequorModSystem.For(entity.Api)?.LevelUps.Rules,
+            ActiveProgression.SpecializationLevels,
             nodeId,
             out SkillTreeNodeDef? node,
             out int tier);
@@ -1390,6 +1626,9 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
 
         throw new ArgumentException($"Unknown Prosequor skill '{skillId}'.", nameof(skillId));
     }
+
+    float PlayerBarFill(float lifetimeXp, int level) =>
+        LevelUpHudMath.PlayerBarFill(lifetimeXp, level, ActiveProgression.MaxPlayerLevel);
 
     int ResolveSkillMaxLevel(string skillId)
     {

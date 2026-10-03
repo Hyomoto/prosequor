@@ -1,3 +1,4 @@
+using Newtonsoft.Json.Linq;
 using Prosequor.Ability;
 using Prosequor.Data;
 using Vintagestory.API.Common;
@@ -15,6 +16,10 @@ public static class TraitAttributeFixtures
         VerifyVanillaClassTotals();
         VerifyClassTraitStrip();
         VerifyExtraTraitFoldMath();
+        VerifyEmptyStatCatalogFallsBackForMutate();
+        VerifyClassProfileScores();
+        VerifyClassProfileSkills();
+        VerifyClassProfileTraits();
     }
 
     static void VerifyResolveScoresMath()
@@ -175,6 +180,269 @@ public static class TraitAttributeFixtures
                 "[prosequor] Hunter + soldier extras expected STR/PER 11/13, got {0}/{1}.",
                 withSoldier[AttributeIds.Strength],
                 withSoldier[AttributeIds.Perception]));
+        }
+    }
+
+    static void VerifyEmptyStatCatalogFallsBackForMutate()
+    {
+        if (!ReferenceEquals(AttributeIds.CatalogIds(new AttributeStatRegistry()), AttributeIds.All))
+        {
+            Assert.Fail("[prosequor] Empty attribute-stat registry must fall back to AttributeIds.All.");
+        }
+
+        TraitAttributeRegistry registry = BuildShippedRegistry();
+        CharacterSystem fake = new();
+        fake.characterClasses.Add(new CharacterClass
+        {
+            Code = "hunter",
+            Traits = ["focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"]
+        });
+
+        TraitAttributeConverter.MutateLoadedClasses(fake, registry, new AttributeStatRegistry());
+        if (!registry.ClassStartingScores.TryGetValue("hunter", out Dictionary<string, int>? scores)
+            || scores[AttributeIds.Perception] != 13
+            || scores[AttributeIds.Strength] != 9)
+        {
+            Assert.Fail("[prosequor] Mutate with unloaded attribute stats must still cache hunter trait scores.");
+        }
+    }
+
+
+    static void VerifyClassProfileScores()
+    {
+        TraitAttributeRegistry registry = BuildShippedRegistry();
+        List<string> warnings = new();
+        ClassProfile? profile = ClassProfile.Compile(
+            "scout",
+            new ClassProfileJson
+            {
+                attributes = new Dictionary<string, int>
+                {
+                    ["strength"] = 12,
+                    ["nope"] = 3
+                }
+            },
+            AttributeIds.All,
+            skills: null,
+            warnings.Add);
+        if (profile == null
+            || profile.Attributes[AttributeIds.Strength] != 12
+            || profile.Attributes[AttributeIds.Perception] != AttributeGrowth.DefaultScore
+            || profile.Attributes.ContainsKey("nope")
+            || warnings.Count != 1)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Class profile expected strength 12, other attributes 10, and one unknown-attribute warning. Warnings: {0}.",
+                string.Join("; ", warnings)));
+        }
+
+        string[] hunterTraits =
+        [
+            "focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"
+        ];
+        Dictionary<string, int> plain = TraitAttributeConverter.ResolveClassScores(registry, "hunter", hunterTraits);
+        Dictionary<string, int> classic = TraitAttributeConverter.ResolveScores(registry, hunterTraits);
+        if (plain[AttributeIds.Strength] != classic[AttributeIds.Strength]
+            || plain[AttributeIds.Perception] != classic[AttributeIds.Perception]
+            || plain[AttributeIds.Strength] != 9
+            || plain[AttributeIds.Perception] != 13)
+        {
+            Assert.Fail("[prosequor] A class with no profile must match trait-only starting scores.");
+        }
+
+        registry.RegisterClassProfile(profile);
+        CharacterSystem fake = new();
+        fake.characterClasses.Add(new CharacterClass
+        {
+            Code = "scout",
+            Traits = ["soldier"]
+        });
+        fake.characterClasses.Add(new CharacterClass
+        {
+            Code = "hunter",
+            Traits = hunterTraits
+        });
+        TraitAttributeConverter.MutateLoadedClasses(fake, registry);
+
+        if (!registry.ClassStartingScores.TryGetValue("scout", out Dictionary<string, int>? scout)
+            || scout[AttributeIds.Strength] != 14
+            || scout[AttributeIds.Perception] != AttributeGrowth.DefaultScore)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Scout strength 12 plus soldier +2 expected STR/PER 14/10, got {0}/{1}.",
+                scout?[AttributeIds.Strength],
+                scout?[AttributeIds.Perception]));
+        }
+
+        if (!registry.ClassStartingScores.TryGetValue("hunter", out Dictionary<string, int>? hunter)
+            || hunter[AttributeIds.Strength] != 9
+            || hunter[AttributeIds.Perception] != 13)
+        {
+            Assert.Fail("[prosequor] Hunter without a class profile must keep trait-only scores after mutate.");
+        }
+    }
+
+    static void VerifyClassProfileSkills()
+    {
+        SkillRegistry skills = new();
+        skills.Register(new SkillDef { Id = "always" });
+        skills.Register(new SkillDef { Id = "gated", IsOptional = true });
+
+        JObject raw = JObject.Parse("""
+            {
+              "attributes": {},
+              "skills": ["gated", "always", "no-such-skill", " "],
+              "unlocks": [
+                { "skill": "prosequor:hunting", "nodes": ["tracker", ""], "level": 4 }
+              ]
+            }
+            """);
+        ClassProfileJson? row = ClassProfile.ReadJson(raw, out string? error);
+        List<string> warnings = new();
+        ClassProfile? profile = ClassProfile.Compile("scout", row, AttributeIds.All, skills, warnings.Add);
+        if (error != null
+            || profile == null
+            || profile.Skills.Count != 2
+            || !profile.Skills.Contains("gated")
+            || !profile.Skills.Contains("always")
+            || profile.Unlocks.Count != 1
+            || profile.Unlocks[0].Skill != "prosequor:hunting"
+            || profile.Unlocks[0].Nodes.Count != 1
+            || profile.Unlocks[0].Nodes[0] != "tracker")
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Class profile JSON expected gated+always and unlock tracker. Error={0}. Skills=[{1}].",
+                error,
+                profile == null ? "" : string.Join(", ", profile.Skills)));
+        }
+
+        foreach (string id in AttributeIds.All)
+        {
+            if (profile.Attributes[id] != AttributeGrowth.DefaultScore)
+            {
+                Assert.Fail(string.Format(
+                    "[prosequor] Empty class attributes must stay {0} for {1}, got {2}.",
+                    AttributeGrowth.DefaultScore,
+                    id,
+                    profile.Attributes[id]));
+            }
+        }
+
+        TraitAttributeRegistry traits = new();
+        traits.RegisterClassProfile(profile);
+        traits.SetClassOriginalTraits("scout", Array.Empty<string>());
+        traits.RebuildClassSkillSets(skills);
+        IReadOnlySet<string> set = traits.SkillSetForClass("scout");
+        if (!set.Contains("always")
+            || !set.Contains("gated")
+            || set.Contains("no-such-skill")
+            || ReferenceEquals(set, traits.BaseSkillSet))
+        {
+            Assert.Fail("[prosequor] Class skills must add known optional ids and skip unknown ones.");
+        }
+
+        ClassProfile? baseOnly = ClassProfile.Compile(
+            "commoner",
+            new ClassProfileJson { skills = ["always"] },
+            AttributeIds.All,
+            skills,
+            warn: null);
+        traits.RegisterClassProfile(baseOnly!);
+        traits.SetClassOriginalTraits("commoner", Array.Empty<string>());
+        traits.RebuildClassSkillSets(skills);
+        if (!ReferenceEquals(traits.SkillSetForClass("commoner"), traits.BaseSkillSet))
+        {
+            Assert.Fail("[prosequor] Class skills already in the base must keep the shared base reference.");
+        }
+    }
+
+    static void VerifyClassProfileTraits()
+    {
+        List<string> warnings = new();
+        ClassProfile? profile = ClassProfile.Compile(
+            "hunter",
+            new ClassProfileJson
+            {
+                traits = ["Soldier", "-Claustrophobic", "-bowyer", "tinkerer", "focused", "-", " ", "ghost"]
+            },
+            AttributeIds.All,
+            skills: null,
+            warnings.Add);
+        if (profile == null
+            || profile.TraitEdits.Count != 6
+            || profile.TraitEdits[0].Remove
+            || profile.TraitEdits[0].Code != "Soldier"
+            || !profile.TraitEdits[1].Remove
+            || profile.TraitEdits[1].Code != "Claustrophobic"
+            || warnings.Count != 2)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Trait edits expected 6 ops and 2 blank warnings, got {0} ops and [{1}].",
+                profile?.TraitEdits.Count,
+                string.Join("; ", warnings)));
+        }
+
+        string[] hunterTraits =
+        [
+            "focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"
+        ];
+        string[] withoutThenWith = profile.ApplyTraitEdits(
+            hunterTraits,
+            code => code == "ghost" ? null : code,
+            warnings.Add);
+        if (withoutThenWith.Count(code => string.Equals(code, "soldier", StringComparison.OrdinalIgnoreCase)) != 1
+            || withoutThenWith.Contains("claustrophobic", StringComparer.OrdinalIgnoreCase)
+            || withoutThenWith.Contains("bowyer", StringComparer.OrdinalIgnoreCase)
+            || withoutThenWith.Contains("ghost", StringComparer.OrdinalIgnoreCase)
+            || !withoutThenWith.Contains("tinkerer"))
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Trait edits expected soldier and tinkerer, without claustrophobic, bowyer, or ghost. Got [{0}].",
+                string.Join(", ", withoutThenWith)));
+        }
+
+        ClassProfile? removeAfterAdd = ClassProfile.Compile(
+            "hunter",
+            new ClassProfileJson { traits = ["soldier", "-soldier"] },
+            AttributeIds.All,
+            skills: null,
+            warn: null);
+        string[] removed = removeAfterAdd!.ApplyTraitEdits(hunterTraits, resolveAdd: null, warn: null);
+        if (removed.Contains("soldier", StringComparer.OrdinalIgnoreCase))
+        {
+            Assert.Fail("[prosequor] A later -soldier must remove an added soldier.");
+        }
+
+        TraitAttributeRegistry registry = BuildShippedRegistry();
+        registry.RegisterClassProfile(profile);
+        CharacterSystem fake = new();
+        fake.TraitsByCode["soldier"] = new Trait { Code = "soldier" };
+        fake.TraitsByCode["tinkerer"] = new Trait { Code = "tinkerer" };
+        fake.characterClasses.Add(new CharacterClass
+        {
+            Code = "hunter",
+            Traits = hunterTraits
+        });
+        TraitAttributeConverter.MutateLoadedClasses(fake, registry);
+
+        if (!registry.ClassStartingScores.TryGetValue("hunter", out Dictionary<string, int>? scores)
+            || scores[AttributeIds.Strength] != 11
+            || scores[AttributeIds.Perception] != 13
+            || scores[AttributeIds.Resilience] != 10)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Hunter trait edits expected STR/PER/RES 11/13/10, got {0}/{1}/{2}.",
+                scores?[AttributeIds.Strength],
+                scores?[AttributeIds.Perception],
+                scores?[AttributeIds.Resilience]));
+        }
+
+        string[] leftover = fake.characterClasses[0].Traits ?? Array.Empty<string>();
+        if (leftover.Length != 1 || leftover[0] != "tinkerer")
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Hunter leftover traits expected [tinkerer], got [{0}].",
+                string.Join(", ", leftover)));
         }
     }
 

@@ -27,4 +27,5 @@ public sealed class AnimalAlertState
     public int LastSyncedAlert = -1;
     public int LastSyncedThreat = -1;
     public int LastSyncedFlags = -1;
+    public long LastSyncedTarget = -1;
 }

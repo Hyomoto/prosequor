@@ -15,9 +15,10 @@ public static class XpCurves
     public const int SkillMaxLevel = 100;
 
     /// <summary>XP needed to go from <paramref name="level"/> to level+1. 0 at cap.</summary>
-    public static int XpToNextPlayerLevel(int level)
+    public static int XpToNextPlayerLevel(int level, int maxPlayerLevel = PlayerMaxLevel)
     {
-        if (level < PlayerMinLevel || level >= PlayerMaxLevel)
+        int cap = maxPlayerLevel < PlayerMinLevel ? PlayerMaxLevel : maxPlayerLevel;
+        if (level < PlayerMinLevel || level >= cap)
         {
             return 0;
         }
@@ -69,13 +70,14 @@ public static class XpCurves
     }
 
     /// <summary>Lifetime XP required to be at exactly <paramref name="level"/> (start of that level).</summary>
-    public static float LifetimeXpForPlayerLevel(int level)
+    public static float LifetimeXpForPlayerLevel(int level, int maxPlayerLevel = PlayerMaxLevel)
     {
-        level = Math.Clamp(level, PlayerMinLevel, PlayerMaxLevel);
+        int cap = maxPlayerLevel < PlayerMinLevel ? PlayerMaxLevel : maxPlayerLevel;
+        level = Math.Clamp(level, PlayerMinLevel, cap);
         float sum = 0f;
         for (int i = PlayerMinLevel; i < level; i++)
         {
-            sum += XpToNextPlayerLevel(i);
+            sum += XpToNextPlayerLevel(i, cap);
         }
 
         return sum;
@@ -94,8 +96,9 @@ public static class XpCurves
         return sum;
     }
 
-    public static int PlayerLevelFromLifetimeXp(float lifetimeXp)
+    public static int PlayerLevelFromLifetimeXp(float lifetimeXp, int maxPlayerLevel = PlayerMaxLevel)
     {
+        int cap = maxPlayerLevel < PlayerMinLevel ? PlayerMaxLevel : maxPlayerLevel;
         if (lifetimeXp <= 0f)
         {
             return PlayerMinLevel;
@@ -103,9 +106,9 @@ public static class XpCurves
 
         int level = PlayerMinLevel;
         float remaining = lifetimeXp;
-        while (level < PlayerMaxLevel)
+        while (level < cap)
         {
-            int need = XpToNextPlayerLevel(level);
+            int need = XpToNextPlayerLevel(level, cap);
             if (remaining < need)
             {
                 break;
@@ -142,9 +145,9 @@ public static class XpCurves
         return level;
     }
 
-    public static float InLevelPlayerXp(float lifetimeXp, int level)
+    public static float InLevelPlayerXp(float lifetimeXp, int level, int maxPlayerLevel = PlayerMaxLevel)
     {
-        return Math.Max(0f, lifetimeXp - LifetimeXpForPlayerLevel(level));
+        return Math.Max(0f, lifetimeXp - LifetimeXpForPlayerLevel(level, maxPlayerLevel));
     }
 
     public static float InLevelSkillXp(float lifetimeXp, int level)
@@ -152,15 +155,15 @@ public static class XpCurves
         return Math.Max(0f, lifetimeXp - LifetimeXpForSkillLevel(level));
     }
 
-    public static float XpUntilNextPlayerLevel(float lifetimeXp, int level)
+    public static float XpUntilNextPlayerLevel(float lifetimeXp, int level, int maxPlayerLevel = PlayerMaxLevel)
     {
-        int need = XpToNextPlayerLevel(level);
+        int need = XpToNextPlayerLevel(level, maxPlayerLevel);
         if (need <= 0)
         {
             return 0f;
         }
 
-        float into = InLevelPlayerXp(lifetimeXp, level);
+        float into = InLevelPlayerXp(lifetimeXp, level, maxPlayerLevel);
         return Math.Max(0f, need - into);
     }
 

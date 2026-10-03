@@ -2,27 +2,6 @@
   "id": "resilience",
   "rules": [
     {
-      "id": "prosequor:res-frost-damage",
-      "minScore": 0,
-      "hook": "prosequor:player-interaction",
-      "verb": "prosequor:on-damage",
-      "phase": "amount",
-      "action": "prosequor:add-mapped-number",
-      "when": {
-        "tags": [
-          "damage:frost",
-          "damage:weather"
-        ]
-      },
-      "params": {
-        "op": "scale",
-        "fromScore": 0,
-        "fromValue": 2.5,
-        "toScore": 18,
-        "toValue": 0.5
-      }
-    },
-    {
       "id": "prosequor:res-last-stand",
       "minScore": 14,
       "hook": "prosequor:player-interaction",
@@ -30,10 +9,20 @@
       "phase": "last-stand",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 14,
-        "fromValue": 10,
-        "toScore": 18,
-        "toValue": 2,
+        "from": [14, 18],
+        "to": [10, 2],
+        "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:con-health",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:health",
+      "action": "prosequor:add-mapped-number",
+      "params": {
+        "from": [0, 18],
+        "to": [-5, 5],
         "round": "ceil"
       }
     },
@@ -44,12 +33,8 @@
       "verb": "prosequor:fall-damage-factor",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": 125,
-        "midScore": 10,
-        "midValue": 100,
-        "toScore": 18,
-        "toValue": 90,
+        "from": [0, 18],
+        "to": [125, 100, 90],
         "round": "ceil"
       }
     },
@@ -60,12 +45,8 @@
       "verb": "prosequor:fall-damage-threshold",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": 100,
-        "midScore": 10,
-        "midValue": 100,
-        "toScore": 18,
-        "toValue": 150,
+        "from": [0, 18],
+        "to": [100, 100, 150],
         "round": "ceil"
       }
     }

@@ -2,17 +2,34 @@
   "id": "constitution",
   "rules": [
     {
-      "id": "prosequor:con-health",
+      "id": "prosequor:con-hunger-delay",
       "minScore": 0,
       "hook": "prosequor:player-interaction",
-      "verb": "prosequor:health",
+      "verb": "prosequor:hunger-delay",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": -5,
-        "toScore": 18,
-        "toValue": 5,
+        "from": [13, 18],
+        "to": [0, 50],
         "round": "ceil"
+      }
+    },
+    {
+      "id": "prosequor:res-frost-damage",
+      "minScore": 0,
+      "hook": "prosequor:player-interaction",
+      "verb": "prosequor:on-damage",
+      "phase": "amount",
+      "action": "prosequor:add-mapped-number",
+      "when": {
+        "tags": [
+          "damage:frost",
+          "damage:weather"
+        ]
+      },
+      "params": {
+        "op": "multiply",
+        "from": [0, 18],
+        "to": [2.5, 0.5]
       }
     },
     {
@@ -22,24 +39,20 @@
       "verb": "prosequor:satiety",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 0,
-        "fromValue": -200,
-        "toScore": 18,
-        "toValue": 800,
+        "from": [0, 18],
+        "to": [-200, 800],
         "round": "ceil"
       }
     },
     {
-      "id": "prosequor:con-hunger-delay",
+      "id": "prosequor:con-walk-speed",
       "minScore": 0,
       "hook": "prosequor:player-interaction",
-      "verb": "prosequor:hunger-delay",
+      "verb": "prosequor:walk-speed",
       "action": "prosequor:add-mapped-number",
       "params": {
-        "fromScore": 13,
-        "fromValue": 0,
-        "toScore": 18,
-        "toValue": 50,
+        "from": [0, 18],
+        "to": [0, 15],
         "round": "ceil"
       }
     }

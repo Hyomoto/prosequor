@@ -119,7 +119,13 @@ public class MigratedFixtureTests
     public void AttributeBucketAxisFixtures_Should_Pass() => AttributeBucketAxisFixtures.VerifyAll();
 
     [Fact]
+    public void AttributeRingRelaxFixtures_Should_Pass() => AttributeRingRelaxFixtures.VerifyAll();
+
+    [Fact]
     public void LevelUpRuleFixtures_Should_Pass() => LevelUpRuleFixtures.VerifyAll();
+
+    [Fact]
+    public void ProgressionProfileFixtures_Should_Pass() => ProgressionProfileFixtures.VerifyAll();
 
     [Fact]
     public void ContributionDependsOnFixtures_Should_Pass() => ContributionDependsOnFixtures.VerifyAll();
@@ -138,6 +144,9 @@ public class MigratedFixtureTests
 
     [Fact]
     public void TraitAttributeFixtures_Should_Pass() => TraitAttributeFixtures.VerifyAll();
+
+    [Fact]
+    public void OptionsFixtures_Should_Pass() => OptionsFixtures.VerifyAll();
 
     [Fact]
     public void SkillAccessFixtures_Should_Pass() => SkillAccessFixtures.VerifyAll();
@@ -174,4 +183,10 @@ public class MigratedFixtureTests
 
     [Fact]
     public void HuntingFixtures_Should_Pass() => HuntingFixtures.VerifyAll();
+
+    [Fact]
+    public void TrackMarkFixtures_Should_Pass() => TrackMarkFixtures.VerifyAll();
+
+    [Fact]
+    public void FocusShotFixtures_Should_Pass() => FocusShotFixtures.VerifyAll();
 }

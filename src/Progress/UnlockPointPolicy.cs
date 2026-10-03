@@ -1,25 +1,23 @@
+using Prosequor.Data;
+
 namespace Prosequor.Progress;
 
 /// <summary>
-/// Unlock-point awards from skill level milestones: one point every
-/// <see cref="SkillLevelsPerPoint"/> skill levels gained.
+/// Unlock-point awards from skill levels listed on the progression table.
 /// </summary>
 public static class UnlockPointPolicy
 {
-    public const int SkillLevelsPerPoint = 20;
-
     /// <summary>
     /// Unlock points granted when a skill rises from <paramref name="before"/> to
-    /// <paramref name="after"/>. Counts each crossed multiple of
-    /// <see cref="SkillLevelsPerPoint"/> (e.g. 0→40 with interval 20 awards 2).
+    /// <paramref name="after"/>. One point per listed level in (before, after].
     /// </summary>
-    public static int PointsForSkillLevelGain(int before, int after)
+    public static int PointsForSkillLevelGain(int before, int after, LevelSet levels)
     {
-        if (after <= before || SkillLevelsPerPoint <= 0)
+        if (after <= before)
         {
             return 0;
         }
 
-        return after / SkillLevelsPerPoint - before / SkillLevelsPerPoint;
+        return levels.CountCrossed(before, after);
     }
 }

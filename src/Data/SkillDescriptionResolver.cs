@@ -75,6 +75,16 @@ public static class SkillDescriptionResolver
             }
 
             string format = expression.Value<string>("format")?.Trim() ?? "";
+            if (format == QualityPercentFormat)
+            {
+                if (!TryValidateQualityPercent(skillId, expression, rootEffects, tree, errors))
+                {
+                    valid = false;
+                }
+
+                continue;
+            }
+
             if (format.Length > 0 && format is not ("percent" or "fractionPercent"))
             {
                 errors.Add($"Skill '{skillId}': unknown description format '{format}'.");
@@ -104,7 +114,8 @@ public static class SkillDescriptionResolver
 
     /// <summary>
     /// Resolves skill-list description args for the current ownership snapshot.
-    /// Unowned node operands contribute 0 inside sums.
+    /// Unowned node operands contribute 0 inside sums. An unowned
+    /// <c>qualityPercent</c> table yields an empty arg.
     /// </summary>
     public static IReadOnlyList<object> Resolve(
         SkillDef skill,
@@ -147,6 +158,12 @@ public static class SkillDescriptionResolver
             }
 
             string format = expression.Value<string>("format")?.Trim() ?? "";
+            if (format == QualityPercentFormat)
+            {
+                args.Add(ResolveQualityPercent(skill, progress, expression));
+                continue;
+            }
+
             JArray? sum = expression["sum"] as JArray;
             if (sum == null || sum.Count == 0)
             {
@@ -422,6 +439,151 @@ public static class SkillDescriptionResolver
 
         value = matches[0];
         return true;
+    }
+
+    internal const string QualityPercentFormat = "qualityPercent";
+
+    /// <summary>
+    /// Reads a <c>qualityPercent</c> expression. <paramref name="useMin"/> selects the
+    /// first knot; otherwise the last. <c>end</c> omitted means last.
+    /// </summary>
+    internal static bool TryReadQualityPercent(
+        JObject expression,
+        out string selector,
+        out bool useMin,
+        out string? error)
+    {
+        selector = "";
+        useMin = false;
+        error = null;
+
+        JToken? sum = expression["sum"];
+        if (sum != null && sum.Type != JTokenType.Null)
+        {
+            error = "qualityPercent does not use sum.";
+            return false;
+        }
+
+        selector = expression.Value<string>("table")?.Trim() ?? "";
+        if (selector.Length == 0)
+        {
+            error = "qualityPercent requires a table selector.";
+            return false;
+        }
+
+        string end = expression.Value<string>("end")?.Trim() ?? "";
+        if (end.Length == 0 || end == "max")
+        {
+            return true;
+        }
+
+        if (end == "min")
+        {
+            useMin = true;
+            return true;
+        }
+
+        error = $"unknown qualityPercent end '{end}'.";
+        return false;
+    }
+
+    /// <summary>
+    /// Picks the first or last finite number from a quality table array.
+    /// </summary>
+    internal static bool TryReduceQualityTable(
+        JToken value,
+        bool useMin,
+        out decimal knot,
+        out string? error)
+    {
+        knot = 0m;
+        error = null;
+        if (value is not JArray array || array.Count == 0)
+        {
+            error = "qualityPercent table must be a non-empty number array.";
+            return false;
+        }
+
+        foreach (JToken? cell in array)
+        {
+            if (cell == null || !TryToDecimal(cell, out _))
+            {
+                error = "qualityPercent table entries must be finite numbers.";
+                return false;
+            }
+        }
+
+        JToken chosen = useMin ? array[0]! : array[array.Count - 1]!;
+        return TryToDecimal(chosen, out knot);
+    }
+
+    static bool TryValidateQualityPercent(
+        string skillId,
+        JObject expression,
+        IReadOnlyList<AbilityEffectJson> rootEffects,
+        SkillTreeDef? tree,
+        List<string> errors)
+    {
+        if (!TryReadQualityPercent(expression, out string selector, out bool useMin, out string? readError))
+        {
+            errors.Add($"Skill '{skillId}': {readError}");
+            return false;
+        }
+
+        if (!TryValidateSelector(skillId, selector, rootEffects, tree, allowMissing: false, errors))
+        {
+            return false;
+        }
+
+        if (!TryLookupValidatedTable(selector, rootEffects, tree, out JToken? table) || table == null)
+        {
+            errors.Add(
+                $"Skill '{skillId}': description param '{selector}' qualityPercent table must be a non-empty number array.");
+            return false;
+        }
+
+        if (!TryReduceQualityTable(table, useMin, out _, out string? reduceError))
+        {
+            errors.Add($"Skill '{skillId}': description param '{selector}' {reduceError}");
+            return false;
+        }
+
+        return true;
+    }
+
+    static object ResolveQualityPercent(SkillDef skill, IPlayerProgress? progress, JObject expression)
+    {
+        if (!TryReadQualityPercent(expression, out string selector, out bool useMin, out _)
+            || !TryResolveSelector(skill, progress, selector, allowMissingNode: false, out JToken? table)
+            || table == null
+            || !TryReduceQualityTable(table, useMin, out decimal knot, out _))
+        {
+            return "";
+        }
+
+        return new FormattedDescriptionArg { Value = knot, Format = "fractionPercent" };
+    }
+
+    static bool TryLookupValidatedTable(
+        string selector,
+        IReadOnlyList<AbilityEffectJson> rootEffects,
+        SkillTreeDef? tree,
+        out JToken? table)
+    {
+        table = null;
+        if (!TryParseSelector(selector, out string? nodeId, out string scopedSelector, out _))
+        {
+            return false;
+        }
+
+        if (nodeId != null)
+        {
+            return tree != null
+                && tree.TryGet(nodeId, out SkillTreeNodeDef node)
+                && TryFindPathOnAnyTier(node, scopedSelector, out table);
+        }
+
+        return TryMatchParam(rootEffects, scopedSelector, out table);
     }
 
     internal static bool TryGetParamPath(JObject? parameters, string path, out JToken token)

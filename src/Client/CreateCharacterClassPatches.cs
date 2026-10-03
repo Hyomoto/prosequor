@@ -180,6 +180,7 @@ public static class CreateCharacterClassPatches
 
         tab.Compose(
             composer,
+            bgBounds,
             rightX,
             top + 25,
             rightW,

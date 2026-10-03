@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using Prosequor.Client.Tracker;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
@@ -9,36 +9,32 @@ using Vintagestory.GameContent;
 namespace Prosequor.Client;
 
 /// <summary>
-/// Debug overlay: alert / threat bars above animals that currently sense the player.
+/// Animal Sense: alert / threat bars above the living marked animal.
 /// Fill = alert 0–100. Color: calm (cyan), awake (amber), committed (red).
-/// A thin secondary fill shows current threat.
+/// A thin secondary fill shows current threat. A calm animal still draws empty bars.
 /// </summary>
 public sealed class AnimalAlertOverlayRenderer : IRenderer, IDisposable
 {
     const float BarWidth = 60f;
     const float BarHeight = 8f;
     const float ThreatHeight = 3f;
-    const float MaxDistance = 48f;
+    const string SkillId = "hunting";
+    const string NodeId = "animal-sense";
 
     readonly ICoreClientAPI capi;
+    readonly TrackerOutlineRenderer tracker;
     readonly MeshRef outlineRef;
     readonly MeshRef fillRef;
     readonly Matrixf mv = new();
-    bool enabled = true;
 
     public double RenderOrder => 0.95;
 
     public int RenderRange => 50;
 
-    public bool Enabled
-    {
-        get => enabled;
-        set => enabled = value;
-    }
-
-    public AnimalAlertOverlayRenderer(ICoreClientAPI api)
+    public AnimalAlertOverlayRenderer(ICoreClientAPI api, TrackerOutlineRenderer tracker)
     {
         capi = api;
+        this.tracker = tracker;
         outlineRef = api.Render.UploadMesh(LineMeshUtil.GetRectangle(-1));
         fillRef = api.Render.UploadMesh(QuadMeshUtil.GetQuad());
         api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "prosequor-alert");
@@ -46,46 +42,37 @@ public sealed class AnimalAlertOverlayRenderer : IRenderer, IDisposable
 
     public void OnRenderFrame(float deltaTime, EnumRenderStage stage)
     {
-        if (!enabled || capi.World?.Player?.Entity == null)
+        IPlayer? player = capi.World?.Player;
+        EntityPlayer? self = player?.Entity;
+        if (player == null || self == null)
         {
             return;
         }
 
-        EntityPlayer self = capi.World.Player.Entity;
         IShaderProgram? shader = capi.Render.CurrentActiveShader;
-        if (shader == null)
+        if (shader == null || tracker.MarkedId is not long markedId)
         {
             return;
         }
 
-        IEnumerable<Entity> entities = capi.World.LoadedEntities.Values;
-        foreach (Entity entity in entities)
+        if ((ProsequorModSystem.GetProgress(player)?.GetUnlockTier(SkillId, NodeId) ?? 0) <= 0)
         {
-            if (entity == null
-                || !entity.Alive
-                || entity.EntityId == self.EntityId
-                || entity.Pos.Dimension != self.Pos.Dimension)
-            {
-                continue;
-            }
-
-            if (!Ability.AnimalAlertService.TryReadOverlay(
-                    entity,
-                    out int alert,
-                    out int threat,
-                    out bool awake,
-                    out bool committed))
-            {
-                continue;
-            }
-
-            if (self.Pos.SquareDistanceTo(entity.Pos) > MaxDistance * MaxDistance)
-            {
-                continue;
-            }
-
-            DrawBar(shader, self, entity, alert, threat, awake, committed);
+            return;
         }
+
+        Entity? entity = capi.World?.GetEntityById(markedId);
+        if (entity == null || !entity.Alive || entity.Pos.Dimension != self.Pos.Dimension)
+        {
+            return;
+        }
+
+        Ability.AnimalAlertService.TryReadOverlay(
+            entity,
+            out int alert,
+            out int threat,
+            out bool awake,
+            out bool committed);
+        DrawBar(shader, self, entity, alert, threat, awake, committed);
     }
 
     void DrawBar(

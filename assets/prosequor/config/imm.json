@@ -15,6 +15,68 @@
           "Min": 0,
           "Max": 100,
           "Step": 1
+        },
+        {
+          "Type": "Boolean",
+          "Label": "prosequor:imm-show-vanilla-traits-tab",
+          "Description": "prosequor:imm-show-vanilla-traits-tab-desc",
+          "Map": "ShowVanillaTraitsTab"
+        }
+      ]
+    },
+    {
+      "ConfigFile": "prosequor/server.json",
+      "ConfigLabel": "prosequor:imm-preset-label",
+      "Description": "prosequor:imm-preset-desc",
+      "ConfigSource": "ModConfig",
+      "ConfigSide": "Server",
+      "Settings": [
+        {
+          "Type": "Dropdown",
+          "Label": "prosequor:imm-preset",
+          "Description": "prosequor:imm-preset-setting-desc",
+          "Map": "preset",
+          "Options": [
+            { "Label": "prosequor:imm-preset-multiplayer", "Value": "prosequor:multiplayer" },
+            { "Label": "prosequor:imm-preset-singleplayer", "Value": "prosequor:singleplayer" },
+            { "Label": "prosequor:imm-preset-mmo", "Value": "prosequor:mmo" }
+          ]
+        },
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-max-player-level",
+          "Description": "prosequor:imm-max-player-level-desc",
+          "Map": "maxPlayerLevel",
+          "Min": 1,
+          "Max": 1000,
+          "Step": 1
+        },
+        {
+          "Type": "Slider",
+          "Label": "prosequor:imm-xp-gain",
+          "Description": "prosequor:imm-xp-gain-desc",
+          "Map": "xpGain",
+          "Min": 0,
+          "Max": 1000,
+          "Step": 0.1
+        },
+        {
+          "Type": "String",
+          "Label": "prosequor:imm-skill-points-per-player-level",
+          "Description": "prosequor:imm-skill-points-per-player-level-desc",
+          "Map": "skillPointsPerPlayerLevel"
+        },
+        {
+          "Type": "String",
+          "Label": "prosequor:imm-skill-points-per-skill-level",
+          "Description": "prosequor:imm-skill-points-per-skill-level-desc",
+          "Map": "skillPointsPerSkillLevel"
+        },
+        {
+          "Type": "String",
+          "Label": "prosequor:imm-specialization-levels",
+          "Description": "prosequor:imm-specialization-levels-desc",
+          "Map": "specializationLevels"
         }
       ]
     }

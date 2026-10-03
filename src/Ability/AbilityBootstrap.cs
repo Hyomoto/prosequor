@@ -545,13 +545,18 @@ public static class AbilityBootstrap
                      VerbIds.BasicSlots,
                      VerbIds.RangedSpeed,
                      VerbIds.RangedAcc,
+                     VerbIds.RangedDamage,
+                     VerbIds.RangedDistance,
                      VerbIds.FallDamageFactor,
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
+                     VerbIds.WalkSpeed,
+                     VerbIds.HungerRate,
                      VerbIds.AnimalThreat,
                      VerbIds.CritChance,
-                     VerbIds.WholeVesselLootChance
+                     VerbIds.WholeVesselLootChance,
+                     VerbIds.MechanicalsDamage
                  })
         {
             hooks.RegisterPhase(
@@ -590,6 +595,42 @@ public static class AbilityBootstrap
             HookIds.PlayerInteraction,
             VerbIds.UnawareDamage,
             HookIds.Threshold,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Range,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Focus,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.TrackMark,
+            HookIds.Angle,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.FocusShot,
+            HookIds.Hold,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.FocusShot,
+            HookIds.Amount,
+            typeof(PlayerInteractionContext),
+            typeof(float));
+        hooks.RegisterPhase(
+            HookIds.PlayerInteraction,
+            VerbIds.CritDamage,
+            HookIds.Default,
             typeof(PlayerInteractionContext),
             typeof(float));
 
@@ -790,13 +831,18 @@ public static class AbilityBootstrap
                      VerbIds.BasicSlots,
                      VerbIds.RangedSpeed,
                      VerbIds.RangedAcc,
+                     VerbIds.RangedDamage,
+                     VerbIds.RangedDistance,
                      VerbIds.FallDamageFactor,
                      VerbIds.FallDamageThreshold,
                      VerbIds.TemporalRecoverRate,
                      VerbIds.TemporalDrainRate,
+                     VerbIds.WalkSpeed,
+                     VerbIds.HungerRate,
                      VerbIds.AnimalThreat,
                      VerbIds.CritChance,
-                     VerbIds.WholeVesselLootChance
+                     VerbIds.WholeVesselLootChance,
+                     VerbIds.MechanicalsDamage
                  })
         {
             actions.Register(new AddMappedNumberIntAction(mapped));
@@ -819,8 +865,15 @@ public static class AbilityBootstrap
 
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Amount));
         actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.UnawareDamage, HookIds.Threshold));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Range));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Focus));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.TrackMark, HookIds.Angle));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.FocusShot, HookIds.Hold));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.FocusShot, HookIds.Amount));
+        actions.Register(new NumberPlayerInteractionFloatAction(VerbIds.CritDamage));
 
         actions.Register(new AddMappedNumberFloatAction(VerbIds.CatEyes));
+        actions.Register(new AddMappedNumberInteractionSpeedAction());
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.Amount));
         actions.Register(new AddMappedNumberOnDamageAction(HookIds.LastStand));
     }

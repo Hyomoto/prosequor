@@ -19,6 +19,7 @@ public static class ProgressParkFixtures
         VerifyHydrateRejectsEmpty();
         VerifyMissingSkillBarIsZero();
         VerifySkillBarCompleteAtKindCap();
+        VerifyParkedAttributeUsesClassBaseline();
     }
 
     static void VerifyParkAndRead()
@@ -109,7 +110,7 @@ public static class ProgressParkFixtures
         }
 
         SkillProgressState mapped = once.Skills["forestry"];
-        if (once.Schema != PlayerProgressState.CurrentSchema
+        if (once.Schema != PlayerProgressState.UnlockRemapSchema
             || mapped.GetTier("seasoned-logger") != 3
             || mapped.GetTier("lumberjack") != 1
             || mapped.GetTier("forester") != 0
@@ -188,6 +189,45 @@ public static class ProgressParkFixtures
             || cookingNeed != 1)
         {
             Assert.Fail("[prosequor] ProgressPark fixture failed (skill bar complete at kind cap).");
+        }
+    }
+
+    static void VerifyParkedAttributeUsesClassBaseline()
+    {
+        TraitAttributeRegistry traits = new();
+        traits.SetClassStartingScores(
+            "hunter",
+            new Dictionary<string, int> { [AttributeIds.Strength] = 14 });
+
+        PlayerProgressState state = new()
+        {
+            Schema = PlayerProgressState.CurrentSchema,
+            CharacterClass = "hunter"
+        };
+        state.Attributes[AttributeIds.Strength] = 0;
+
+        ParkedPlayerProgress parked = new(
+            state,
+            ruleIndex: null,
+            registry: null,
+            skillAccess: null,
+            maxPlayerLevel: XpCurves.PlayerMaxLevel,
+            traits: traits);
+        if (parked.GetAttribute(AttributeIds.Strength) != 14)
+        {
+            Assert.Fail("[prosequor] ProgressPark fixture failed (class baseline).");
+        }
+
+        PlayerProgressState absolute = new()
+        {
+            Schema = PlayerProgressState.AttributeDeltaSchema - 1,
+            CharacterClass = "hunter"
+        };
+        absolute.Attributes[AttributeIds.Strength] = 12;
+        ParkedPlayerProgress legacy = new(absolute, traits: traits);
+        if (legacy.GetAttribute(AttributeIds.Strength) != 12)
+        {
+            Assert.Fail("[prosequor] ProgressPark fixture failed (pre-delta absolute score).");
         }
     }
 
