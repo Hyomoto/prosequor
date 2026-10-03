@@ -86,9 +86,9 @@ public static class EntityHarvestableDropsPatch
             {
                 continue;
             }
-
+            // grow happens elsewhere, we just set the drops
             slot.Itemstack = i < drops.Length ? drops[i] : null;
-            slot.MarkDirty();
+            
         }
     }
 
