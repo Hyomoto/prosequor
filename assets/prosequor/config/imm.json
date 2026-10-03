@@ -17,7 +17,7 @@
           "Step": 1
         },
         {
-          "Type": "Switch",
+          "Type": "Boolean",
           "Label": "prosequor:imm-show-vanilla-traits-tab",
           "Description": "prosequor:imm-show-vanilla-traits-tab-desc",
           "Map": "ShowVanillaTraitsTab"
@@ -61,19 +61,19 @@
           "Step": 0.1
         },
         {
-          "Type": "Text",
+          "Type": "String",
           "Label": "prosequor:imm-skill-points-per-player-level",
           "Description": "prosequor:imm-skill-points-per-player-level-desc",
           "Map": "skillPointsPerPlayerLevel"
         },
         {
-          "Type": "Text",
+          "Type": "String",
           "Label": "prosequor:imm-skill-points-per-skill-level",
           "Description": "prosequor:imm-skill-points-per-skill-level-desc",
           "Map": "skillPointsPerSkillLevel"
         },
         {
-          "Type": "Text",
+          "Type": "String",
           "Label": "prosequor:imm-specialization-levels",
           "Description": "prosequor:imm-specialization-levels-desc",
           "Map": "specializationLevels"

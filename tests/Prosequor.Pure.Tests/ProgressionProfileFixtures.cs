@@ -304,14 +304,12 @@ public static class ProgressionProfileFixtures
         };
         List<string> warnings = new();
         ServerProgressionConfig.Normalize(defaults, presets, baseline, out ProgressionProfile resolved, warnings);
-        if (defaults.Count != 2
-            || defaults["preset"]?.Value<string>() != ProgressionProfile.MultiplayerPresetId
-            || defaults["xpGain"]?.Value<int>() != 3
+        if (!IsFullTable(defaults, ProgressionProfile.MultiplayerPresetId, xpGain: 3)
             || Math.Abs(resolved.XpGain - 3f) > 0.0001f
             || resolved.SpecializationSlotCount(50) != 5
             || warnings.Count != 0)
         {
-            Assert.Fail("[prosequor] Progression fixture failed (default table migrates, custom xp stays).");
+            Assert.Fail("[prosequor] Progression fixture failed (default table fills, custom xp stays).");
         }
 
         JObject single = new()
@@ -322,23 +320,60 @@ public static class ProgressionProfileFixtures
         };
         warnings.Clear();
         ServerProgressionConfig.Normalize(single, presets, baseline, out ProgressionProfile singleResolved, warnings);
-        if (single["xpGain"] != null
+        if (single["xpGain"]?.Value<int>() != 2
             || single["specializationLevels"]?.Value<string>() != "20,40"
+            || single["appliedPreset"]?.Value<string>() != ProgressionProfile.SinglePlayerPresetId
+            || single.Count != 7
             || Math.Abs(singleResolved.XpGain - 2f) > 0.0001f
             || singleResolved.SpecializationSlotCount(50) != 2)
         {
-            Assert.Fail("[prosequor] Progression fixture failed (single-player drops its own xp gain).");
+            Assert.Fail("[prosequor] Progression fixture failed (single-player keeps its xp and a custom slot list).");
         }
 
         single["preset"] = ProgressionProfile.MmoPresetId;
         warnings.Clear();
         ServerProgressionConfig.Normalize(single, presets, baseline, out ProgressionProfile mmoResolved, warnings);
         if (mmoResolved.PresetId != ProgressionProfile.MmoPresetId
-            || single["specializationLevels"] != null
+            || single["specializationLevels"]?.Value<string>() != "20,40"
+            || single["appliedPreset"]?.Value<string>() != ProgressionProfile.MmoPresetId
+            || single["xpGain"]?.Value<int>() != 1
             || Math.Abs(mmoResolved.XpGain - 1f) > 0.0001f
             || mmoResolved.SpecializationSlotCount(50) != 2)
         {
-            Assert.Fail("[prosequor] Progression fixture failed (switching to MMO drops matching slots).");
+            Assert.Fail("[prosequor] Progression fixture failed (switching to MMO follows single-player xp, keeps the slot override).");
+        }
+
+        JObject followed = new()
+        {
+            ["preset"] = ProgressionProfile.MultiplayerPresetId,
+            ["appliedPreset"] = ProgressionProfile.MultiplayerPresetId,
+            ["maxPlayerLevel"] = 50,
+            ["skillPointsPerPlayerLevel"] = "1..50",
+            ["skillPointsPerSkillLevel"] = "20,40,60,80,100",
+            ["specializationLevels"] = "10,20,30,40,50",
+            ["xpGain"] = 1
+        };
+        followed["preset"] = ProgressionProfile.SinglePlayerPresetId;
+        warnings.Clear();
+        ServerProgressionConfig.Normalize(followed, presets, baseline, out ProgressionProfile followedProfile, warnings);
+        if (!IsFullTable(followed, ProgressionProfile.SinglePlayerPresetId, xpGain: 2)
+            || Math.Abs(followedProfile.XpGain - 2f) > 0.0001f
+            || warnings.Count != 0)
+        {
+            Assert.Fail("[prosequor] Progression fixture failed (preset swap rewrites values that still match).");
+        }
+
+        followed["preset"] = ProgressionProfile.MmoPresetId;
+        followed["xpGain"] = 3;
+        warnings.Clear();
+        ServerProgressionConfig.Normalize(followed, presets, baseline, out ProgressionProfile keptGain, warnings);
+        if (followed["xpGain"]?.Value<int>() != 3
+            || followed["specializationLevels"]?.Value<string>() != "20,40"
+            || followed["appliedPreset"]?.Value<string>() != ProgressionProfile.MmoPresetId
+            || Math.Abs(keptGain.XpGain - 3f) > 0.0001f
+            || keptGain.SpecializationSlotCount(50) != 2)
+        {
+            Assert.Fail("[prosequor] Progression fixture failed (preset swap keeps a custom xp gain).");
         }
 
         JObject customGain = new()
@@ -348,7 +383,10 @@ public static class ProgressionProfileFixtures
         };
         warnings.Clear();
         ServerProgressionConfig.Normalize(customGain, presets, baseline, out ProgressionProfile kept, warnings);
-        if (customGain["xpGain"]?.Value<int>() != 3 || Math.Abs(kept.XpGain - 3f) > 0.0001f)
+        if (customGain["xpGain"]?.Value<int>() != 3
+            || customGain["appliedPreset"]?.Value<string>() != ProgressionProfile.MmoPresetId
+            || customGain["specializationLevels"]?.Value<string>() != "20,40"
+            || Math.Abs(kept.XpGain - 3f) > 0.0001f)
         {
             Assert.Fail("[prosequor] Progression fixture failed (MMO keeps a custom xp gain).");
         }
@@ -362,7 +400,9 @@ public static class ProgressionProfileFixtures
         ServerProgressionConfig.Normalize(unknown, presets, baseline, out ProgressionProfile missing, warnings);
         if (warnings.Count != 1
             || unknown["preset"]?.Value<string>() != "prosequor:missing"
+            || unknown["appliedPreset"]?.Value<string>() != "prosequor:missing"
             || unknown["xpGain"]?.Value<int>() != 4
+            || unknown.Count != 7
             || Math.Abs(missing.XpGain - 4f) > 0.0001f
             || missing.SpecializationSlotCount(50) != 5)
         {
@@ -375,8 +415,7 @@ public static class ProgressionProfileFixtures
         };
         warnings.Clear();
         ServerProgressionConfig.Normalize(openPlayer, presets, baseline, out _, warnings);
-        if (openPlayer.Count != 1
-            || openPlayer["preset"]?.Value<string>() != ProgressionProfile.MultiplayerPresetId
+        if (!IsFullTable(openPlayer, ProgressionProfile.MultiplayerPresetId, xpGain: 1)
             || warnings.Count != 0)
         {
             Assert.Fail("[prosequor] Progression fixture failed (open player list matches 1..50).");
@@ -397,6 +436,18 @@ public static class ProgressionProfileFixtures
         {
             Assert.Fail("[prosequor] Progression fixture failed (open ends use the list cap).");
         }
+    }
+
+    static bool IsFullTable(JObject root, string presetId, int xpGain, string? specializationLevels = null)
+    {
+        return root.Count == 7
+            && root["preset"]?.Value<string>() == presetId
+            && root["appliedPreset"]?.Value<string>() == presetId
+            && root["maxPlayerLevel"]?.Value<int>() == 50
+            && root["skillPointsPerPlayerLevel"]?.Value<string>() == "1..50"
+            && root["skillPointsPerSkillLevel"]?.Value<string>() == "20,40,60,80,100"
+            && root["specializationLevels"]?.Value<string>() == (specializationLevels ?? "10,20,30,40,50")
+            && root["xpGain"]?.Value<int>() == xpGain;
     }
 
     static Dictionary<string, ProgressionProfile> StockPresets()

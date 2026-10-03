@@ -17,6 +17,7 @@ using Prosequor.Xp.Adapters;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -94,6 +95,7 @@ public class ProsequorModSystem : ModSystem
     FishingCatchXpAdapter? fishingCatchXpAdapter;
     CraftXpAdapter? craftXpAdapter;
     ClayFormXpAdapter? clayFormXpAdapter;
+    EventBusListenerDelegate? immConfigListener;
     long activityWatchListenerId;
     long progressFlushListenerId;
     long animalAlertListenerId;
@@ -238,6 +240,10 @@ public class ProsequorModSystem : ModSystem
         {
             Dictionary<string, ProgressionProfile> presets = ProgressionLoader.LoadPresets(api, baseline);
             Progression = ProgressionLoader.ApplyServerSelection(api, baseline, presets);
+            if (ProgressPark != null)
+            {
+                ProgressPark.MaxPlayerLevel = Progression.MaxPlayerLevel;
+            }
         }
         else
         {
@@ -370,6 +376,8 @@ public class ProsequorModSystem : ModSystem
         api.Event.PlayerJoin += OnPlayerJoin;
         api.Event.PlayerNowPlaying += OnPlayerNowPlaying;
         api.Event.PlayerDisconnect += OnPlayerDisconnect;
+        immConfigListener = OnImmServerConfig;
+        api.Event.RegisterEventBusListener(immConfigListener, 0.5, "imm." + ModId);
         ActivityWatch = new ActivityWatchService(api, XpRules);
         // Host (and anyone already spawned) inited before this listener existed.
         foreach (IServerPlayer player in api.World.AllOnlinePlayers.OfType<IServerPlayer>())
@@ -437,6 +445,7 @@ public class ProsequorModSystem : ModSystem
         progressionProfileHandler = () => skillsTab?.RefreshAfterProgressionSync();
         Network.ProgressionProfileReceived += progressionProfileHandler;
 
+#if DEBUG
         api.ChatCommands
             .GetOrCreate("prosequor")
             .WithDescription("Prosequor client tools")
@@ -453,6 +462,7 @@ public class ProsequorModSystem : ModSystem
                         $"v{Fingerprint.Version} {Fingerprint.Hash}");
                 })
             .EndSubCommand();
+#endif
 
         // Character dialog exists after BlockTexturesLoaded / gui load.
         // Stats compose is a Harmony postfix on Essentials ComposeStatsGui.
@@ -481,6 +491,11 @@ public class ProsequorModSystem : ModSystem
             sapi.Event.PlayerJoin -= OnPlayerJoin;
             sapi.Event.PlayerNowPlaying -= OnPlayerNowPlaying;
             sapi.Event.PlayerDisconnect -= OnPlayerDisconnect;
+            if (immConfigListener != null)
+            {
+                sapi.Event.UnregisterEventBusListener(immConfigListener);
+                immConfigListener = null;
+            }
             if (activityWatchListenerId != 0)
             {
                 sapi.Event.UnregisterGameTickListener(activityWatchListenerId);
@@ -651,6 +666,32 @@ public class ProsequorModSystem : ModSystem
         }
 
         PushProgression(byPlayer);
+    }
+
+    void OnImmServerConfig(string eventName, ref EnumHandling handling, IAttribute data)
+    {
+        if (sapi == null)
+        {
+            return;
+        }
+
+        ProgressionProfile baseline = ProgressionLoader.LoadBaseline(sapi);
+        Dictionary<string, ProgressionProfile> presets = ProgressionLoader.LoadPresets(sapi, baseline);
+        Progression = ProgressionLoader.ApplyServerSelection(sapi, baseline, presets);
+        if (ProgressPark != null)
+        {
+            ProgressPark.MaxPlayerLevel = Progression.MaxPlayerLevel;
+        }
+
+        if (sapi.World?.AllOnlinePlayers == null)
+        {
+            return;
+        }
+
+        foreach (IServerPlayer player in sapi.World.AllOnlinePlayers.OfType<IServerPlayer>())
+        {
+            PushProgression(player);
+        }
     }
 
     void PushProgression(IServerPlayer player)

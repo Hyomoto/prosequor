@@ -1080,18 +1080,29 @@ Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xp
 
 ### Server config
 
-File: `ModConfig/prosequor/server.json`.
+File: `ModConfig/prosequor/server.json`. Every progression key is stored.
 
 ```json
-{ "preset": "prosequor:multiplayer" }
+{
+  "preset": "prosequor:multiplayer",
+  "maxPlayerLevel": 50,
+  "skillPointsPerPlayerLevel": "1..50",
+  "skillPointsPerSkillLevel": "20,40,60,80,100",
+  "specializationLevels": "10,20,30,40,50",
+  "xpGain": 1,
+  "appliedPreset": "prosequor:multiplayer"
+}
 ```
 
 | Field | Meaning |
 | --- | --- |
 | `preset` | Preset id. Missing key is read as `prosequor:multiplayer` |
-| other progression keys | Applied after the preset. A key whose value matches the selected preset is removed when the file is loaded |
+| other progression keys | The value in effect. A missing key is filled from the selected preset when the file is loaded |
+| `appliedPreset` | Preset id the stored values were last aligned to. Set to the current `preset` when the file is loaded |
 
-An unknown preset id keeps the id and uses the baseline table. Keys in the file still apply. Changing `preset` drops stored keys the new preset already has and keeps keys that still differ.
+When `preset` and `appliedPreset` differ, a stored value that still matches `appliedPreset` is replaced with the new preset's value. A stored value that differs is kept. When `appliedPreset` is missing, values already in the file are treated as written for the current `preset`, and missing keys are filled from that preset.
+
+An unknown preset id keeps the id and uses the baseline table. Keys in the file still apply.
 
 ---
 

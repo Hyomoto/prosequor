@@ -16,7 +16,6 @@ Server console / in-game chat. Requires `controlserver`. Online players only (na
 | `/prosequor emptybuckets [player]` | optional player | Zero XP saturation buckets and pending accrued XP only |
 | `/prosequor setfriendliness <value> [entityId]` | looked-at entity or id | Replace friendliness score (admin Set; sentinel contributor) |
 | `/prosequor addfriendliness [amount] [entityId]` | looked-at entity or id | Earn friendliness via the real gain path (your UID, cooldown stamp, favorite roll). Default amount 1; skips the wait so you can fire it again |
-| `/prosequor finishbarrel` | looked-at block | Finish the targeted sealed barrel immediately (vanilla complete + pedigree / XP) |
 | `/prosequor pedigree` | held item, else looked-at entity/block | Dump maker / contributors (player names). Occupied hand inspects that stack; empty hand interrogates the target. `none` if no pedigree, `invalid` if nothing to inspect |
 
 Skill arguments accept the skill id or the caller’s localized display name. Attribute ids are the five stable ids above (case-insensitive).

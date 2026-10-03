@@ -5,7 +5,7 @@ using Vintagestory.API.Datastructures;
 namespace Prosequor.Data;
 
 /// <summary>
-/// Loads <c>progression.json</c>, preset files, and the sparse server config.
+/// Loads <c>progression.json</c>, preset files, and the server config.
 /// </summary>
 public static class ProgressionLoader
 {
@@ -111,7 +111,7 @@ public static class ProgressionLoader
     }
 
     /// <summary>
-    /// Reads <c>prosequor/server.json</c>, keeps only overrides that differ from the preset, and stores the file when it changes.
+    /// Reads <c>prosequor/server.json</c>, fills every progression key, and stores the file when it changes.
     /// </summary>
     public static ProgressionProfile ApplyServerSelection(
         ICoreAPI api,

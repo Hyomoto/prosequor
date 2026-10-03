@@ -130,6 +130,36 @@ public readonly struct LevelSet : IEquatable<LevelSet>
         return copy;
     }
 
+    /// <summary>Canonical list text: <c>20</c>, <c>1..50</c>, <c>20..100^20</c>, joined by commas.</summary>
+    public string Format()
+    {
+        LevelRun[] items = Items;
+        if (items.Length == 0)
+        {
+            return "";
+        }
+
+        string[] parts = new string[items.Length];
+        for (int i = 0; i < items.Length; i++)
+        {
+            LevelRun run = items[i];
+            if (run.GrantCount <= 1)
+            {
+                parts[i] = run.Start.ToString(CultureInfo.InvariantCulture);
+                continue;
+            }
+
+            string span = run.Start.ToString(CultureInfo.InvariantCulture)
+                + ".."
+                + run.End.ToString(CultureInfo.InvariantCulture);
+            parts[i] = run.Step <= 1
+                ? span
+                : span + "^" + run.Step.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return string.Join(",", parts);
+    }
+
     /// <summary>How many listed levels sit in (before, after].</summary>
     public int CountCrossed(int before, int after)
     {
