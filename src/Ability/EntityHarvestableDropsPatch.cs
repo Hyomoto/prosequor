@@ -87,8 +87,8 @@ public static class EntityHarvestableDropsPatch
                 continue;
             }
 
+            // Slot packets do not grow the client carcass. SyncHarvestableInv does.
             slot.Itemstack = i < drops.Length ? drops[i] : null;
-            slot.MarkDirty();
         }
     }
 
