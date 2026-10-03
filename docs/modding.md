@@ -20,6 +20,21 @@ In `modinfo.json`:
 
 Bare `hook`, `verb`, `action`, and lang keys are prefixed with `prosequor:`. Icon paths are not: a path without a domain is loaded from Prosequor. Use `yourmodid:textures/…` for your own icons.
 
+## Contents
+
+- [Build a skill](#build-a-skill)
+- [Fit existing content](#fit-existing-content)
+  - [Make your codes match a tag](#make-your-codes-match-a-tag)
+  - [Add XP or a node to someone else's skill](#add-xp-or-a-node-to-someone-elses-skill)
+  - [Only when another mod is loaded](#only-when-another-mod-is-loaded)
+  - [A skill only some classes should see](#a-skill-only-some-classes-should-see)
+- [Leave the traits tab up](#leave-the-traits-tab-up)
+- [Call it from a code mod](#call-it-from-a-code-mod)
+  - [Report a moment](#report-a-moment)
+  - [Read progress](#read-progress)
+  - [Fold a number at a moment you own](#fold-a-number-at-a-moment-you-own)
+  - [Register an action](#register-an-action)
+
 ---
 
 ## Build a skill
@@ -375,4 +390,71 @@ return mod.Pipeline.Run(
     baseSpeed);
 ```
 
-The hook, verb, and phase have to be a triple [reference.md](reference.md) already lists, and the context type has to be the one that verb uses. A new hook or action has to be registered inside Prosequor; another mod cannot add one.
+The hook, verb, and phase have to be a triple that is already registered, and the context type has to be the one that phase uses. Prosequor's triples are in [reference.md](reference.md) (Hooks).
+
+### Register an action
+
+Do this when a bonus needs behavior Prosequor does not ship, and other mods should name it from JSON. Register in `Start`, on the instance `For` returns. `Start` runs on the client and on the server. Skills compile after every mod's `Start`, so an action registered there is visible to every skill file.
+
+The handler is one hook, one verb, and one phase. Its context type and value type have to be the ones that phase was registered with. Registering the same action on that same triple again is an error.
+
+```csharp
+public sealed class SurveyBonusParams
+{
+    public float Amount { get; init; }
+}
+
+public sealed class SurveyBonusAction
+    : AbilityActionHandler<InteractionSpeedContext, float, SurveyBonusParams>
+{
+    public override ActionId Id => new("mymod:survey-bonus");
+    public override HookId Hook => HookIds.BlockInteraction;
+    public override VerbId Verb => VerbIds.InteractionSpeed;
+    public override PhaseId Phase => HookIds.Default;
+
+    protected override bool TryParse(
+        JObject? raw,
+        out SurveyBonusParams? parameters,
+        out string error)
+    {
+        parameters = new SurveyBonusParams
+        {
+            Amount = raw?.Value<float?>("amount") ?? 0f
+        };
+        error = "";
+        return true;
+    }
+
+    protected override float Apply(
+        InteractionSpeedContext context,
+        float value,
+        SurveyBonusParams parameters,
+        AbilityRuleSource source) =>
+        value + parameters.Amount;
+}
+```
+
+```csharp
+public override void Start(ICoreAPI api)
+{
+    ProsequorModSystem? mod = ProsequorModSystem.For(api);
+    mod?.Actions.Register(new SurveyBonusAction());
+}
+```
+
+Another mod names the id as written. A bare action id is read as `prosequor:`, so keep your domain on it.
+
+```json
+{
+  "hook": "block-interaction",
+  "verb": "interaction-speed",
+  "action": "mymod:survey-bonus",
+  "params": { "amount": 0.05 }
+}
+```
+
+The effect runs when that hook and verb already run. You do not call the action yourself.
+
+A hook or phase Prosequor has not registered has to be declared on `mod.Hooks` before the action. `RegisterPhase` takes the context type and the value type. Call `Pipeline.Run` at that moment, the same way as the fold above. Until something does, JSON that names the hook never runs.
+
+If the mod that registered the action is not loaded, that effect list fails to compile. A failed root list drops the skill's root effects. A failed tree is dropped, and the skill stays without it.
