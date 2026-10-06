@@ -19,12 +19,19 @@ public enum DeedToken
     Grown,
     /// <summary>Hoe converted soil into farmland (one emit per tilled tile).</summary>
     TillSoil,
-    /// <summary>Knife / rip harvest of a dead animal (meat and fat quantity).</summary>
+    /// <summary>Knife / rip harvest of a dead animal below cleaver-certain generation.</summary>
     Butchered,
-    /// <summary>Animal killed by a player arrow or thrown spear.</summary>
+    /// <summary>Player kill of a food animal below cleaver-certain generation.</summary>
     Hunted,
-    /// <summary>Animal caught in a basket / crate trap.</summary>
+    /// <summary>Food animal caught in a basket / crate trap, below cleaver-certain generation.</summary>
     Trapped,
+    /// <summary>
+    /// Player kill, or trap catch, of an animal at cleaver-certain generation
+    /// (<see cref="Prosequor.Xp.AnimalWeightCatalog.CleaverCertainGeneration"/>).
+    /// </summary>
+    Slaughtered,
+    /// <summary>Dead-animal harvest of an animal at cleaver-certain generation.</summary>
+    Dressed,
     /// <summary>Farmland slow-release fertilizer transferred into available nutrients.</summary>
     FertilizerAbsorbed,
     /// <summary>Firepit output that is a meal host (cooking pot), not a raw smelt or leftover pot.</summary>
@@ -90,14 +97,20 @@ public static class DeedTokenTags
     /// <summary>Hoe converted soil into farmland.</summary>
     public const string TillSoil = "till-soil";
 
-    /// <summary>Dead-animal harvest (knife or rip). Quantity is meat + fat after cooking yield.</summary>
+    /// <summary>Dead-animal harvest below cleaver-certain generation. Quantity is meat + fat after cooking yield.</summary>
     public const string Butchered = "butchered";
 
-    /// <summary>Animal killed by a player arrow or thrown spear.</summary>
+    /// <summary>Player kill of a food animal below cleaver-certain generation.</summary>
     public const string Hunted = "hunted";
 
-    /// <summary>Animal caught in a basket / crate trap.</summary>
+    /// <summary>Food animal caught in a basket / crate trap, below cleaver-certain generation.</summary>
     public const string Trapped = "trapped";
+
+    /// <summary>Player kill or trap catch of an animal at cleaver-certain generation.</summary>
+    public const string Slaughtered = "slaughtered";
+
+    /// <summary>Dead-animal harvest of an animal at cleaver-certain generation.</summary>
+    public const string Dressed = "dressed";
 
     /// <summary>Slow-release fertilizer absorbed into farmland nutrients (whole percent quantity).</summary>
     public const string FertilizerAbsorbed = "fertilizer-absorbed";
@@ -144,6 +157,8 @@ public static class DeedTokenTags
         DeedToken.Butchered => Butchered,
         DeedToken.Hunted => Hunted,
         DeedToken.Trapped => Trapped,
+        DeedToken.Slaughtered => Slaughtered,
+        DeedToken.Dressed => Dressed,
         DeedToken.FertilizerAbsorbed => FertilizerAbsorbed,
         DeedToken.CookingPot => CookingPot,
         DeedToken.FedAnimal => FedAnimal,
@@ -241,6 +256,18 @@ public static class DeedTokenTags
         if (t.Equals(Trapped, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Trapped;
+            return true;
+        }
+
+        if (t.Equals(Slaughtered, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Slaughtered;
+            return true;
+        }
+
+        if (t.Equals(Dressed, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Dressed;
             return true;
         }
 

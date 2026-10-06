@@ -1,79 +1,116 @@
+using Newtonsoft.Json.Linq;
 using Prosequor.Ability;
+using Prosequor.Ability.Hooks;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
 
 namespace Prosequor.Xp;
 
 /// <summary>
-/// GameReady catalog of authored animal <see cref="EntityProperties.Weight"/> min/max.
-/// Amount tables with <c>pay: effort</c> on hunted / trapped deeds normalize against this span.
+/// GameReady weights of animals whose harvest drops include raw meat or fat.
+/// <see cref="MetricDomain"/> is that whole set. <see cref="MetricDomainTrappable"/> is the
+/// subset with a trap chance above zero. Amount tables with <c>pay: effort</c> lerp against
+/// one of those spans. Resolved <see cref="EntityProperties.Weight"/> already includes
+/// <c>weightByType</c>.
 /// </summary>
 public sealed class AnimalWeightCatalog
 {
     public const string MetricDomain = "animal-weight";
 
+    public const string MetricDomainTrappable = "animal-weight-trappable";
+
+    /// <summary>
+    /// Cleaver slaughter chance is <c>generation / 3</c>. At this generation the hit always kills.
+    /// </summary>
+    public const int CleaverCertainGeneration = 3;
+
     public readonly record struct Range(float Min, float Max, int EntityCount);
 
-    readonly Range? span;
+    readonly Range? food;
+    readonly Range? trappable;
+    readonly HashSet<string> foodCodes;
 
-    AnimalWeightCatalog(Range? span)
+    AnimalWeightCatalog(Range? food, Range? trappable, HashSet<string> foodCodes)
     {
-        this.span = span;
+        this.food = food;
+        this.trappable = trappable;
+        this.foodCodes = foodCodes;
     }
 
-    public int EntityCount => span?.EntityCount ?? 0;
+    public int EntityCount => food?.EntityCount ?? 0;
 
-    public float Min => span?.Min ?? 0f;
+    public float Min => food?.Min ?? 0f;
 
-    public float Max => span?.Max ?? 0f;
+    public float Max => food?.Max ?? 0f;
 
-    public static AnimalWeightCatalog Build(ICoreAPI api)
+    public int TrappableCount => trappable?.EntityCount ?? 0;
+
+    public static AnimalWeightCatalog Build(ICoreAPI api, CollectionIndex? collections)
     {
-        if (api?.World?.EntityTypes == null)
+        if (api?.World?.EntityTypes == null || collections == null)
         {
-            return new AnimalWeightCatalog(null);
+            return new AnimalWeightCatalog(null, null, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         }
 
-        float min = float.MaxValue;
-        float max = float.MinValue;
-        int count = 0;
+        float foodMin = float.MaxValue;
+        float foodMax = float.MinValue;
+        int foodCount = 0;
+        float trapMin = float.MaxValue;
+        float trapMax = float.MinValue;
+        int trapCount = 0;
+        HashSet<string> codes = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (EntityProperties props in api.World.EntityTypes)
         {
-            if (!IsCatalogAnimal(props))
+            if (props?.Code == null || props.Weight <= 0f || !DropsRawFood(props, collections))
             {
                 continue;
             }
 
+            string code = props.Code.ToString();
+            codes.Add(code);
             float weight = props.Weight;
-            min = Math.Min(min, weight);
-            max = Math.Max(max, weight);
-            count++;
+            foodMin = Math.Min(foodMin, weight);
+            foodMax = Math.Max(foodMax, weight);
+            foodCount++;
+
+            if (!HasTrapChance(props))
+            {
+                continue;
+            }
+
+            trapMin = Math.Min(trapMin, weight);
+            trapMax = Math.Max(trapMax, weight);
+            trapCount++;
         }
 
-        if (count <= 0)
-        {
-            return new AnimalWeightCatalog(null);
-        }
-
-        return new AnimalWeightCatalog(new Range(min, max, count));
+        Range? foodSpan = foodCount > 0 ? new Range(foodMin, foodMax, foodCount) : null;
+        Range? trapSpan = trapCount > 0 ? new Range(trapMin, trapMax, trapCount) : null;
+        return new AnimalWeightCatalog(foodSpan, trapSpan, codes);
     }
 
-    public bool TryGetRange(out float min, out float max)
-    {
-        min = 0f;
-        max = 0f;
-        if (span is not Range range || range.EntityCount <= 0)
-        {
-            return false;
-        }
+    public bool IsListed(Entity? entity) => IsListed(entity?.Code?.ToString());
 
-        min = range.Min;
-        max = range.Max;
-        return true;
-    }
+    public bool IsListed(string? code) =>
+        !string.IsNullOrWhiteSpace(code) && foodCodes.Contains(code.Trim());
 
-    public Range? TryGet() => span;
+    public bool TryGetRange(out float min, out float max) => TryGet(food, out min, out max);
+
+    public bool TryGetTrappableRange(out float min, out float max) =>
+        TryGet(trappable, out min, out max);
+
+    public Range? TryGet() => food;
+
+    public Range? TryGetTrappable() => trappable;
+
+    /// <summary>True when a cleaver hit is a certain slaughter (<c>generation &gt;= 3</c>).</summary>
+    public static bool CanCleaverSlaughter(int generation) =>
+        generation >= CleaverCertainGeneration;
+
+    public static bool CanCleaverSlaughter(Entity? entity) =>
+        entity?.WatchedAttributes != null
+        && CanCleaverSlaughter(entity.WatchedAttributes.GetInt("generation"));
 
     public static bool IsAnimal(Entity? entity) =>
         entity is EntityAgent
@@ -134,5 +171,130 @@ public sealed class AnimalWeightCatalog
         }
 
         return true;
+    }
+
+    static bool TryGet(Range? span, out float min, out float max)
+    {
+        min = 0f;
+        max = 0f;
+        if (span is not Range range || range.EntityCount <= 0)
+        {
+            return false;
+        }
+
+        min = range.Min;
+        max = range.Max;
+        return true;
+    }
+
+    static bool DropsRawFood(EntityProperties props, CollectionIndex collections)
+    {
+        JsonObject[]? behaviors = props.Server?.BehaviorsAsJsonObj;
+        if (behaviors == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < behaviors.Length; i++)
+        {
+            JsonObject behavior = behaviors[i];
+            if (behavior == null
+                || !string.Equals(behavior["code"].AsString(), "harvestable", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (!behavior["drops"].Exists)
+            {
+                continue;
+            }
+
+            JsonObject[]? drops = behavior["drops"].AsArray();
+            if (drops == null)
+            {
+                continue;
+            }
+
+            for (int d = 0; d < drops.Length; d++)
+            {
+                if (DropIsRawFood(drops[d], collections))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    static bool DropIsRawFood(JsonObject drop, CollectionIndex collections)
+    {
+        if (drop == null)
+        {
+            return false;
+        }
+
+        if (IsRawFoodCode(drop["code"].AsString(), collections))
+        {
+            return true;
+        }
+
+        if (!drop["codeByType"].Exists || drop["codeByType"].Token is not JObject byType)
+        {
+            return false;
+        }
+
+        foreach (JProperty prop in byType.Properties())
+        {
+            if (prop.Value.Type == JTokenType.String
+                && IsRawFoodCode(prop.Value.ToString(), collections))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool IsRawFoodCode(string? raw, CollectionIndex collections)
+    {
+        if (string.IsNullOrWhiteSpace(raw) || raw.Contains('{') || raw.Contains('*'))
+        {
+            return false;
+        }
+
+        AssetLocation loc = new(raw.Trim());
+        string code = loc.ToString();
+        return collections.Contains("meat", code) || collections.Contains("fat", code);
+    }
+
+    static bool HasTrapChance(EntityProperties props)
+    {
+        JsonObject? attributes = props.Attributes;
+        if (attributes == null)
+        {
+            return false;
+        }
+
+        return PositiveTrapChance(attributes["trappable"])
+            || PositiveTrapChance(attributes["trappableByType"]);
+    }
+
+    static bool PositiveTrapChance(JsonObject node)
+    {
+        if (node == null || !node.Exists || node.Token == null)
+        {
+            return false;
+        }
+
+        foreach (JToken chance in node.Token.SelectTokens("$..trapChance"))
+        {
+            if (chance.Type is JTokenType.Float or JTokenType.Integer && chance.Value<double>() > 0d)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

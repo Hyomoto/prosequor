@@ -375,9 +375,11 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | --- | --- |
 | `block-broken` | Block break (dig / mine / chop) |
 | `harvested` | Plant / forage harvest |
-| `butchered` | Dead-animal harvest |
-| `hunted` | Animal killed by a player arrow or thrown spear |
-| `trapped` | Animal caught in a basket / crate trap |
+| `butchered` | Dead-animal harvest when generation is below 3 |
+| `hunted` | Player kill of a food animal when generation is below 3 |
+| `trapped` | Food animal caught in a basket / crate trap when generation is below 3 |
+| `slaughtered` | Player kill or trap catch when generation is 3 or higher |
+| `dressed` | Dead-animal harvest when generation is 3 or higher |
 | `crafted` | Craft-grid take / similar discrete craft |
 | `crafting` | Hand-shape progress (clay-form / smith); one flat deed per novel voxel |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
@@ -822,7 +824,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`. For `hunted` / `trapped` deeds, `pay: effort` lerps against the GameReady animal-weight catalog (authored entity `weight` / `weightByType` min–max).
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`. For `hunted` and `slaughtered` deeds, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). For `trapped` deeds, the span is the subset of those animals with a trap chance above zero.
 
 ### XP `when`
 

@@ -50,7 +50,7 @@
     },
     {
       "id": "prosequor:trapped-hunting",
-      "amount": [0.1, 10],
+      "amount": [1, 4],
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",

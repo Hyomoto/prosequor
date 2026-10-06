@@ -42,7 +42,7 @@ While this may seem like it's designed to prevent you from levelling up, the des
 
 ## Modding and Prosequor
 
-Compatibility was a primary concern, but it touches many vanilla interactions to award XP and apply skills.  It's impossible to know how it will interact with other mods, so Prosequor is tested specifically against vanilla.  It can, in some cases, work with other mods depending on how vanilla-aligned they are (for example, using vanilla-styled item codes), but more complex mods are unlikely to just work out of the box.  To that end I have tried to make it very easy for modders.
+Compatibility was a primary concern, but it touches many vanilla interactions to award XP and apply skills.  It's impossible to know how it will interact with other mods, so Prosequor is tested specifically against vanilla.  It can, in some cases, work with other mods depending on how vanilla-aligned they are (for example, using vanilla-styled item codes), but more complex mods are unlikely to just work out of the box.  To that end I have tried to make it very easy for modders and the full spec can be seen [here](https://github.com/Hyomoto/prosequor/blob/main/docs/modding.md)
 
 ::: details Collections
 A lot of what Prosequor does relies on collections.  These are just groups of items codes it matches against to figure out if rules should apply (see below).  For content mods, if your items aren't automatically registered to a collection, a simple VS patch to add them to relevant collections is usually all that's needed.  collections.json contains them all, and of course mods are free to make their own collections.

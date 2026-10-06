@@ -69,6 +69,25 @@
         "activity": "prosequor:deed",
         "tags": ["skep-propagate"]
       }
+    },
+    {
+      "id": "prosequor:slaughter-husbandry",
+      "amount": [0.05, 2],
+      "pay": "effort",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["slaughtered"]
+      }
+    },
+    {
+      "id": "prosequor:butcher-husbandry",
+      "amount": 0.04,
+      "pay": "quantity",
+      "include": ["<meat>", "<fat>"],
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["dressed"]
+      }
     }
   ],
   "effects": [

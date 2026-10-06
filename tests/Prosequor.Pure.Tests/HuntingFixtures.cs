@@ -17,6 +17,7 @@ public static class HuntingFixtures
         VerifyHideSizeUpgrade();
         VerifyArrowBreakClamp();
         VerifyHuntedWeightPlanPays();
+        VerifyCleaverGenerationSplit();
         VerifyButcherPaysHuntingNotCooking();
         VerifyArrowAndBowCraftPays();
         VerifyUpgradeHideSizeActionRegistered();
@@ -80,7 +81,7 @@ public static class HuntingFixtures
         XpRule trapRule = AmountTableRule(
             "trapped-hunting",
             "hunting",
-            [0.1f, 10f],
+            [1f, 4f],
             order: 2,
             collections,
             tags: ["trapped"]);
@@ -139,10 +140,21 @@ public static class HuntingFixtures
             || heavy.Count != 1
             || Math.Abs(heavy[0].Amount - 10f) > 0.0001f
             || trapped.Count != 1
-            || Math.Abs(trapped[0].Amount - 0.1f) > 0.0001f)
+            || Math.Abs(trapped[0].Amount - 1f) > 0.0001f)
         {
             Assert.Fail(
                 $"[prosequor] Hunted/trapped weight plan failed light={AmountOrNone(light)} heavy={AmountOrNone(heavy)} trapped={AmountOrNone(trapped)}.");
+        }
+    }
+
+    static void VerifyCleaverGenerationSplit()
+    {
+        if (AnimalWeightCatalog.CanCleaverSlaughter(0)
+            || AnimalWeightCatalog.CanCleaverSlaughter(2)
+            || !AnimalWeightCatalog.CanCleaverSlaughter(AnimalWeightCatalog.CleaverCertainGeneration)
+            || !AnimalWeightCatalog.CanCleaverSlaughter(5))
+        {
+            Assert.Fail("[prosequor] Cleaver slaughter should be certain from generation 3.");
         }
     }
 

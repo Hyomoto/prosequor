@@ -746,7 +746,7 @@ public static class Deed
             resistanceMin = rMin;
             resistanceMax = rMax;
         }
-        else if (TryMeasureAnimalWeight(api, mod, target, out float w, out float wMin, out float wMax))
+        else if (TryMeasureAnimalWeight(api, mod, tokens, target, out float w, out float wMin, out float wMax))
         {
             hasResistance = true;
             resistance = w;
@@ -1048,7 +1048,8 @@ public static class Deed
         && (domain.Equals(BlockBreakHardnessCatalog.DomainDig, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainMine, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainChop, StringComparison.OrdinalIgnoreCase)
-            || domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase));
+            || domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase)
+            || domain.Equals(AnimalWeightCatalog.MetricDomainTrappable, StringComparison.OrdinalIgnoreCase));
 
     static bool IsLifetimeDomain(string? domain) =>
         domain != null
@@ -1183,6 +1184,7 @@ public static class Deed
     static bool TryMeasureAnimalWeight(
         ICoreAPI api,
         ProsequorModSystem? mod,
+        IReadOnlySet<string> tokens,
         string? target,
         out float weight,
         out float min,
@@ -1196,16 +1198,22 @@ public static class Deed
             return false;
         }
 
-        EntityProperties? props = api.World.GetEntityType(new AssetLocation(target.Trim()));
-        if (!AnimalWeightCatalog.IsCatalogAnimal(props))
+        if (mod?.AnimalWeight == null || !mod.AnimalWeight.IsListed(target))
         {
             return false;
         }
 
-        weight = props!.Weight;
+        EntityProperties? props = api.World.GetEntityType(new AssetLocation(target.Trim()));
+        if (props == null || props.Weight <= 0f)
+        {
+            return false;
+        }
+
+        bool trapped = tokens.Contains(DeedTokenTags.Trapped);
+        weight = props.Weight;
         ResolveMetricRange(
             mod,
-            AnimalWeightCatalog.MetricDomain,
+            trapped ? AnimalWeightCatalog.MetricDomainTrappable : AnimalWeightCatalog.MetricDomain,
             metricMin: null,
             metricMax: null,
             out min,
@@ -1321,6 +1329,13 @@ public static class Deed
         if (domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase)
             && mod.AnimalWeight != null
             && mod.AnimalWeight.TryGetRange(out min, out max))
+        {
+            return;
+        }
+
+        if (domain.Equals(AnimalWeightCatalog.MetricDomainTrappable, StringComparison.OrdinalIgnoreCase)
+            && mod.AnimalWeight != null
+            && mod.AnimalWeight.TryGetTrappableRange(out min, out max))
         {
             return;
         }

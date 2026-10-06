@@ -7,8 +7,8 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Cooking butcher deed: <c>butchered</c> with all drops as outputs.
-/// Cooking rules keep meat and fat via <c>include</c>.
+/// Dead-animal harvest. Generation below cleaver-certain pays <c>butchered</c> (hunting).
+/// Cleaver-certain generation pays <c>dressed</c> (husbandry). Rules keep meat and fat via <c>include</c>.
 /// </summary>
 public static class ButcherXp
 {
@@ -46,7 +46,7 @@ public static class ButcherXp
         Deed.Emit(
             api,
             serverPlayer.PlayerUID,
-            DeedToken.Butchered,
+            AnimalWeightCatalog.CanCleaverSlaughter(entity) ? DeedToken.Dressed : DeedToken.Butchered,
             caller: caller,
             target: EventFactBuilder.CodeOf(entity),
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),

@@ -322,14 +322,18 @@ public class ProsequorModSystem : ModSystem
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainMine);
             LogHardnessDomain(api, BlockBreakHardnessCatalog.DomainChop);
 
-            AnimalWeight = AnimalWeightCatalog.Build(api);
+            AnimalWeight = AnimalWeightCatalog.Build(api, Collections.Index);
             if (AnimalWeight.TryGet() is AnimalWeightCatalog.Range animalSpan)
             {
+                AnimalWeightCatalog.Range? trapSpan = AnimalWeight.TryGetTrappable();
                 api.Logger.Notification(
-                    "[prosequor] Animal weight catalog: {0} entities, weight {1:0.###}–{2:0.###}.",
+                    "[prosequor] Animal weight catalog: {0} food animals, weight {1:0.###}–{2:0.###}; {3} trappable, weight {4:0.###}–{5:0.###}.",
                     animalSpan.EntityCount,
                     animalSpan.Min,
-                    animalSpan.Max);
+                    animalSpan.Max,
+                    trapSpan?.EntityCount ?? 0,
+                    trapSpan?.Min ?? 0f,
+                    trapSpan?.Max ?? 0f);
             }
 
             CropLifetime = CropLifetimeCatalog.Build(api);

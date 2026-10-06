@@ -10,7 +10,9 @@ using Vintagestory.GameContent;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Hunting deeds: arrow / thrown-spear kills and basket-trap catches, paid by animal weight.
+/// Food-animal kills and basket-trap catches, paid by animal weight.
+/// Generation at or above <see cref="AnimalWeightCatalog.CleaverCertainGeneration"/> pays husbandry
+/// (<c>slaughtered</c>); younger animals pay hunting (<c>hunted</c> / <c>trapped</c>).
 /// </summary>
 public static class HuntXp
 {
@@ -18,19 +20,22 @@ public static class HuntXp
     {
         if (victim?.World?.Api is not { Side: EnumAppSide.Server } api
             || damageSource == null
-            || !AnimalWeightCatalog.IsAnimal(victim))
+            || ProsequorModSystem.For(api)?.AnimalWeight is not AnimalWeightCatalog weights
+            || !weights.IsListed(victim))
         {
             return;
         }
 
-        if (!TryResolveProjectileKill(damageSource, out IPlayer? player, out string? caller)
+        if (!TryResolvePlayerKill(damageSource, out IPlayer? player, out string? caller)
             || player?.PlayerUID == null)
         {
             return;
         }
 
+        bool husbandry = AnimalWeightCatalog.CanCleaverSlaughter(victim);
         api.Logger.VerboseDebug(
-            "[prosequor] deed hunted {0} weight={1:0.###} by {2}",
+            "[prosequor] deed {0} {1} weight={2:0.###} by {3}",
+            husbandry ? DeedTokenTags.Slaughtered : DeedTokenTags.Hunted,
             victim.Code,
             victim.Properties?.Weight ?? 0f,
             player.PlayerName);
@@ -38,7 +43,7 @@ public static class HuntXp
         Deed.Emit(
             api,
             player.PlayerUID,
-            DeedToken.Hunted,
+            husbandry ? DeedToken.Slaughtered : DeedToken.Hunted,
             caller: caller,
             target: EventFactBuilder.CodeOf(victim),
             position: victim.Pos?.AsBlockPos?.Copy());
@@ -50,7 +55,8 @@ public static class HuntXp
         if (api == null
             || api.Side != EnumAppSide.Server
             || trap == null
-            || !AnimalWeightCatalog.IsAnimal(animal))
+            || ProsequorModSystem.For(api)?.AnimalWeight is not AnimalWeightCatalog weights
+            || !weights.IsListed(animal))
         {
             return;
         }
@@ -74,8 +80,10 @@ public static class HuntXp
             return;
         }
 
+        bool husbandry = AnimalWeightCatalog.CanCleaverSlaughter(animal);
         api.Logger.VerboseDebug(
-            "[prosequor] deed trapped {0} weight={1:0.###} by {2}",
+            "[prosequor] deed {0} {1} weight={2:0.###} by {3}",
+            husbandry ? DeedTokenTags.Slaughtered : DeedTokenTags.Trapped,
             animal!.Code,
             animal.Properties?.Weight ?? 0f,
             uid);
@@ -83,13 +91,13 @@ public static class HuntXp
         Deed.Emit(
             api,
             uid.Trim(),
-            DeedToken.Trapped,
+            husbandry ? DeedToken.Slaughtered : DeedToken.Trapped,
             caller: caller,
             target: EventFactBuilder.CodeOf(animal),
             position: trap.Pos?.Copy());
     }
 
-    static bool TryResolveProjectileKill(
+    static bool TryResolvePlayerKill(
         DamageSource damageSource,
         out IPlayer? player,
         out string? caller)
@@ -97,39 +105,29 @@ public static class HuntXp
         player = null;
         caller = null;
 
-        Entity? source = damageSource.SourceEntity;
-        if (source is not EntityProjectileBase projectile)
+        Entity? source = damageSource.SourceEntity ?? damageSource.CauseEntity;
+        if (source is EntityProjectileBase projectile)
         {
-            return false;
+            if (projectile.FiredBy is not EntityPlayer fired || fired.Player == null)
+            {
+                return false;
+            }
+
+            player = fired.Player;
+            caller = EventFactBuilder.CodeOf(projectile.ProjectileStack ?? projectile.WeaponStack)
+                ?? CallerIdentities.Hand;
+            return true;
         }
 
-        ItemStack? weapon = projectile.WeaponStack;
-        ItemStack? ammo = projectile.ProjectileStack;
-        bool arrow = IsArrow(ammo) || IsArrow(weapon);
-        bool spear = IsThrownSpear(ammo) || IsThrownSpear(weapon);
-        if (!arrow && !spear)
+        if (source is EntityPlayer ep && ep.Player != null)
         {
-            return false;
+            player = ep.Player;
+            caller = EventFactBuilder.HeldCode(player) ?? CallerIdentities.Hand;
+            return true;
         }
 
-        if (projectile.FiredBy is not EntityPlayer ep || ep.Player == null)
-        {
-            return false;
-        }
-
-        player = ep.Player;
-        caller = EventFactBuilder.CodeOf(arrow ? ammo ?? weapon : weapon ?? ammo)
-            ?? CallerIdentities.Hand;
-        return true;
+        return false;
     }
-
-    static bool IsArrow(ItemStack? stack) =>
-        stack?.Collectible is ItemArrow
-        || (stack?.Collectible?.Code?.Path?.StartsWith("arrow-", StringComparison.OrdinalIgnoreCase) ?? false);
-
-    static bool IsThrownSpear(ItemStack? stack) =>
-        stack?.Collectible?.Tool == EnumTool.Spear
-        || (stack?.Collectible?.Code?.Path?.StartsWith("spear-", StringComparison.OrdinalIgnoreCase) ?? false);
 }
 
 /// <summary>Harmony adapters for hunting XP deeds.</summary>
