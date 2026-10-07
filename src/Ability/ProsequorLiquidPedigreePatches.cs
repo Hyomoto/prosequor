@@ -387,7 +387,12 @@ public static class ProsequorLiquidPedigreePatches
             ProsequorLiquidPedigree.StripQualityAndRank(content);
             open.SetContent(__state.BucketStack, content);
             // Pay the new drops only. The bucket total would compound each tick.
-            CraftedProductXp.Emit(__instance.Api.World, __state.QualityUid, content, moved);
+            CraftedProductXp.Emit(
+                __instance.Api.World,
+                __state.QualityUid,
+                content,
+                moved,
+                EventFactBuilder.CodeOf(__instance.Block));
         }
     }
 

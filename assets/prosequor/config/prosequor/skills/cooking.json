@@ -12,21 +12,29 @@
   ],
   "xpRules": [
     {
-      "id": "prosequor:craft-meal-cooking",
-      "amount": [0.1, 12],
-      "pay": "ingredients",
+      "id": "prosequor:roast-firepit-cooking",
+      "amount": 0.1,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<meal>" ]
+        "tags": [ "crafted", "caller:<firepit>", "target:<firepit-roast>" ]
       }
     },
     {
-      "id": "prosequor:craft-cooking-pot-cooking",
+      "id": "prosequor:cook-pot-cooking",
       "amount": [0.1, 12],
       "pay": "ingredients",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "cooking-pot" ]
+        "tags": [ "crafted", "caller:<cooking-vessel>", "target:<claypot>" ]
+      }
+    },
+    {
+      "id": "prosequor:bake-oven-cooking",
+      "amount": [0.1, 12],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:<oven>", "target:<oven-baked>" ]
       }
     },
     {
@@ -36,7 +44,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<fermented>" ]
+        "tags": [ "crafted", "caller:<barrel>", "target:<fermented>" ]
       }
     },
     {
@@ -45,7 +53,7 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<distilled>" ]
+        "tags": [ "crafted", "caller:<condenser>", "target:<distilled>" ]
       }
     },
     {
@@ -54,7 +62,7 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<juice>" ]
+        "tags": [ "crafted", "caller:<fruitpress>", "target:<juice>" ]
       }
     }
   ],

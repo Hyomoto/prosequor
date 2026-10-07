@@ -34,10 +34,6 @@ public static class ProsequorChunkPedigree
 
         public float WaterCredit;
 
-        public int AnvilHighWater;
-
-        public string? AnvilRecipeKey;
-
         public int ClayHighWater;
 
         public string? ClayRecipeKey;
@@ -79,8 +75,6 @@ public static class ProsequorChunkPedigree
             || WaterCredit > ProsequorBlockPedigreeStation.WaterCreditMinGain
             || AbsorbMultiplier > ProsequorBlockPedigreeStation.DefaultAbsorbMultiplier + AbsorbEpsilon
             || AbsorbRemainder > AbsorbEpsilon
-            || AnvilHighWater > 0
-            || !string.IsNullOrEmpty(AnvilRecipeKey)
             || ClayHighWater > 0
             || !string.IsNullOrEmpty(ClayRecipeKey)
             || ClimateHalfDelta > AbsorbEpsilon
@@ -107,8 +101,6 @@ public static class ProsequorChunkPedigree
             ClimateHalfDelta = 0f;
             GrowthTimeMultiplier = 0f;
             EstablishChance = 0f;
-            AnvilHighWater = 0;
-            AnvilRecipeKey = null;
             ClayHighWater = 0;
             ClayRecipeKey = null;
             CementationPaid = false;
@@ -167,16 +159,6 @@ public static class ProsequorChunkPedigree
                 {
                     absorb.SetFloat(AbsorbRemainderKey, AbsorbRemainder);
                 }
-            }
-
-            if (AnvilHighWater > 0)
-            {
-                tree.SetInt(AnvilXpStation.HighWaterAttr, AnvilHighWater);
-            }
-
-            if (!string.IsNullOrEmpty(AnvilRecipeKey))
-            {
-                tree.SetString(AnvilXpStation.RecipeKeyAttr, AnvilRecipeKey);
             }
 
             if (ClayHighWater > 0)
@@ -333,13 +315,6 @@ public static class ProsequorChunkPedigree
             {
                 AbsorbRemainder = remainder;
             }
-
-            if (tree.HasAttribute(AnvilXpStation.HighWaterAttr))
-            {
-                AnvilHighWater = Math.Max(0, tree.GetInt(AnvilXpStation.HighWaterAttr));
-            }
-
-            AnvilRecipeKey = NormalizeOptional(tree.GetString(AnvilXpStation.RecipeKeyAttr));
 
             if (tree.HasAttribute(ClayFormXpStation.HighWaterAttr))
             {

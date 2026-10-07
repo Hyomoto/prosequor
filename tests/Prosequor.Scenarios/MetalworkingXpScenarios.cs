@@ -159,7 +159,8 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             Skill,
             player.PlayerUID,
             target,
-            voxelCount: 10);
+            voxelCount: 10,
+            caller: EventFactBuilder.CodeOf(anvil.Block)!);
         ScenarioXp.AssertPaid(gained, expected, "10 anvil good voxels");
     }
 
@@ -393,6 +394,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Assert.NotNull(anvil.recipeVoxels);
 
         anvil.Voxels = new byte[16, 6, 16];
+        AnvilXpStation.NoteBaseline(anvil);
         goods = CollectGoodVoxels(anvil.recipeVoxels!, Math.Min(6, recipe.QuantityLayers), max: 12);
         Assert.NotEmpty(goods);
         return anvil;

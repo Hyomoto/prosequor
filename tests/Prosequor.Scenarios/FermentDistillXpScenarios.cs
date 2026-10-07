@@ -61,7 +61,8 @@ public class FermentDistillXpScenarios : AtlasScenarioBase
             cider,
             made,
             contributors: [new Deed.ContributorShare(sealer.PlayerUID, 1)],
-            makerUid: sealer.PlayerUID);
+            makerUid: sealer.PlayerUID,
+            caller: EventFactBuilder.CodeOf(barrel.Block));
         ScenarioXp.AssertPaid(gained, expected, $"{made} fermented units");
         Assert.Equal(otherBefore, TotalCookingXp(other.Player));
 
@@ -129,7 +130,8 @@ public class FermentDistillXpScenarios : AtlasScenarioBase
             cider,
             made,
             contributors: shares,
-            makerUid: sealer.PlayerUID);
+            makerUid: sealer.PlayerUID,
+            caller: EventFactBuilder.CodeOf(barrel.Block));
         float sealerExpected = ScenarioXp.PlannedCrafted(
             World.Api.World,
             Skill,
@@ -137,7 +139,8 @@ public class FermentDistillXpScenarios : AtlasScenarioBase
             cider,
             made,
             contributors: shares,
-            makerUid: sealer.PlayerUID);
+            makerUid: sealer.PlayerUID,
+            caller: EventFactBuilder.CodeOf(barrel.Block));
         ScenarioXp.AssertPaid(
             TotalCookingXp(pourer) - pourerBefore,
             pourerExpected,
@@ -256,7 +259,8 @@ public class FermentDistillXpScenarios : AtlasScenarioBase
             cider!,
             cider.StackSize,
             contributors: [new Deed.ContributorShare(sealer.PlayerUID, 1)],
-            makerUid: sealer.PlayerUID);
+            makerUid: sealer.PlayerUID,
+            caller: EventFactBuilder.CodeOf(barrel.Block));
         ScenarioXp.AssertPaid(gained, expected, "finishbarrel fermented output");
     }
 
@@ -291,7 +295,8 @@ public class FermentDistillXpScenarios : AtlasScenarioBase
             Skill,
             loader.PlayerUID,
             firstDrop,
-            quantity: 1);
+            quantity: 1,
+            caller: EventFactBuilder.CodeOf(condenser.Block));
         float afterFirst = TotalCookingXp(loader) - before;
         ScenarioXp.AssertPaid(afterFirst, perDrop, "first spirit drop");
 

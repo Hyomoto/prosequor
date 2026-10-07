@@ -1,90 +1,56 @@
 using Prosequor.Xp;
 using Vintagestory.API.Common;
+using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
 
 /// <summary>
-/// High-water good-voxel count on an anvil work piece, keyed by selected smithing recipe.
-/// Survives chunk save/load on <see cref="ProsequorChunkPedigree"/> so undo-redo cannot re-farm XP.
+/// High-water correct-voxel count on the anvil work item, keyed by selected smithing recipe.
+/// The work item is the workpiece: the mark travels with <see cref="BlockEntityAnvil.WorkItemStack"/>.
 /// </summary>
 public static class AnvilXpStation
 {
-    public const string HighWaterAttr = "prosequorAnvilXpHighWater";
-    public const string RecipeKeyAttr = "prosequorAnvilXpRecipe";
+    public const string HighWaterAttr = "prosequorVoxelXpHighWater";
+    public const string RecipeKeyAttr = "prosequorVoxelXpRecipe";
 
-    public static string? RecipeKeyOf(SmithingRecipe? recipe)
+    public static string? RecipeKeyOf(SmithingRecipe? recipe) =>
+        VoxelWorkXp.RecipeKeyOf(recipe?.Name);
+
+    /// <summary>
+    /// Record the correct-voxel count before an edit. The first sight of a recipe
+    /// adopts that count and pays nothing.
+    /// </summary>
+    public static void NoteBaseline(BlockEntityAnvil anvil)
     {
-        if (recipe == null)
+        if (!TryMeasure(anvil, out int good, out string? key, out ItemStack work))
         {
-            return null;
+            return;
         }
 
-        AssetLocation? name = recipe.Name;
-        if (name == null)
-        {
-            return null;
-        }
-
-        string key = name.ToShortString();
-        return string.IsNullOrWhiteSpace(key) ? null : key;
+        VoxelWorkXp.Mark current = Read(work);
+        VoxelWorkXp.Mark next = VoxelWorkXp.Note(good, key, current);
+        Save(anvil, work, current, next);
     }
 
     /// <summary>
-    /// After a voxel mutation, pay newly reached good voxels and advance the mark.
+    /// After a voxel mutation, pay newly reached correct voxels and advance the mark.
     /// Returns how many voxels to award (0 when nothing novel).
     /// </summary>
     public static int TakeProgress(BlockEntityAnvil anvil)
     {
-        if (anvil?.Api?.Side != EnumAppSide.Server
-            || anvil.Voxels == null
-            || anvil.SelectedRecipe == null)
+        if (!TryMeasure(anvil, out int good, out string? key, out ItemStack work))
         {
             return 0;
         }
 
-        string? currentKey = RecipeKeyOf(anvil.SelectedRecipe);
-        if (currentKey == null)
-        {
-            return 0;
-        }
-
-        bool[,,]? want = anvil.recipeVoxels;
-        if (want == null)
-        {
-            return 0;
-        }
-
-        int layers = Math.Min(AnvilVoxelGrid.SizeY, anvil.SelectedRecipe.QuantityLayers);
-        int good = ClayFormXpMath.CountGood(anvil.Voxels, want, layers, AnvilVoxelGrid.Metal);
-
-        if (!ProsequorBlockPedigreeStation.TryGetBox(anvil, out ProsequorChunkPedigree.Box box))
-        {
-            box = new ProsequorChunkPedigree.Box();
-        }
-
-        int paid = ClayFormXpMath.TakeDelta(
-            good,
-            box.AnvilHighWater,
-            box.AnvilRecipeKey,
-            currentKey,
-            out int newHighWater,
-            out string? newKey);
-
-        if (box.AnvilHighWater != newHighWater
-            || !string.Equals(box.AnvilRecipeKey, newKey, StringComparison.Ordinal))
-        {
-            ProsequorBlockPedigreeStation.Mutate(anvil, b =>
-            {
-                b.AnvilHighWater = newHighWater;
-                b.AnvilRecipeKey = newKey;
-            });
-        }
-
+        VoxelWorkXp.Mark current = Read(work);
+        int paid = VoxelWorkXp.Apply(good, key, current, out VoxelWorkXp.Mark next);
+        Save(anvil, work, current, next);
         return paid;
     }
 
-    /// <summary>Award novel good voxels to the hammering player (server).</summary>
+    /// <summary>Award novel correct voxels to the hammering player (server).</summary>
     public static void TryAwardProgress(BlockEntityAnvil anvil, IPlayer? player)
     {
         if (anvil?.Api?.Side != EnumAppSide.Server || player == null)
@@ -100,21 +66,86 @@ public static class AnvilXpStation
 
         string? target = anvil.SelectedRecipe?.Output?.Code?.ToString()
             ?? anvil.SelectedRecipe?.Output?.ResolvedItemstack?.Collectible?.Code?.ToString();
-        ProsequorModSystem.For(anvil.Api)?.ClayFormXp?.NotifyProgress(player, paid, target);
+        ProsequorModSystem.For(anvil.Api)?.VoxelWorkXp?.NotifyProgress(
+            player,
+            paid,
+            target,
+            EventFactBuilder.CodeOf(anvil.Block));
     }
 
-    /// <summary>Scenario / test stamp of high-water state onto the pedigree host.</summary>
-    public static void Stamp(BlockEntityAnvil? anvil, int highWater, string? recipeKey)
+    static bool TryMeasure(
+        BlockEntityAnvil? anvil,
+        out int good,
+        out string? key,
+        out ItemStack work)
     {
-        if (anvil == null)
+        good = 0;
+        key = null;
+        work = null!;
+        ItemStack? stack = anvil?.WorkItemStack;
+        if (anvil?.Api?.Side != EnumAppSide.Server
+            || anvil.Voxels == null
+            || anvil.SelectedRecipe == null
+            || stack == null)
+        {
+            return false;
+        }
+
+        bool[,,]? want = anvil.recipeVoxels;
+        if (want == null)
+        {
+            return false;
+        }
+
+        key = RecipeKeyOf(anvil.SelectedRecipe);
+        if (key == null)
+        {
+            return false;
+        }
+
+        work = stack;
+        int layers = Math.Min(AnvilVoxelGrid.SizeY, anvil.SelectedRecipe.QuantityLayers);
+        good = VoxelWorkXpMath.CountGood(anvil.Voxels, want, layers, AnvilVoxelGrid.Metal);
+        return true;
+    }
+
+    static VoxelWorkXp.Mark Read(ItemStack work)
+    {
+        ITreeAttribute? tree = work.Attributes;
+        if (tree == null)
+        {
+            return default;
+        }
+
+        string? recipe = tree.GetString(RecipeKeyAttr);
+        return new VoxelWorkXp.Mark(
+            Math.Max(0, tree.GetInt(HighWaterAttr)),
+            string.IsNullOrWhiteSpace(recipe) ? null : recipe.Trim());
+    }
+
+    static void Save(
+        BlockEntityAnvil anvil,
+        ItemStack work,
+        VoxelWorkXp.Mark current,
+        VoxelWorkXp.Mark next)
+    {
+        if (current.HighWater == next.HighWater
+            && string.Equals(current.RecipeKey, next.RecipeKey, StringComparison.Ordinal))
         {
             return;
         }
 
-        ProsequorBlockPedigreeStation.Mutate(anvil, box =>
+        work.Attributes ??= new TreeAttribute();
+        work.Attributes.SetInt(HighWaterAttr, next.HighWater);
+        if (string.IsNullOrEmpty(next.RecipeKey))
         {
-            box.AnvilHighWater = Math.Max(0, highWater);
-            box.AnvilRecipeKey = string.IsNullOrWhiteSpace(recipeKey) ? null : recipeKey.Trim();
-        });
+            work.Attributes.RemoveAttribute(RecipeKeyAttr);
+        }
+        else
+        {
+            work.Attributes.SetString(RecipeKeyAttr, next.RecipeKey);
+        }
+
+        anvil.MarkDirty(redrawOnClient: false);
     }
 }

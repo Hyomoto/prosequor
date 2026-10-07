@@ -13,7 +13,7 @@ public enum XpPayChannel
     /// <remarks>JSON also accepts <c>effort</c> as an alias for this channel.</remarks>
     Resistance,
 
-    /// <summary>Lerped amount table against clay voxels-per-unit (<c>clay-voxels</c> catalog).</summary>
+    /// <summary>Lerped amount table against voxels-per-unit of the stamped clay, smithing, or knapping recipe.</summary>
     Voxels,
 
     /// <summary>Multiply by emit quantity (crafts, clay-form voxels, drops). Missing → ×1.</summary>

@@ -26,6 +26,9 @@ public class MigratedFixtureTests
     public void ClayFormXpFixtures_Should_Pass() => ClayFormXpFixtures.VerifyAll();
 
     [Fact]
+    public void VoxelRecipeMeasureFixtures_Should_Pass() => VoxelRecipeMeasureFixtures.VerifyAll();
+
+    [Fact]
     public void MoldCastXpFixtures_Should_Pass() => MoldCastXpFixtures.VerifyAll();
 
     [Fact]

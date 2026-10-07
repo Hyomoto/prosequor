@@ -76,6 +76,8 @@ public static class ClayFormVoxelOps
             return false;
         }
 
+        ClayFormXpStation.NoteBaseline(form);
+
         int assistRadius = VoxelWorkStation.RunInt(
             player,
             AbilityBootstrap.VerbClayForm,
@@ -195,6 +197,8 @@ public static class ClayFormVoxelOps
             return false;
         }
 
+        ClayFormXpStation.NoteBaseline(form);
+
         int quota = VoxelWorkStation.ResolveVoxelCopy(player);
 
         bool result = false;
@@ -287,6 +291,8 @@ public static class ClayFormVoxelOps
             return;
         }
 
+        ClayFormXpStation.NoteBaseline(form);
+
         int layers = Math.Min(16, form.SelectedRecipe.QuantityLayers);
         for (int y = 0; y < layers; y++)
         {
@@ -358,6 +364,10 @@ public static class ClayFormVoxelOps
         }
 
         string? target = form.SelectedRecipe?.Output?.Code?.ToString();
-        ProsequorModSystem.For(form.Api)?.ClayFormXp?.NotifyProgress(player, paid, target);
+        ProsequorModSystem.For(form.Api)?.VoxelWorkXp?.NotifyProgress(
+            player,
+            paid,
+            target,
+            EventFactBuilder.CodeOf(form.Block));
     }
 }

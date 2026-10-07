@@ -134,6 +134,9 @@ public static class DeedFixtures
         if (DeedToken.BlockBroken.ToTag() != DeedTokenTags.BlockBroken
             || DeedToken.Crafted.ToTag() != DeedTokenTags.Crafted
             || DeedToken.Crafting.ToTag() != DeedTokenTags.Crafting
+            || DeedToken.VoxelFinished.ToTag() != DeedTokenTags.VoxelFinished
+            || !DeedTokenTags.TryParse("voxel-finished", out DeedToken voxelFinished)
+            || voxelFinished != DeedToken.VoxelFinished
             || DeedToken.KilnFired.ToTag() != DeedTokenTags.KilnFired
             || DeedToken.Grown.ToTag() != DeedTokenTags.Grown
             || !DeedTokenTags.TryParse("fishing-catch", out DeedToken t)
@@ -741,6 +744,8 @@ public static class DeedFixtures
         CollectionIndex collections = new();
         collections.AddCode("clay-formed", "game:bowl-blue");
         collections.AddCode("smithing-formed", "game:ingot-copper");
+        collections.AddCode("clayform", "game:clayform");
+        collections.AddCode("anvil", "game:anvil-copper");
 
         XpRule clayVoxel = AmountRule(
             "prosequor:clay-form-voxel",
@@ -748,14 +753,14 @@ public static class DeedFixtures
             0.01f,
             order: 1,
             collections,
-            tags: ["crafting", "caller:@hand", "target:<clay-formed>"]);
+            tags: ["crafting", "caller:<clayform>", "target:<clay-formed>"]);
         XpRule smithWork = AmountRule(
             "prosequor:smith-work",
             "metalworking",
             0.01f,
             order: 1,
             collections,
-            tags: ["crafting", "caller:@hand", "target:<smithing-formed>"]);
+            tags: ["crafting", "caller:<anvil>", "target:<smithing-formed>"]);
 
         FixedAmountRules clayRules = new(clayVoxel);
         IReadOnlyList<Deed.PlannedPay> oneClay = Deed.PlanPays(
@@ -763,7 +768,7 @@ public static class DeedFixtures
             collections,
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
-            caller: CallerIdentities.Hand,
+            caller: "game:clayform",
             target: "game:bowl-blue",
             mount: null,
             ground: null,
@@ -785,7 +790,7 @@ public static class DeedFixtures
             collections,
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
-            caller: CallerIdentities.Hand,
+            caller: "game:clayform",
             target: "game:bowl-blue",
             mount: null,
             ground: null,
@@ -817,7 +822,7 @@ public static class DeedFixtures
             collections,
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
-            caller: CallerIdentities.Hand,
+            caller: "game:anvil-copper",
             target: "game:ingot-copper",
             mount: null,
             ground: null,
@@ -1879,63 +1884,95 @@ public static class DeedFixtures
         collections.AddCode("hide", "game:hide-scraped-large");
         collections.AddCode("hide", "game:hide-prepared-large");
 
-        if (!TryCompileTailoringCraft(
+        collections.AddCode("barrel", "game:barrel");
+        collections.AddCode("knife", "game:knife-generic-flint");
+
+        bool compiled = TryCompileTailoringCraft(
                 "prosequor:craft-cloth-tailoring",
                 0.3f,
+                CallerIdentities.Grid,
                 "cloth",
                 1,
                 collections,
                 out XpRule cloth,
-                out string clothError))
-        {
-            Assert.Fail($"[prosequor] cloth tailoring compile failed: {clothError}");
-            return;
-        }
-
-        if (!TryCompileTailoringCraft(
-                "prosequor:craft-leather-tailoring",
-                0.5f,
-                "leather",
+                out string clothError)
+            & TryCompileTailoringCraft(
+                "prosequor:craft-cloth-barrel-tailoring",
+                0.3f,
+                "game:barrel",
+                "cloth",
                 2,
                 collections,
-                out XpRule leather,
-                out string leatherError))
-        {
-            Assert.Fail($"[prosequor] leather tailoring compile failed: {leatherError}");
-            return;
-        }
-
-        if (!TryCompileTailoringCraft(
-                "prosequor:craft-hide-tailoring",
-                0.2f,
-                "hide",
+                out XpRule dyedCloth,
+                out string dyedError)
+            & TryCompileTailoringCraft(
+                "prosequor:craft-leather-tailoring",
+                0.5f,
+                "game:barrel",
+                "leather",
                 3,
                 collections,
+                out XpRule leather,
+                out string leatherError)
+            & TryCompileTailoringCraft(
+                "prosequor:craft-hide-tailoring",
+                0.2f,
+                CallerIdentities.Grid,
+                "hide",
+                4,
+                collections,
                 out XpRule hide,
-                out string hideError))
+                out string hideError)
+            & TryCompileTailoringCraft(
+                "prosequor:craft-hide-knife-tailoring",
+                0.2f,
+                "game:knife-generic-flint",
+                "hide",
+                5,
+                collections,
+                out XpRule hideKnife,
+                out string knifeError)
+            & TryCompileTailoringCraft(
+                "prosequor:craft-hide-barrel-tailoring",
+                0.2f,
+                "game:barrel",
+                "hide",
+                6,
+                collections,
+                out XpRule hideBarrel,
+                out string barrelHideError);
+        if (!compiled)
         {
-            Assert.Fail($"[prosequor] hide tailoring compile failed: {hideError}");
+            Assert.Fail(
+                "[prosequor] tailoring craft compile failed: "
+                + $"{clothError} {dyedError} {leatherError} {hideError} {knifeError} {barrelHideError}");
             return;
         }
 
-        FixedAmountRules rules = new(cloth, leather, hide);
-        IReadOnlyList<Deed.PlannedPay> linen = PayGridCraft(
-            rules, collections, "game:linen-normal-down", 1);
-        IReadOnlyList<Deed.PlannedPay> clothPlain = PayGridCraft(
-            rules, collections, "game:cloth-plain", 2);
-        IReadOnlyList<Deed.PlannedPay> tanned = PayGridCraft(
-            rules, collections, "game:leather-normal-plain", 3);
-        IReadOnlyList<Deed.PlannedPay> soaked = PayGridCraft(
-            rules, collections, "game:hide-soaked-large", 1);
-        IReadOnlyList<Deed.PlannedPay> scraped = PayGridCraft(
-            rules, collections, "game:hide-scraped-large", 1);
-        IReadOnlyList<Deed.PlannedPay> prepared = PayGridCraft(
-            rules, collections, "game:hide-prepared-large", 1);
-        IReadOnlyList<Deed.PlannedPay> raw = PayGridCraft(
-            rules, collections, "game:hide-raw-large", 1);
+        FixedAmountRules rules = new(cloth, dyedCloth, leather, hide, hideKnife, hideBarrel);
+        IReadOnlyList<Deed.PlannedPay> linen = PayCraft(
+            rules, collections, CallerIdentities.Grid, "game:linen-normal-down", 1);
+        IReadOnlyList<Deed.PlannedPay> clothPlain = PayCraft(
+            rules, collections, CallerIdentities.Grid, "game:cloth-plain", 2);
+        IReadOnlyList<Deed.PlannedPay> dyed = PayCraft(
+            rules, collections, "game:barrel", "game:cloth-plain", 2);
+        IReadOnlyList<Deed.PlannedPay> gridLeather = PayCraft(
+            rules, collections, CallerIdentities.Grid, "game:leather-normal-plain", 3);
+        IReadOnlyList<Deed.PlannedPay> tanned = PayCraft(
+            rules, collections, "game:barrel", "game:leather-normal-plain", 3);
+        IReadOnlyList<Deed.PlannedPay> soaked = PayCraft(
+            rules, collections, CallerIdentities.Grid, "game:hide-soaked-large", 1);
+        IReadOnlyList<Deed.PlannedPay> scraped = PayCraft(
+            rules, collections, "game:knife-generic-flint", "game:hide-scraped-large", 1);
+        IReadOnlyList<Deed.PlannedPay> prepared = PayCraft(
+            rules, collections, "game:barrel", "game:hide-prepared-large", 1);
+        IReadOnlyList<Deed.PlannedPay> raw = PayCraft(
+            rules, collections, CallerIdentities.Grid, "game:hide-raw-large", 1);
 
         if (linen.Count != 1 || Math.Abs(linen[0].Amount - 0.3f) > 0.001f
             || clothPlain.Count != 1 || Math.Abs(clothPlain[0].Amount - 0.6f) > 0.001f
+            || dyed.Count != 1 || Math.Abs(dyed[0].Amount - 0.6f) > 0.001f
+            || gridLeather.Count != 0
             || tanned.Count != 1 || Math.Abs(tanned[0].Amount - 1.5f) > 0.001f
             || soaked.Count != 1 || Math.Abs(soaked[0].Amount - 0.2f) > 0.001f
             || scraped.Count != 1 || Math.Abs(scraped[0].Amount - 0.2f) > 0.001f
@@ -1949,6 +1986,7 @@ public static class DeedFixtures
     static bool TryCompileTailoringCraft(
         string id,
         float amount,
+        string caller,
         string collection,
         int order,
         CollectionIndex collections,
@@ -1963,7 +2001,7 @@ public static class DeedFixtures
                 when = new XpRuleWhenJson
                 {
                     activity = "prosequor:deed",
-                    tags = ["crafted", "caller:@grid", $"target:<{collection}>"]
+                    tags = ["crafted", caller.StartsWith('@') ? "caller:" + caller : "caller:<" + CallerCollection(caller) + ">", $"target:<{collection}>"]
                 }
             },
             "tailoring",
@@ -1972,9 +2010,17 @@ public static class DeedFixtures
             out rule,
             out error);
 
-    static IReadOnlyList<Deed.PlannedPay> PayGridCraft(
+    static string CallerCollection(string caller) => caller switch
+    {
+        "game:barrel" => "barrel",
+        "game:knife-generic-flint" => "knife",
+        _ => caller
+    };
+
+    static IReadOnlyList<Deed.PlannedPay> PayCraft(
         FixedAmountRules rules,
         CollectionIndex collections,
+        string caller,
         string target,
         int quantity) =>
         Deed.PlanPays(
@@ -1982,7 +2028,7 @@ public static class DeedFixtures
             collections,
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
-            caller: CallerIdentities.Grid,
+            caller: caller,
             target: target,
             mount: null,
             ground: null,

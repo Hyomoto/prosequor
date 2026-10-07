@@ -2,7 +2,7 @@ using Atlas.Api;
 using Atlas.XUnit;
 using Prosequor.Ability;
 using Prosequor.Player;
-using Prosequor.Xp.Activity;
+using System.Reflection;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
@@ -64,7 +64,7 @@ public class CookQualityScenarios : AtlasScenarioBase
             cooked,
             servings,
             ingredients: 2,
-            extraTokens: MealHostCredit.IsMealVessel(cooked) ? [DeedTokenTags.CookingPot] : null);
+            caller: EventFactBuilder.CodeOf(pot));
         ScenarioXp.AssertPaid(gained, expected, $"cooked pot ({servings} servings, 2 ingredients)");
 
         Block bowl = RequireBlock("game:bowl-blue-fired", "bowl-blue-fired");
@@ -202,26 +202,116 @@ public class CookQualityScenarios : AtlasScenarioBase
         StartCooking(firepit, cook);
 
         Item raw = RequireItem("game:redmeat-raw", "redmeat-raw");
-        firepit.inputSlot.Itemstack = new ItemStack(raw, 1);
+        firepit.inputSlot.Itemstack = new ItemStack(raw, 4);
         firepit.inputSlot.MarkDirty();
 
         float before = TotalCookingXp(cook);
+        float miningBefore = ScenarioXp.TotalSkill(cook, "mining");
         firepit.smeltItems();
 
         ItemStack? cooked = firepit.outputSlot.Itemstack;
         Assert.NotNull(cooked);
         Assert.Equal("redmeat-cooked", cooked!.Collectible.Code.Path);
+        Assert.Equal(1, cooked.StackSize);
+        Assert.Equal(3, firepit.inputSlot.Itemstack?.StackSize);
         AssertPedigree(cooked, cook.PlayerUID, "smelted meat");
-        float gained = TotalCookingXp(cook) - before;
-        float expected = ScenarioXp.PlannedCrafted(
+        float one = ScenarioXp.PlannedCrafted(
             World.Api.World,
             Skill,
             cook.PlayerUID,
             cooked,
-            quantity: Math.Max(1, cooked.StackSize),
-            ingredients: 1);
-        ScenarioXp.AssertPaid(gained, expected, "smelted meat");
-        Assert.True(firepit.outputSlot.Itemstack == cooked);
+            quantity: 1,
+            ingredients: 1,
+            caller: EventFactBuilder.CodeOf(firepit.Block));
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, one, "first roast from a stack of 4");
+
+        string? grade = null;
+        if (ItemAffixes.TryGetQuality(cooked, out ItemAffixEntry firstGrade))
+        {
+            grade = firstGrade.LangKey;
+        }
+
+        firepit.smeltItems();
+        Assert.Equal(2, firepit.outputSlot.Itemstack?.StackSize);
+        Assert.Equal(2, firepit.inputSlot.Itemstack?.StackSize);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, one * 2, "second roast still pays one item");
+        if (grade != null)
+        {
+            Assert.True(ItemAffixes.TryGetQuality(firepit.outputSlot.Itemstack, out ItemAffixEntry secondGrade));
+            Assert.Equal(grade, secondGrade.LangKey);
+        }
+
+        Assert.Equal(miningBefore, ScenarioXp.TotalSkill(cook, "mining"));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Pedigree")]
+    [Trait("Kind", "CookQuality")]
+    public async Task FirepitSmelt_Should_NotPayMining_ForANuggetStack()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookNugget");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityFirepit firepit = PlaceFirepit(cook);
+        StartCooking(firepit, cook);
+        Item nugget = RequireItem("game:nugget-nativecopper", "nugget-nativecopper");
+        firepit.inputSlot.Itemstack = new ItemStack(nugget, 8);
+        firepit.inputSlot.MarkDirty();
+
+        float miningBefore = ScenarioXp.TotalSkill(cook, "mining");
+        float cookingBefore = TotalCookingXp(cook);
+        firepit.smeltItems();
+
+        Assert.Equal(miningBefore, ScenarioXp.TotalSkill(cook, "mining"));
+        Assert.Equal(cookingBefore, TotalCookingXp(cook));
+        Assert.True(
+            (firepit.inputSlot.Itemstack?.StackSize ?? 0) >= 7,
+            "The unsmelted nuggets must still be in the input.");
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Pedigree")]
+    [Trait("Kind", "CookQuality")]
+    public async Task OvenBake_Should_PayPartBaked_And_NotPayPerfectAgain()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookOven");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityOven oven = PlaceOven(cook);
+        OvenCookStarterStation.NoteInteractor(oven, cook);
+        Item dough = RequireItem("game:dough-spelt", "dough-spelt");
+        Assert.True(oven.Inventory.Count > 0, "Expected an oven inventory.");
+        int slot = 0;
+        oven.Inventory[slot].Itemstack = new ItemStack(dough, 1);
+        oven.Inventory[slot].MarkDirty();
+
+        float before = TotalCookingXp(cook);
+        Assert.True(
+            BakeUntil(oven, slot, "partbaked"),
+            "Expected the oven to turn dough into part-baked bread.");
+        ItemStack? part = oven.Inventory[slot].Itemstack;
+        Assert.NotNull(part);
+        Assert.Contains("partbaked", part!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        float partPay = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            part,
+            quantity: 1,
+            ingredients: 1,
+            caller: EventFactBuilder.CodeOf(oven.Block));
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, partPay, "part-baked loaf");
+
+        float afterPart = TotalCookingXp(cook);
+        Assert.True(
+            BakeUntil(oven, slot, "perfect"),
+            "Expected the oven to finish the loaf.");
+        Assert.Contains("perfect", oven.Inventory[slot].Itemstack?.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(afterPart, TotalCookingXp(cook));
     }
 
     [AtlasScenario]
@@ -457,6 +547,85 @@ public class CookQualityScenarios : AtlasScenarioBase
         }
 
         return be;
+    }
+
+    BlockEntityOven PlaceOven(IPlayer player)
+    {
+        IWorldAccessor world = World.Api.World;
+        int offset = nextOffset;
+        nextOffset += 3;
+        BlockPos pos = player.Entity.Pos.AsBlockPos.AddCopy(offset, 0, 0);
+        EnsureFloor(pos);
+        Block oven = RequireBlock("game:clayoven-north", "clayoven-north");
+        world.BlockAccessor.SetBlock(0, pos);
+        world.BlockAccessor.SetBlock(oven.BlockId, pos);
+        if (world.BlockAccessor.GetBlockEntity(pos) is not BlockEntityOven be)
+        {
+            Assert.Fail($"Expected BlockEntityOven at {pos}.");
+            throw new InvalidOperationException();
+        }
+
+        return be;
+    }
+
+    static bool BakeUntil(BlockEntityOven oven, int slot, string pathContains)
+    {
+        HeatOven(oven);
+        MethodInfo? bake = typeof(BlockEntityOven).GetMethod(
+            "IncrementallyBake",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        Assert.NotNull(bake);
+        ParameterInfo[] parameters = bake!.GetParameters();
+        object?[] args = new object[parameters.Length];
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            Type type = parameters[i].ParameterType;
+            if (type == typeof(int))
+            {
+                args[i] = slot;
+            }
+            else if (type == typeof(float))
+            {
+                args[i] = 5f;
+            }
+            else if (type == typeof(double))
+            {
+                args[i] = 5d;
+            }
+            else
+            {
+                args[i] = type.IsValueType ? Activator.CreateInstance(type) : null;
+            }
+        }
+
+        for (int i = 0; i < 400; i++)
+        {
+            bake.Invoke(oven, args);
+            string? path = oven.Inventory[slot].Itemstack?.Collectible?.Code?.Path;
+            if (path != null && path.Contains(pathContains, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static void HeatOven(BlockEntityOven oven)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        FieldInfo? dataField = typeof(BlockEntityOven).GetField("bakingData", flags);
+        if (dataField?.GetValue(oven) is not Array data)
+        {
+            return;
+        }
+
+        for (int i = 0; i < data.Length; i++)
+        {
+            object? entry = data.GetValue(i);
+            FieldInfo? temp = entry?.GetType().GetField("temp", flags);
+            temp?.SetValue(entry, 800f);
+        }
     }
 
     void EnsureFloor(BlockPos pos)

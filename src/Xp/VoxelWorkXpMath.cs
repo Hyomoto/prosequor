@@ -1,10 +1,10 @@
 namespace Prosequor.Xp;
 
 /// <summary>
-/// Pure clay-form XP math: good-voxel count and high-water deltas.
-/// A good voxel is a recipe-wanted cell that is currently filled.
+/// Voxel-work XP math shared by clay forming, smithing, and knapping.
+/// A correct voxel is one the recipe wants in its finished state.
 /// </summary>
-public static class ClayFormXpMath
+public static class VoxelWorkXpMath
 {
     /// <summary>
     /// Count filled cells that the recipe wants within <paramref name="layers"/>.
@@ -71,8 +71,41 @@ public static class ClayFormXpMath
     }
 
     /// <summary>
-    /// Advance high-water for <paramref name="currentKey"/>. Recipe-key change resets the mark
-    /// to <paramref name="good"/> and pays 0. Same key pays <c>max(0, good - highWater)</c>.
+    /// Knapping: cells the recipe wants empty that are empty, within <paramref name="layers"/>.
+    /// A full starting slab counts 0. Each correct removal raises the count by one.
+    /// </summary>
+    public static int CountRemoved(bool[,,] have, bool[,,] want, int layers)
+    {
+        if (have == null || want == null || layers <= 0)
+        {
+            return 0;
+        }
+
+        int xSize = Math.Min(have.GetLength(0), want.GetLength(0));
+        int ySize = Math.Min(Math.Min(have.GetLength(1), want.GetLength(1)), layers);
+        int zSize = Math.Min(have.GetLength(2), want.GetLength(2));
+        int removed = 0;
+        for (int x = 0; x < xSize; x++)
+        {
+            for (int y = 0; y < ySize; y++)
+            {
+                for (int z = 0; z < zSize; z++)
+                {
+                    if (!want[x, y, z] && !have[x, y, z])
+                    {
+                        removed++;
+                    }
+                }
+            }
+        }
+
+        return removed;
+    }
+
+    /// <summary>
+    /// Missing recipe key and a different recipe key both adopt <paramref name="good"/> and pay 0.
+    /// The same key pays <c>max(0, good - highWater)</c>. A later drop below the mark pays 0.
+    /// A null <paramref name="currentKey"/> leaves the stored mark unchanged.
     /// </summary>
     public static int TakeDelta(
         int good,
@@ -85,17 +118,17 @@ public static class ClayFormXpMath
         good = Math.Max(0, good);
         currentKey = string.IsNullOrWhiteSpace(currentKey) ? null : currentKey.Trim();
         storedKey = string.IsNullOrWhiteSpace(storedKey) ? null : storedKey.Trim();
-        newRecipeKey = currentKey;
 
         if (currentKey == null)
         {
             newHighWater = Math.Max(0, highWater);
+            newRecipeKey = storedKey;
             return 0;
         }
 
-        // Recipe swap (not first bind): adopt current good, pay nothing.
-        if (storedKey != null
-            && !string.Equals(storedKey, currentKey, StringComparison.OrdinalIgnoreCase))
+        newRecipeKey = currentKey;
+        if (storedKey == null
+            || !string.Equals(storedKey, currentKey, StringComparison.OrdinalIgnoreCase))
         {
             newHighWater = good;
             return 0;

@@ -388,7 +388,8 @@ public static class CraftMutateOutputStation
         IWorldAccessor world,
         string? playerUid,
         ItemStack crafted,
-        bool stampMaker = true)
+        bool stampMaker = true,
+        string? caller = null)
     {
         if (world?.Side != EnumAppSide.Server
             || string.IsNullOrWhiteSpace(playerUid)
@@ -416,17 +417,18 @@ public static class CraftMutateOutputStation
         }
 
         IPlayer? player = world.PlayerByUid(uid);
+        string held = StationCaller(caller);
         AbilityAction fact = player != null
             ? EventFactBuilder.ForPlayer(
                 player,
                 VerbIds.MutateOutput.Value,
                 target: EventFactBuilder.CodeOf(crafted),
-                held: CallerIdentities.Grid,
+                held: held,
                 includeLastCraft: false)
             : EventFactBuilder.Build(
                 VerbIds.MutateOutput.Value,
                 uid,
-                held: CallerIdentities.Grid,
+                held: held,
                 target: EventFactBuilder.CodeOf(crafted));
 
         CraftMutateOutputContext context = new()
@@ -440,7 +442,7 @@ public static class CraftMutateOutputStation
         };
 
         mod.Pipeline.Run(HookIds.CraftingInteraction, VerbIds.MutateOutput, HookIds.Attributes, context, crafted);
-        TryApplyQuality(world, uid, crafted);
+        TryApplyQuality(world, uid, crafted, caller: held);
     }
 
     /// <summary>
@@ -528,7 +530,8 @@ public static class CraftMutateOutputStation
         IWorldAccessor world,
         string? playerUid,
         ItemStack crafted,
-        float extraQualityBase = 0f)
+        float extraQualityBase = 0f,
+        string? caller = null)
     {
         if (world?.Side != EnumAppSide.Server || crafted?.Collectible == null)
         {
@@ -550,18 +553,19 @@ public static class CraftMutateOutputStation
         IPlayer? player = !string.IsNullOrWhiteSpace(playerUid)
             ? world.PlayerByUid(playerUid)
             : null;
+        string held = StationCaller(caller);
 
         AbilityAction qualityFact = player != null
             ? EventFactBuilder.ForPlayer(
                 player,
                 VerbIds.ApplyQuality.Value,
                 target: EventFactBuilder.CodeOf(crafted),
-                held: CallerIdentities.Grid,
+                held: held,
                 includeLastCraft: false)
             : EventFactBuilder.Build(
                 VerbIds.ApplyQuality.Value,
                 playerUid ?? "",
-                held: CallerIdentities.Grid,
+                held: held,
                 target: EventFactBuilder.CodeOf(crafted));
 
         CraftMutateOutputContext qualityContext = new()
@@ -590,6 +594,9 @@ public static class CraftMutateOutputStation
             crafted);
         return true;
     }
+
+    static string StationCaller(string? caller) =>
+        string.IsNullOrWhiteSpace(caller) ? CallerIdentities.Grid : caller.Trim();
 
     /// <summary>
     /// Resolves apply-quality knob phases onto <paramref name="context"/> once.

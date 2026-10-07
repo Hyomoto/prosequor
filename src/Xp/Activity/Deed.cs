@@ -1268,16 +1268,22 @@ public static class Deed
         voxels = 0f;
         min = 0f;
         max = 0f;
-        ClayFormingRecipeCatalog? catalog = mod?.ClayFormingRecipes;
-        if (catalog == null
-            || !ProsequorStackPedigree.TryGetRecipeKey(subject, out string? recipeKey)
-            || !catalog.TryGet(recipeKey, out ClayFormingRecipeCatalog.RecipeInfo info))
+        if (!ProsequorStackPedigree.TryGetRecipeKey(subject, out string? recipeKey)
+            || !VoxelRecipeMeasure.TryResolve(
+                recipeKey,
+                mod?.ClayFormingRecipes,
+                mod?.SmithingRecipes,
+                mod?.KnappingRecipes,
+                out int perUnit,
+                out int spanMin,
+                out int spanMax))
         {
             return false;
         }
 
-        voxels = info.VoxelsPerUnit;
-        ResolveMetricRange(mod, MetricDomainClayVoxels, metricMin: null, metricMax: null, out min, out max);
+        voxels = perUnit;
+        min = spanMin;
+        max = spanMax;
         return true;
     }
 

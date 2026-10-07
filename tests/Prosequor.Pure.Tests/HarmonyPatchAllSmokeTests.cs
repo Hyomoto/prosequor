@@ -949,6 +949,16 @@ public class HarmonyPatchAllSmokeTests
             Patches? finishedInfo = Harmony.GetPatchInfo(anvilFinished);
             Assert.NotNull(finishedInfo);
             Assert.True(finishedInfo!.Postfixes.Count > 0, "Expected anvil CheckIfFinished postfix.");
+
+            MethodInfo? knappingFinished = AccessTools.Method(
+                typeof(BlockEntityKnappingSurface),
+                nameof(BlockEntityKnappingSurface.CheckIfFinished));
+            Assert.NotNull(knappingFinished);
+            Assert.Contains(knappingFinished, harmony.GetPatchedMethods());
+            Patch? knappingPrefix = Harmony.GetPatchInfo(knappingFinished)
+                ?.Prefixes
+                .FirstOrDefault(p => p.PatchMethod.DeclaringType == typeof(KnappingCheckIfFinishedPatch));
+            Assert.NotNull(knappingPrefix);
         }
         finally
         {

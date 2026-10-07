@@ -16,7 +16,7 @@
       "amount": 0.01,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafting", "caller:@hand", "target:<clay-formed>" ]
+        "tags": [ "crafting", "caller:<clayform>", "target:<clay-formed>" ]
       }
     },
     {

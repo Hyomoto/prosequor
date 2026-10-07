@@ -8,7 +8,7 @@ namespace Prosequor.Xp.Adapters;
 /// <summary>
 /// Ground-storage process complete (<see cref="CollectibleBehaviorGroundStoredProcessable"/>)
 /// → <c>crafted</c> deed for the remaining item (hide scrape, parchment trim, …).
-/// Barrel soak/prepare and grid scrape already emit through existing craft adapters.
+/// The caller is the held tool. Barrel soak and grid scrape emit from their own stations.
 /// </summary>
 public static class GroundProcessXp
 {
@@ -83,7 +83,9 @@ public static class GroundProcessXp
             }
 
             int count = Math.Max(1, __state.Remaining.StackSize);
-            CraftedProductXp.Emit(world, byPlayer.PlayerUID, __state.Remaining, count);
+            string? tool = EventFactBuilder.HeldCode(byPlayer);
+            string caller = string.IsNullOrWhiteSpace(tool) ? CallerIdentities.Hand : tool;
+            CraftedProductXp.Emit(world, byPlayer.PlayerUID, __state.Remaining, count, caller);
         }
     }
 }

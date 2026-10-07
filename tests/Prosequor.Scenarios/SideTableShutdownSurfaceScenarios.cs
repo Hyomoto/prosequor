@@ -49,7 +49,6 @@ public class SideTableShutdownSurfaceScenarios : AtlasScenarioBase
             BlockPos origin = player.Entity.Pos.AsBlockPos;
             string uid = player.PlayerUID;
 
-            StampAnvil(origin.AddCopy(2, 0, 0));
             StampClayForm(origin.AddCopy(4, 0, 0));
             StampFirepit(origin.AddCopy(6, 0, 0), uid);
             StampOven(origin.AddCopy(8, 0, 0), uid);
@@ -163,13 +162,6 @@ public class SideTableShutdownSurfaceScenarios : AtlasScenarioBase
         Assert.True(unrestored.Count == 0,
             "Shutdown row kept the key, but the loaded chunk pedigree did not: "
             + string.Join(", ", unrestored) + ".");
-    }
-
-    void StampAnvil(BlockPos pos)
-    {
-        BlockEntityAnvil anvil = PlaceBe<BlockEntityAnvil>(pos, "game:anvil-copper", "game:anvil-bronze", "game:anvil-iron");
-        AnvilXpStation.Stamp(anvil, 7, "side-table-anvil");
-        Remember("anvil", pos, AnvilXpStation.HighWaterAttr);
     }
 
     void StampClayForm(BlockPos pos)

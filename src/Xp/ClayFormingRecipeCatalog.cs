@@ -10,7 +10,7 @@ namespace Prosequor.Xp;
 /// The voxel table dedups by recipe name (bowl.json blue/fire/red share one Name);
 /// every variant's <c>Output.Code</c> and resolved collectible still join <c>clay-formed</c>.
 /// </summary>
-public sealed class ClayFormingRecipeCatalog
+public sealed class ClayFormingRecipeCatalog : IVoxelPerUnitCatalog
 {
     readonly Dictionary<string, RecipeInfo> byKey;
     readonly int minVoxelsPerUnit;
@@ -67,7 +67,7 @@ public sealed class ClayFormingRecipeCatalog
             int layers = Math.Min(16, Math.Max(0, recipe.QuantityLayers));
             int total = CountWantedVoxels(recipe.Voxels, layers);
             int outputCount = Math.Max(1, recipe.Output?.StackSize ?? 1);
-            int perUnit = Math.Max(1, (int)Math.Ceiling(total / (double)outputCount));
+            int perUnit = VoxelsPerUnit(recipe.Voxels, layers, outputCount);
 
             map[key] = new RecipeInfo(total, outputCount, perUnit, outputCode);
             if (perUnit < min)
@@ -99,6 +99,26 @@ public sealed class ClayFormingRecipeCatalog
         {
             index.AddCode(id, code);
         }
+    }
+
+    public bool TryGetVoxelsPerUnit(string? recipeKey, out int voxelsPerUnit)
+    {
+        if (!TryGet(recipeKey, out RecipeInfo info))
+        {
+            voxelsPerUnit = 0;
+            return false;
+        }
+
+        voxelsPerUnit = info.VoxelsPerUnit;
+        return true;
+    }
+
+    /// <summary>Wanted cells divided by output stack size, at least 1.</summary>
+    public static int VoxelsPerUnit(bool[,,]? voxels, int layers, int outputStackSize)
+    {
+        int total = CountWantedVoxels(voxels, layers);
+        int outputCount = Math.Max(1, outputStackSize);
+        return Math.Max(1, (int)Math.Ceiling(total / (double)outputCount));
     }
 
     public bool TryGet(string? recipeKey, out RecipeInfo info)

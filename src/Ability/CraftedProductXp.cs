@@ -15,6 +15,7 @@ public static class CraftedProductXp
         string? actorUid,
         ItemStack? stack,
         int quantity,
+        string? caller,
         int ingredients = 0,
         IReadOnlyList<Deed.ContributorShare>? contributors = null,
         string? makerUid = null,
@@ -22,6 +23,7 @@ public static class CraftedProductXp
     {
         if (world?.Side != EnumAppSide.Server
             || string.IsNullOrWhiteSpace(actorUid)
+            || string.IsNullOrWhiteSpace(caller)
             || stack?.Collectible == null
             || quantity <= 0)
         {
@@ -51,7 +53,7 @@ public static class CraftedProductXp
             world.Api,
             actorUid.Trim(),
             tokens,
-            caller: CallerIdentities.Grid,
+            caller: caller.Trim(),
             target: target,
             outputs: [new Deed.QuantityUnit(target, quantity)],
             inputs: ingredients > 0 ? [new Deed.QuantityUnit(target, ingredients)] : null,

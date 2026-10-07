@@ -33,6 +33,7 @@ public static class AnvilOnHitAssistPatch
     [HarmonyPrefix]
     public static void Prefix(BlockEntityAnvil __instance, Vec3i voxelPos)
     {
+        AnvilXpStation.NoteBaseline(__instance);
         IPlayer? player = AnvilHitScope.CurrentPlayer;
         if (player == null)
         {
@@ -68,6 +69,7 @@ public static class AnvilOnSplitRecoveryPatch
     [HarmonyPrefix]
     public static void Prefix(BlockEntityAnvil __instance, Vec3i voxelPos)
     {
+        AnvilXpStation.NoteBaseline(__instance);
         IPlayer? player = AnvilHitScope.CurrentPlayer;
         if (player == null)
         {
@@ -95,6 +97,10 @@ public static class AnvilOnSplitRecoveryPatch
 [HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.OnUpset))]
 public static class AnvilOnUpsetHeatedStrikesPatch
 {
+    [HarmonyPrefix]
+    public static void Prefix(BlockEntityAnvil __instance) =>
+        AnvilXpStation.NoteBaseline(__instance);
+
     [HarmonyPostfix]
     public static void Postfix(BlockEntityAnvil __instance)
     {
@@ -123,6 +129,7 @@ public static class AnvilTryPutBitsForgingPatch
         IPlayer byPlayer,
         BlockSelection blockSel)
     {
+        AnvilXpStation.NoteBaseline(__instance);
         ItemStack? stack = byPlayer?.InventoryManager?.ActiveHotbarSlot?.Itemstack;
         if (!AnvilBitsForgingOps.IsMetalBit(stack?.Collectible))
         {
@@ -194,8 +201,10 @@ public static class AnvilInteractBitsForgingPatch
             return true;
         }
 
+        AnvilXpStation.NoteBaseline(__instance);
         object? invoked = TryPutMethod.Invoke(__instance, new object[] { world, byPlayer, blockSel });
         __result = invoked is true;
+        AnvilXpStation.TryAwardProgress(__instance, byPlayer);
         return false;
     }
 }
@@ -207,9 +216,24 @@ public static class AnvilInteractBitsForgingPatch
 [HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.CheckIfFinished))]
 public static class AnvilCheckIfFinishedXpPatch
 {
+    [HarmonyPrefix]
+    public static void Prefix(BlockEntityAnvil __instance, IPlayer byPlayer)
+    {
+        AnvilXpStation.NoteBaseline(__instance);
+        if (byPlayer == null || __instance?.Api?.Side != EnumAppSide.Server)
+        {
+            return;
+        }
+
+        VoxelFinishScope.BeginGive(byPlayer, AnvilXpStation.RecipeKeyOf(__instance.SelectedRecipe));
+    }
+
     [HarmonyPostfix]
     public static void Postfix(BlockEntityAnvil __instance, IPlayer byPlayer) =>
         AnvilXpStation.TryAwardProgress(__instance, byPlayer);
+
+    [HarmonyFinalizer]
+    public static void Finalizer() => VoxelFinishScope.End();
 }
 
 

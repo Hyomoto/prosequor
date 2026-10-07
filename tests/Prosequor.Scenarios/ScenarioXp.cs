@@ -44,7 +44,8 @@ static class ScenarioXp
         int ingredients = 0,
         IReadOnlyList<Deed.ContributorShare>? contributors = null,
         string? makerUid = null,
-        IReadOnlyList<string>? extraTokens = null)
+        IReadOnlyList<string>? extraTokens = null,
+        string? caller = null)
     {
         string? target = EventFactBuilder.CodeOf(stack);
         Assert.False(string.IsNullOrWhiteSpace(target), "Expected a crafted stack code.");
@@ -68,7 +69,7 @@ static class ScenarioXp
                 world,
                 playerUid,
                 tokens,
-                CallerIdentities.Grid,
+                string.IsNullOrWhiteSpace(caller) ? CallerIdentities.Grid : caller.Trim(),
                 target,
                 ingredients,
                 quantity,
@@ -119,7 +120,8 @@ static class ScenarioXp
         string skillId,
         string playerUid,
         string? target,
-        int voxelCount)
+        int voxelCount,
+        string caller)
     {
         Assert.True(voxelCount > 0);
         float one = Sum(
@@ -127,7 +129,7 @@ static class ScenarioXp
                 world,
                 playerUid,
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
-                CallerIdentities.Hand,
+                caller,
                 target,
                 totalUnits: 0,
                 craftCount: 1,

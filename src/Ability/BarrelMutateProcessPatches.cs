@@ -32,6 +32,23 @@ public static class BarrelMutateProcessPatches
         public bool WasSealed;
         public string? SealerUid;
         public IReadOnlyList<Deed.ContributorShare> Shares = Array.Empty<Deed.ContributorShare>();
+        public SlotBefore[] Before = [];
+    }
+
+    public readonly struct SlotBefore
+    {
+        public SlotBefore(string? code, int size)
+        {
+            Code = string.IsNullOrWhiteSpace(code) ? null : code;
+            Size = Code == null ? 0 : Math.Max(0, size);
+        }
+
+        public string? Code { get; }
+
+        public int Size { get; }
+
+        public static SlotBefore Of(ItemStack? stack) =>
+            new(EventFactBuilder.CodeOf(stack), stack?.StackSize ?? 0);
     }
 
     [HarmonyPatch(typeof(BlockBarrel), nameof(BlockBarrel.OnBlockInteractStart))]
@@ -148,7 +165,8 @@ public static class BarrelMutateProcessPatches
             {
                 WasSealed = __instance.Sealed,
                 SealerUid = SealerOf(__instance),
-                Shares = SnapshotShares(__instance)
+                Shares = SnapshotShares(__instance),
+                Before = SnapshotSlots(__instance)
             };
         }
 
@@ -200,13 +218,7 @@ public static class BarrelMutateProcessPatches
                     changed = true;
                 }
 
-                CraftedProductXp.Emit(
-                    __instance.Api.World,
-                    sealer,
-                    slot.Itemstack,
-                    slot.Itemstack.StackSize,
-                    contributors: __state.Shares,
-                    makerUid: sealer);
+                PaySlot(__instance, __state, i, sealer, slot.Itemstack);
             }
 
             ClearProcess(__instance);
@@ -215,6 +227,54 @@ public static class BarrelMutateProcessPatches
                 __instance.MarkDirty(true);
             }
         }
+    }
+
+    static SlotBefore[] SnapshotSlots(BlockEntityBarrel barrel)
+    {
+        InventoryBase? inventory = barrel.Inventory;
+        int count = inventory?.Count ?? 0;
+        SlotBefore[] slots = new SlotBefore[count];
+        for (int i = 0; i < count; i++)
+        {
+            slots[i] = SlotBefore.Of(inventory![i]?.Itemstack);
+        }
+
+        return slots;
+    }
+
+    /// <summary>
+    /// One crafted deed for a stack this unseal created or grew. The caller is the barrel block.
+    /// </summary>
+    static void PaySlot(
+        BlockEntityBarrel barrel,
+        SealCompleteState before,
+        int index,
+        string sealer,
+        ItemStack stack)
+    {
+        string? after = EventFactBuilder.CodeOf(stack);
+        if (string.IsNullOrWhiteSpace(after))
+        {
+            return;
+        }
+
+        int afterSize = Math.Max(0, stack.StackSize);
+        SlotBefore was = index < before.Before.Length ? before.Before[index] : default;
+        bool same = string.Equals(was.Code, after, StringComparison.OrdinalIgnoreCase);
+        int quantity = same ? afterSize - was.Size : afterSize;
+        if (quantity <= 0)
+        {
+            return;
+        }
+
+        CraftedProductXp.Emit(
+            barrel.Api.World,
+            sealer,
+            stack,
+            quantity,
+            EventFactBuilder.CodeOf(barrel.Block),
+            contributors: before.Shares,
+            makerUid: sealer);
     }
 
     /// <summary>

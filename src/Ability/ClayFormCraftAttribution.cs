@@ -43,7 +43,20 @@ public static class ClayFormCraftAttribution
         }
 
         CraftAttribution.StampMaker(stack, playerEntity.Player);
-        TryStampRecipeFromPlayerForm(playerEntity.Player, stack);
+        string? recipeKey = VoxelFinishScope.RecipeKey;
+        if (string.IsNullOrWhiteSpace(recipeKey))
+        {
+            TryStampRecipeFromPlayerForm(playerEntity.Player, stack);
+        }
+        else
+        {
+            CraftAttribution.StampRecipe(stack, recipeKey);
+        }
+
+        if (ProsequorStackPedigree.TryGetRecipeKey(stack, out _))
+        {
+            ProsequorModSystem.For(serverApi)?.VoxelWorkXp?.NotifyFinished(playerEntity.Player, stack);
+        }
     }
 
     /// <summary>Ground-storage and multi-slot clay-form outputs bypass the event bus.</summary>
@@ -59,7 +72,13 @@ public static class ClayFormCraftAttribution
             return;
         }
 
-        string? recipeKey = ClayFormXpStation.RecipeKeyOf(form.SelectedRecipe);
+        string? recipeKey = VoxelFinishScope.RecipeKey;
+        if (string.IsNullOrWhiteSpace(recipeKey))
+        {
+            recipeKey = ClayFormXpStation.RecipeKeyOf(form.SelectedRecipe);
+        }
+
+        bool stampRecipe = !string.IsNullOrWhiteSpace(recipeKey);
         foreach (ItemSlot slot in storage.Inventory)
         {
             if (slot.Itemstack == null)
@@ -68,7 +87,12 @@ public static class ClayFormCraftAttribution
             }
 
             CraftAttribution.StampMaker(slot.Itemstack, player);
-            CraftAttribution.StampRecipe(slot.Itemstack, recipeKey);
+            if (stampRecipe)
+            {
+                CraftAttribution.StampRecipe(slot.Itemstack, recipeKey);
+                ProsequorModSystem.For(form.Api)?.VoxelWorkXp?.NotifyFinished(player, slot.Itemstack);
+            }
+
             slot.MarkDirty();
         }
     }

@@ -380,12 +380,12 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `trapped` | Food animal caught in a basket / crate trap when generation is below 3 |
 | `slaughtered` | Player kill or trap catch when generation is 3 or higher |
 | `dressed` | Dead-animal harvest when generation is 3 or higher |
-| `crafted` | Craft-grid take / similar discrete craft |
+| `crafted` | A finished product. The caller says which station made it; omit the caller to match every station. |
 | `crafting` | Hand-shape progress (clay-form / smith); one flat deed per novel voxel |
+| `voxel-finished` | Voxel workpiece became its output. Subject is that stack, with the recipe key stamped |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
 | `till-soil` | Soil → farmland |
 | `fertilizer-absorbed` | Fertilizer nutrient transfer |
-| `cooking-pot` | Meal finished in a cooking pot |
 | `fishing-catch` | Fish catch |
 | `kiln-fired` | Kiln settle |
 | `mold-cast` | Mold cast hardened |
@@ -851,7 +851,7 @@ All set conditions AND. Among matching rules for a skill, one winner: identity c
 | `flat` | Pay `amount` once (default) |
 | `resistance` | Lerp `amount` table against a float measure (block resistance, animal weight, or an explicit 0–1 emit range) |
 | `effort` | Alias for `resistance` (same channel) |
-| `voxels` | Lerp `amount` table against clay voxels-per-unit on the fired piece |
+| `voxels` | Lerp `amount` table against voxels-per-unit of the recipe stamped on the subject. The span is that recipe's catalog: clayforming, smithing, or knapping |
 | `quantity` | Multiply by produced units on the emit (drops, crafts, contents, …). Not used for clay-form / smith voxel pulses — those are flat per emit |
 | `ingredients` | Lerp `amount` table against recipe ingredient units (1–40) |
 | `lifetime` | Lerp `amount` table against crop growth days (catalog min–max), then divide by `GrowthStages` |

@@ -34,7 +34,7 @@
       "amount": 2,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<mortar>" ]
+        "tags": [ "crafted", "caller:<barrel>", "target:<mortar>" ]
       }
     },
     {
@@ -42,7 +42,15 @@
       "amount": 2,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:<daub>" ]
+        "tags": [ "crafted", "caller:@grid", "target:<daub>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-daub-barrel-construction",
+      "amount": 2,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:<barrel>", "target:<daub>" ]
       }
     }
   ],

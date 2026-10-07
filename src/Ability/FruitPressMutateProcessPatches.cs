@@ -26,6 +26,9 @@ public static class FruitPressMutateProcessPatches
     static string? juiceMakerUid;
 
     [ThreadStatic]
+    static string? juiceCaller;
+
+    [ThreadStatic]
     static IWorldAccessor? juiceWorld;
 
     public sealed class MashFillState
@@ -108,6 +111,7 @@ public static class FruitPressMutateProcessPatches
         public static void Prefix(BlockEntityFruitPress __instance)
         {
             juiceMakerUid = null;
+            juiceCaller = null;
             juiceWorld = null;
             if (__instance.Api?.World?.Side != EnumAppSide.Server)
             {
@@ -115,6 +119,7 @@ public static class FruitPressMutateProcessPatches
             }
 
             juiceWorld = __instance.Api.World;
+            juiceCaller = EventFactBuilder.CodeOf(__instance.Block);
             if (ProsequorBlockPedigreeStation.TryGetSoleContributor(__instance, out string? uid)
                 && !string.IsNullOrWhiteSpace(uid))
             {
@@ -126,6 +131,7 @@ public static class FruitPressMutateProcessPatches
         public static void Finalizer()
         {
             juiceMakerUid = null;
+            juiceCaller = null;
             juiceWorld = null;
         }
     }
@@ -175,7 +181,7 @@ public static class FruitPressMutateProcessPatches
                 return;
             }
 
-            CraftedProductXp.Emit(juiceWorld, juiceMakerUid, content, __result);
+            CraftedProductXp.Emit(juiceWorld, juiceMakerUid, content, __result, juiceCaller);
         }
     }
 

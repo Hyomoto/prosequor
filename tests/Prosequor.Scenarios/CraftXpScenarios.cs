@@ -159,16 +159,22 @@ public class CraftXpScenarios : AtlasScenarioBase
         Assert.NotNull(leather);
 
         ItemStack stack = new(leather, 3);
+        const string barrel = "game:barrel";
         float xpBefore = ScenarioXp.TotalSkill(progress, "tailoring");
-        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, stack, 3);
+        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, stack, 3, barrel);
         float gained = ScenarioXp.TotalSkill(progress, "tailoring") - xpBefore;
         float expected = ScenarioXp.PlannedCrafted(
             World.Api.World,
             "tailoring",
             player.PlayerUID,
             stack,
-            quantity: 3);
-        ScenarioXp.AssertPaid(gained, expected, "3 leather");
+            quantity: 3,
+            caller: barrel);
+        ScenarioXp.AssertPaid(gained, expected, "3 tanned leather");
+
+        float gridBefore = ScenarioXp.TotalSkill(progress, "tailoring");
+        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, stack, 3, CallerIdentities.Grid);
+        Assert.Equal(gridBefore, ScenarioXp.TotalSkill(progress, "tailoring"));
     }
 
     [AtlasScenario]
@@ -185,16 +191,36 @@ public class CraftXpScenarios : AtlasScenarioBase
         Assert.NotNull(hide);
 
         ItemStack stack = new(hide, 1);
+        const string barrel = "game:barrel";
         float xpBefore = ScenarioXp.TotalSkill(progress, "tailoring");
-        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, stack, 1);
+        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, stack, 1, barrel);
         float gained = ScenarioXp.TotalSkill(progress, "tailoring") - xpBefore;
         float expected = ScenarioXp.PlannedCrafted(
             World.Api.World,
             "tailoring",
             player.PlayerUID,
             stack,
-            quantity: 1);
-        ScenarioXp.AssertPaid(gained, expected, "one processed hide");
+            quantity: 1,
+            caller: barrel);
+        ScenarioXp.AssertPaid(gained, expected, "one prepared hide");
+
+        Item? scraped = World.Api.World.GetItem(new AssetLocation("game:hide-scraped-large"));
+        Item? knife = World.Api.World.GetItem(new AssetLocation("game:knife-generic-flint"));
+        Assert.NotNull(scraped);
+        Assert.NotNull(knife);
+        ItemStack scrapedStack = new(scraped, 1);
+        string knifeCode = EventFactBuilder.CodeOf(knife)!;
+        float knifeBefore = ScenarioXp.TotalSkill(progress, "tailoring");
+        CraftedProductXp.Emit(World.Api.World, player.PlayerUID, scrapedStack, 1, knifeCode);
+        float knifeGain = ScenarioXp.TotalSkill(progress, "tailoring") - knifeBefore;
+        float knifeExpected = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            "tailoring",
+            player.PlayerUID,
+            scrapedStack,
+            quantity: 1,
+            caller: knifeCode);
+        ScenarioXp.AssertPaid(knifeGain, knifeExpected, "one scraped hide");
     }
 
     static IPlayerProgress RequireProgress(IPlayer player)

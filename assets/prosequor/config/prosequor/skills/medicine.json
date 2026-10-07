@@ -33,7 +33,7 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "target:game:alcoholportion" ]
+        "tags": [ "crafted", "caller:<condenser>", "target:game:alcoholportion" ]
       }
     }
   ],

@@ -104,6 +104,7 @@ public static class ClayFormCheckIfFinishedPatch
         }
 
         ClayFormVoxelOps.TryAutoFinish(__instance, byPlayer);
+        VoxelFinishScope.BeginClay(byPlayer, __instance);
     }
 
     [HarmonyPostfix]
@@ -111,7 +112,11 @@ public static class ClayFormCheckIfFinishedPatch
     {
         ClayFormVoxelOps.TryAwardProgress(__instance, byPlayer);
         ClayFormCraftAttribution.StampGroundStorageOutputs(__instance, byPlayer);
+        VoxelFinishScope.TryEmitPlacedOutput(__instance);
     }
+
+    [HarmonyFinalizer]
+    public static void Finalizer() => VoxelFinishScope.End();
 }
 
 

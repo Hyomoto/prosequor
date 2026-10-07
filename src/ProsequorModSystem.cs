@@ -58,12 +58,13 @@ public class ProsequorModSystem : ModSystem
     public OptionsRegistry Options { get; } = new();
     public AbilityPipeline? Pipeline { get; private set; }
     public CraftXpAdapter? CraftXp { get; private set; }
-    public ClayFormXpAdapter? ClayFormXp { get; private set; }
+    public VoxelWorkXpAdapter? VoxelWorkXp { get; private set; }
     public ActivityWatchService? ActivityWatch { get; private set; }
     public FatherXp? FatherXp { get; private set; }
     public ProgressPark? ProgressPark { get; private set; }
     public ClayFormingRecipeCatalog? ClayFormingRecipes { get; private set; }
     public SmithingRecipeCatalog? SmithingRecipes { get; private set; }
+    public KnappingRecipeCatalog? KnappingRecipes { get; private set; }
     public BlockBreakHardnessCatalog? BlockBreakHardness { get; private set; }
     public AnimalWeightCatalog? AnimalWeight { get; private set; }
     public CropLifetimeCatalog? CropLifetime { get; private set; }
@@ -94,7 +95,7 @@ public class ProsequorModSystem : ModSystem
     BlockBreakXpAdapter? blockBreakXpAdapter;
     FishingCatchXpAdapter? fishingCatchXpAdapter;
     CraftXpAdapter? craftXpAdapter;
-    ClayFormXpAdapter? clayFormXpAdapter;
+    VoxelWorkXpAdapter? voxelWorkXpAdapter;
     EventBusListenerDelegate? immConfigListener;
     long activityWatchListenerId;
     long progressFlushListenerId;
@@ -168,6 +169,7 @@ public class ProsequorModSystem : ModSystem
                 CementationAbilityPatches.TryPatchOptionalIgniters(sharedHarmony);
                 PlayerModelLibCompat.TryPatch(sharedHarmony);
                 KnapsterCompat.TryPatch(sharedHarmony);
+                VoxelFinishScope.TryPatchSpawn(sharedHarmony);
                 ProsequorStackPedigree.EnsurePedigreeIgnoredForMerge();
             }
 
@@ -279,8 +281,8 @@ public class ProsequorModSystem : ModSystem
         fishingCatchXpAdapter = new FishingCatchXpAdapter(api);
         craftXpAdapter = new CraftXpAdapter(api);
         CraftXp = craftXpAdapter;
-        clayFormXpAdapter = new ClayFormXpAdapter(api);
-        ClayFormXp = clayFormXpAdapter;
+        voxelWorkXpAdapter = new VoxelWorkXpAdapter(api);
+        VoxelWorkXp = voxelWorkXpAdapter;
 
         Effort.RegisterPoll(Effort.PollIdMount, EffortMountEmitter.TryPoll);
         Effort.RegisterPoll(Effort.PollIdFishing, EffortFishingEmitter.TryPoll);
@@ -310,9 +312,18 @@ public class ProsequorModSystem : ModSystem
             Collections.Index.ApplyExcludes(msg => api.Logger.Warning(msg));
             Collections.Index.MaterializeUnions(msg => api.Logger.Warning(msg));
             api.Logger.Notification(
-                "[prosequor] Smithing recipe catalog: {0} recipes, smithing-formed codes {1}.",
+                "[prosequor] Smithing recipe catalog: {0} recipes, voxels/unit {1}–{2}, smithing-formed codes {3}.",
                 SmithingRecipes.RecipeCount,
+                SmithingRecipes.MinVoxelsPerUnit,
+                SmithingRecipes.MaxVoxelsPerUnit,
                 SmithingRecipes.OutputCodes.Count);
+
+            KnappingRecipes = KnappingRecipeCatalog.Build(api);
+            api.Logger.Notification(
+                "[prosequor] Knapping recipe catalog: {0} recipes, voxels/unit {1}–{2}.",
+                KnappingRecipes.RecipeCount,
+                KnappingRecipes.MinVoxelsPerUnit,
+                KnappingRecipes.MaxVoxelsPerUnit);
 
             // Bake after all membership sources (patterns, pools, clay-formed, smithing-formed) are filled.
             TagCriterion.BindAll(Registry, AttributeStats, Collections.Index);
@@ -528,8 +539,8 @@ public class ProsequorModSystem : ModSystem
         fishingCatchXpAdapter = null;
         craftXpAdapter = null;
         CraftXp = null;
-        clayFormXpAdapter = null;
-        ClayFormXp = null;
+        voxelWorkXpAdapter = null;
+        VoxelWorkXp = null;
         ActivityWatch = null;
         Pipeline = null;
 

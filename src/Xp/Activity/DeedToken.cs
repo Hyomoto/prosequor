@@ -11,6 +11,8 @@ public enum DeedToken
     Crafted,
     /// <summary>Clay-form (and similar hand-shape) progress — not craft-grid <see cref="Crafted"/>.</summary>
     Crafting,
+    /// <summary>A clay, smithing, or knapping workpiece became its output item.</summary>
+    VoxelFinished,
     FishingCatch,
     KilnFired,
     SaddleBreak,
@@ -34,8 +36,6 @@ public enum DeedToken
     Dressed,
     /// <summary>Farmland slow-release fertilizer transferred into available nutrients.</summary>
     FertilizerAbsorbed,
-    /// <summary>Firepit output that is a meal host (cooking pot), not a raw smelt or leftover pot.</summary>
-    CookingPot,
     /// <summary>An animal ate from a trough, a crop, or a dropped stack.</summary>
     FedAnimal,
     /// <summary>Liquid metal in a tool/ingot mold hardened into a cast product.</summary>
@@ -62,6 +62,9 @@ public static class DeedTokenTags
     public const string Harvested = "harvested";
     public const string Crafted = "crafted";
     public const string Crafting = "crafting";
+
+    /// <summary>Voxel workpiece became its output item.</summary>
+    public const string VoxelFinished = "voxel-finished";
     public const string FishingCatch = "fishing-catch";
     public const string KilnFired = "kiln-fired";
     public const string SaddleBreak = "saddle-break";
@@ -115,9 +118,6 @@ public static class DeedTokenTags
     /// <summary>Slow-release fertilizer absorbed into farmland nutrients (whole percent quantity).</summary>
     public const string FertilizerAbsorbed = "fertilizer-absorbed";
 
-    /// <summary>Meal finished in a cooking pot. Not stamped on leftover dirty pots.</summary>
-    public const string CookingPot = "cooking-pot";
-
     /// <summary>Liquid metal hardened in a cast mold.</summary>
     public const string MoldCast = "mold-cast";
 
@@ -148,6 +148,7 @@ public static class DeedTokenTags
         DeedToken.Harvested => Harvested,
         DeedToken.Crafted => Crafted,
         DeedToken.Crafting => Crafting,
+        DeedToken.VoxelFinished => VoxelFinished,
         DeedToken.FishingCatch => FishingCatch,
         DeedToken.KilnFired => KilnFired,
         DeedToken.SaddleBreak => SaddleBreak,
@@ -160,7 +161,6 @@ public static class DeedTokenTags
         DeedToken.Slaughtered => Slaughtered,
         DeedToken.Dressed => Dressed,
         DeedToken.FertilizerAbsorbed => FertilizerAbsorbed,
-        DeedToken.CookingPot => CookingPot,
         DeedToken.FedAnimal => FedAnimal,
         DeedToken.MoldCast => MoldCast,
         DeedToken.BloomeryHarvest => BloomeryHarvest,
@@ -201,6 +201,12 @@ public static class DeedTokenTags
         if (t.Equals(Crafting, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Crafting;
+            return true;
+        }
+
+        if (t.Equals(VoxelFinished, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.VoxelFinished;
             return true;
         }
 
@@ -274,12 +280,6 @@ public static class DeedTokenTags
         if (t.Equals(FertilizerAbsorbed, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.FertilizerAbsorbed;
-            return true;
-        }
-
-        if (t.Equals(CookingPot, StringComparison.OrdinalIgnoreCase))
-        {
-            token = DeedToken.CookingPot;
             return true;
         }
 

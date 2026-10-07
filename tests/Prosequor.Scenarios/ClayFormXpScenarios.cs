@@ -89,7 +89,7 @@ public class ClayFormXpScenarios : AtlasScenarioBase
     /// <summary>
     /// Color variants share one recipe Name (bowl.json → blue/fire/red). The voxel table
     /// may keep only the first; <c>clay-formed</c> must still list every output or the
-    /// deed dies on <c>target:&lt;clay-formed&gt;</c> after matching crafting + @hand.
+    /// deed dies on <c>target:&lt;clay-formed&gt;</c> after matching crafting + the clay form block.
     /// </summary>
     [AtlasScenario]
     [Trait("Layer", "Xp")]
@@ -134,7 +134,7 @@ public class ClayFormXpScenarios : AtlasScenarioBase
             collections,
             player.PlayerUID,
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
-            caller: CallerIdentities.Hand,
+            caller: "game:clayform",
             target: redBowl,
             mount: null,
             ground: null,

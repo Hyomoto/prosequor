@@ -79,6 +79,69 @@
     ]
   },
   {
+    "id": "firepit",
+    "includes": [
+      "game:firepit-*"
+    ]
+  },
+  {
+    "id": "firepit-roast",
+    "includes": [
+      "game:vegetable-cookedcattailroot"
+    ],
+    "unions": [ "spit-cooked" ]
+  },
+  {
+    "id": "oven",
+    "includes": [
+      "game:clayoven-*"
+    ]
+  },
+  {
+    "id": "oven-baked",
+    "includes": [
+      "game:bread-*-partbaked",
+      "game:pie-partbaked"
+    ]
+  },
+  {
+    "id": "cooking-vessel",
+    "includes": [
+      "game:claypot-*-fired"
+    ]
+  },
+  {
+    "id": "barrel",
+    "includes": [
+      "game:barrel",
+      "game:barrel-*"
+    ]
+  },
+  {
+    "id": "fruitpress",
+    "includes": [
+      "game:fruitpress-*"
+    ]
+  },
+  {
+    "id": "condenser",
+    "includes": [
+      "game:condenser-*"
+    ]
+  },
+  {
+    "id": "anvil",
+    "includes": [
+      "game:anvil-*"
+    ]
+  },
+  {
+    "id": "clayform",
+    "includes": [
+      "game:clayform"
+    ]
+  },
+  {
     "id": "firewood",
     "includes": [
       "game:firewood"

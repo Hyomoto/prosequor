@@ -31,12 +31,21 @@
       }
     },
     {
+      "id": "prosequor:craft-cloth-barrel-tailoring",
+      "amount": 0.3,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:<barrel>", "target:<cloth>" ]
+      }
+    },
+    {
       "id": "prosequor:craft-leather-tailoring",
       "amount": 0.75,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "caller:@grid", "target:<leather>" ]
+        "tags": [ "crafted", "caller:<barrel>", "target:<leather>" ]
       }
     },
     {
@@ -46,6 +55,24 @@
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "crafted", "caller:@grid", "target:<hide>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-hide-knife-tailoring",
+      "amount": 0.25,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:<knife>", "target:<hide>" ]
+      }
+    },
+    {
+      "id": "prosequor:craft-hide-barrel-tailoring",
+      "amount": 0.25,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:<barrel>", "target:<hide>" ]
       }
     },
     {

@@ -65,10 +65,12 @@ public static class KnapsterCompat
         TryApply(
             harmony,
             processMove,
+            prefix: new HarmonyMethod(typeof(KnapsterCompat), nameof(ProcessMovePrefix)),
             postfix: new HarmonyMethod(typeof(KnapsterCompat), nameof(ProcessMovePostfix)));
         TryApply(
             harmony,
             processRemoveSlag,
+            prefix: new HarmonyMethod(typeof(KnapsterCompat), nameof(ProcessRemoveSlagPrefix)),
             postfix: new HarmonyMethod(typeof(KnapsterCompat), nameof(ProcessRemoveSlagPostfix)));
         TryApply(
             harmony,
@@ -112,6 +114,9 @@ public static class KnapsterCompat
         __result = VoxelWorkStation.ResolveVoxelRefill(byPlayer);
     }
 
+    public static void ProcessMovePrefix(BlockEntityAnvil anvil) =>
+        AnvilXpStation.NoteBaseline(anvil);
+
     public static void ProcessMovePostfix(
         BlockEntityAnvil anvil,
         IPlayer byPlayer,
@@ -126,6 +131,9 @@ public static class KnapsterCompat
             applyMastery: true,
             applySlag: true);
     }
+
+    public static void ProcessRemoveSlagPrefix(BlockEntityAnvil anvil) =>
+        AnvilXpStation.NoteBaseline(anvil);
 
     public static void ProcessRemoveSlagPostfix(
         BlockEntityAnvil anvil,
@@ -147,6 +155,7 @@ public static class KnapsterCompat
         IPlayer byPlayer,
         Vec3i usableMetalVoxel)
     {
+        AnvilXpStation.NoteBaseline(anvil);
         if (byPlayer == null || usableMetalVoxel == null)
         {
             return;
