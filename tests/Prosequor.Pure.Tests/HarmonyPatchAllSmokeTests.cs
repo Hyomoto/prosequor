@@ -1061,6 +1061,46 @@ public class HarmonyPatchAllSmokeTests
     [Fact]
     [Trait("Layer", "Harmony")]
     [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeTreeFellHooks()
+    {
+        MethodInfo? brokenWith = AccessTools.DeclaredMethod(
+            typeof(ItemAxe),
+            nameof(ItemAxe.OnBlockBrokenWith));
+        MethodInfo? findTree = AccessTools.DeclaredMethod(
+            typeof(ItemAxe),
+            nameof(ItemAxe.FindTree));
+        Assert.NotNull(brokenWith);
+        Assert.NotNull(findTree);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.treefell.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+            Assert.Contains(brokenWith, harmony.GetPatchedMethods());
+            Assert.Contains(findTree, harmony.GetPatchedMethods());
+            Patches? brokenInfo = Harmony.GetPatchInfo(brokenWith);
+            Patches? findInfo = Harmony.GetPatchInfo(findTree);
+            Assert.NotNull(brokenInfo);
+            Assert.NotNull(findInfo);
+            Assert.True(
+                brokenInfo!.Prefixes.Count > 0 && brokenInfo.Finalizers.Count > 0,
+                "Expected ItemAxe.OnBlockBrokenWith tree-fell prefix and finalizer.");
+            Assert.True(
+                findInfo!.Postfixes.Count > 0,
+                "Expected ItemAxe.FindTree tree-fell postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
     public void TryPatch_WhenKnapsterMissing_ShouldNotThrow()
     {
         string harmonyId = $"{ProsequorModSystem.ModId}.test.knapsteroptional.{Guid.NewGuid():N}";

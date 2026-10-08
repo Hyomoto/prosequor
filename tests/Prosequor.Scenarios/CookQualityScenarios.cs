@@ -13,6 +13,8 @@ namespace Prosequor.Scenarios;
 /// <summary>
 /// Firepit cook completion: process starter, cooking XP, quality roll, then
 /// meal pots keep pedigree until serve while non-serve products take it immediately.
+/// Payout cases also cover cattail roast, pot ingredient counts, a second meal,
+/// oven stacks, pie and charred bread, and fruit-press juice.
 /// </summary>
 public class CookQualityScenarios : AtlasScenarioBase
 {
@@ -357,6 +359,310 @@ public class CookQualityScenarios : AtlasScenarioBase
             $"Non-meal CooksInto must not pay meal XP (including leftover pots). gained={gained}.");
     }
 
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
+    public async Task CattailRoast_Should_PayOncePerRoot_SameAsRedmeat()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookCattail");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityFirepit firepit = PlaceFirepit(cook);
+        StartCooking(firepit, cook);
+        Item root = RequireItem("game:cattailroot", "cattailroot");
+        firepit.inputSlot.Itemstack = new ItemStack(root, 4);
+        firepit.inputSlot.MarkDirty();
+
+        Item cookedMeat = RequireItem("game:redmeat-cooked", "redmeat-cooked");
+        ItemStack oneRoast = new(cookedMeat, 1);
+        float one = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            oneRoast,
+            quantity: 1,
+            ingredients: 1,
+            caller: EventFactBuilder.CodeOf(firepit.Block));
+        Assert.True(one > 0.001f, "One roasted redmeat is the flat roast payout.");
+
+        float before = TotalCookingXp(cook);
+        firepit.smeltItems();
+        ItemStack? cooked = firepit.outputSlot.Itemstack;
+        Assert.NotNull(cooked);
+        Assert.Contains("cookedcattailroot", cooked!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, cooked.StackSize);
+        Assert.Equal(3, firepit.inputSlot.Itemstack?.StackSize);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, one, "one cattail root from a stack of 4");
+
+        firepit.smeltItems();
+        Assert.Equal(2, firepit.outputSlot.Itemstack?.StackSize);
+        Assert.Equal(2, firepit.inputSlot.Itemstack?.StackSize);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, one * 2, "second cattail root pays one more");
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
+    public async Task MealPot_Should_PayUnitsConsumed_And_PayTheNextPot()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookPortions");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityFirepit firepit = PlaceFirepit(cook);
+        StartCooking(firepit, cook);
+        Block pot = RequireBlock("game:claypot-blue-fired", "claypot-blue-fired");
+        Item grain = RequireItem("game:grain-spelt", "grain-spelt");
+        string? vessel = EventFactBuilder.CodeOf(pot);
+
+        LoadPorridge(firepit, pot, grain, 1, 1, 1, 1);
+        float before = TotalCookingXp(cook);
+        firepit.smeltItems();
+        ItemStack? first = firepit.outputSlot.Itemstack;
+        Assert.NotNull(first);
+        Assert.Contains("cooked", first!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, MealServings(first));
+        float fourPortions = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            first,
+            MealServings(first),
+            ingredients: 4,
+            caller: vessel);
+        float twoPortions = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            first,
+            MealServings(first),
+            ingredients: 2,
+            caller: vessel);
+        Assert.True(fourPortions > twoPortions, "Four portions must pay more than two.");
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, fourPortions, "porridge from four single portions");
+
+        firepit.outputSlot.Itemstack = null;
+        firepit.outputSlot.MarkDirty();
+        LoadPorridge(firepit, pot, grain, 6, 6);
+        firepit.smeltItems();
+        ItemStack? second = firepit.outputSlot.Itemstack;
+        Assert.NotNull(second);
+        Assert.Contains("cooked", second!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(6, MealServings(second));
+        float twelve = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            second,
+            MealServings(second),
+            ingredients: 12,
+            caller: vessel);
+        Assert.True(twelve > fourPortions, "Twelve units must pay more than four portions.");
+        ScenarioXp.AssertPaid(
+            TotalCookingXp(cook) - before,
+            fourPortions + twelve,
+            "second pot pays its own twelve units");
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
+    public async Task OvenBake_Should_PayDoughConsumed_ThenTheNextLoaf_AndStopAtCharred()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookLoaves");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityOven oven = PlaceOven(cook);
+        OvenCookStarterStation.NoteInteractor(oven, cook);
+        Item dough = RequireItem("game:dough-spelt", "dough-spelt");
+        Assert.True(oven.Inventory.Count > 1, "Expected a second oven slot.");
+        string? caller = EventFactBuilder.CodeOf(oven.Block);
+
+        oven.Inventory[0].Itemstack = new ItemStack(dough, 4);
+        oven.Inventory[0].MarkDirty();
+        float before = TotalCookingXp(cook);
+        Assert.True(BakeUntil(oven, 0, "partbaked"), "Expected four dough to become part-baked bread.");
+        ItemStack? first = oven.Inventory[0].Itemstack;
+        Assert.NotNull(first);
+        Assert.Equal(1, first!.StackSize);
+        Assert.Contains("partbaked", first.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        float fourDough = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            first,
+            quantity: 1,
+            ingredients: 4,
+            caller: caller);
+        float oneDough = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            first,
+            quantity: 1,
+            ingredients: 1,
+            caller: caller);
+        Assert.True(fourDough > oneDough, "Four dough must pay more than one.");
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, fourDough, "one loaf from four dough");
+
+        oven.Inventory[1].Itemstack = new ItemStack(dough, 1);
+        oven.Inventory[1].MarkDirty();
+        Assert.True(BakeUntil(oven, 1, "partbaked"), "Expected the second slot to bake.");
+        ItemStack? second = oven.Inventory[1].Itemstack;
+        Assert.NotNull(second);
+        Assert.Contains("partbaked", second!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        float secondLoaf = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            second,
+            quantity: 1,
+            ingredients: 1,
+            caller: caller);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, fourDough + secondLoaf, "second loaf pays on its own");
+
+        float afterLoaves = TotalCookingXp(cook);
+        Assert.True(BakeUntil(oven, 0, "perfect"), "Expected the first loaf to finish.");
+        Assert.Equal(afterLoaves, TotalCookingXp(cook));
+        Assert.True(BakeUntil(oven, 0, "charred"), "Expected the first loaf to char.");
+        Assert.Contains("charred", oven.Inventory[0].Itemstack?.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(afterLoaves, TotalCookingXp(cook));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
+    public async Task PieBake_Should_PayPartBakedOnce_NotTheFilling()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookPie");
+        IPlayer cook = joined.Player;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        BlockEntityOven oven = PlaceOven(cook);
+        OvenCookStarterStation.NoteInteractor(oven, cook);
+        Block raw = RequireBlock("game:pie-raw", "pie-raw");
+        oven.Inventory[0].Itemstack = new ItemStack(raw, 1);
+        oven.Inventory[0].MarkDirty();
+
+        float before = TotalCookingXp(cook);
+        Assert.True(BakeUntil(oven, 0, "partbaked"), "Expected the pie to part-bake.");
+        ItemStack? part = oven.Inventory[0].Itemstack;
+        Assert.NotNull(part);
+        Assert.Contains("partbaked", part!.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        string? caller = EventFactBuilder.CodeOf(oven.Block);
+        float onePie = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            part,
+            quantity: 1,
+            ingredients: 1,
+            caller: caller);
+        float stuffed = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            cook.PlayerUID,
+            part,
+            quantity: 1,
+            ingredients: 10,
+            caller: caller);
+        Assert.True(stuffed > onePie, "A pie counted as its filling would pay more than one item.");
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, onePie, "one part-baked pie");
+
+        float afterPart = TotalCookingXp(cook);
+        Assert.True(BakeUntil(oven, 0, "perfect"), "Expected the pie to finish.");
+        Assert.Equal(afterPart, TotalCookingXp(cook));
+        Assert.True(BakeUntil(oven, 0, "charred"), "Expected the pie to char.");
+        Assert.Contains("charred", oven.Inventory[0].Itemstack?.Collectible.Code.Path, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(afterPart, TotalCookingXp(cook));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
+    public async Task FruitPress_Should_PayNewJuice_NotTheBucket()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookPress");
+        ITestPlayer other = await World.JoinPlayer("PressWatcher");
+        IPlayer presser = joined.Player;
+        GrantCookQuality(RequireProgress(presser));
+        RequireProgress(other.Player);
+        AssertServer();
+
+        BlockEntityFruitPress press = PlaceFruitPress(presser);
+        Item apple = RequireItem("game:fruit-redapple", "fruit-redapple");
+        ItemStack mash = new(apple, 16);
+        mash.Attributes.SetDouble("juiceableLitresLeft", 8);
+        mash.Attributes.SetDouble("squeezeRel", 0.99);
+        press.MashSlot.Itemstack = mash;
+        press.MashSlot.MarkDirty();
+        Block bucket = RequireBlock("game:woodbucket", "woodbucket");
+        press.BucketSlot.Itemstack = new ItemStack(bucket, 1);
+        press.BucketSlot.MarkDirty();
+        ProsequorBlockPedigreeStation.StampSoleContributor(press, presser.PlayerUID);
+        StartScrew(press);
+
+        float before = TotalCookingXp(presser);
+        float otherBefore = TotalCookingXp(other.Player);
+        RewindPressTransfer(press, hoursAgo: 0.05);
+        TickPress(press);
+        ItemStack? juice = JuiceIn(press);
+        Assert.NotNull(juice);
+        int firstUnits = juice!.StackSize;
+        Assert.True(firstUnits >= 1, "Expected the press to put juice in the bucket.");
+        float firstPay = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            presser.PlayerUID,
+            juice,
+            firstUnits,
+            caller: EventFactBuilder.CodeOf(press.Block));
+        Assert.True(firstPay > 0.001f, "New juice must match the juice rule.");
+        ScenarioXp.AssertPaid(TotalCookingXp(presser) - before, firstPay, $"{firstUnits} new juice");
+        Assert.Equal(otherBefore, TotalCookingXp(other.Player));
+
+        int beforeSecond = JuiceIn(press)!.StackSize;
+        RewindPressTransfer(press, hoursAgo: 0.05);
+        TickPress(press);
+        ItemStack? more = JuiceIn(press);
+        Assert.NotNull(more);
+        int added = more!.StackSize - beforeSecond;
+        Assert.True(added >= 1, "Expected a second squeeze to add juice.");
+        Assert.True(added < more.StackSize, "The second squeeze must not be the whole bucket.");
+        float addedPay = ScenarioXp.PlannedCrafted(
+            World.Api.World,
+            Skill,
+            presser.PlayerUID,
+            more,
+            added,
+            caller: EventFactBuilder.CodeOf(press.Block));
+        ScenarioXp.AssertPaid(TotalCookingXp(presser) - before, firstPay + addedPay, "second squeeze pays only the new juice");
+
+        float settled = TotalCookingXp(presser);
+        TickPress(press);
+        Assert.Equal(settled, TotalCookingXp(presser));
+    }
+
+    static void LoadPorridge(BlockEntityFirepit firepit, Block pot, Item grain, params int[] portions)
+    {
+        firepit.inputSlot.Itemstack = new ItemStack(pot, 1);
+        firepit.inputSlot.MarkDirty();
+        Assert.True(
+            firepit.otherCookingSlots.Length >= portions.Length,
+            $"Expected at least {portions.Length} cooking slots.");
+        for (int i = 0; i < firepit.otherCookingSlots.Length; i++)
+        {
+            firepit.otherCookingSlots[i].Itemstack = i < portions.Length ? new ItemStack(grain, portions[i]) : null;
+            firepit.otherCookingSlots[i].MarkDirty();
+        }
+    }
+
     static void AssertCookQuality(ItemStack stack, string label)
     {
         Assert.True(
@@ -566,6 +872,67 @@ public class CookQualityScenarios : AtlasScenarioBase
         }
 
         return be;
+    }
+
+    BlockEntityFruitPress PlaceFruitPress(IPlayer player)
+    {
+        IWorldAccessor world = World.Api.World;
+        int offset = nextOffset;
+        nextOffset += 3;
+        BlockPos pos = player.Entity.Pos.AsBlockPos.AddCopy(offset, 0, 0);
+        EnsureFloor(pos);
+        Block press = RequireBlock("game:fruitpress-ns", "fruitpress-ns");
+        world.BlockAccessor.SetBlock(0, pos);
+        world.BlockAccessor.SetBlock(press.BlockId, pos);
+        if (world.BlockAccessor.GetBlockEntity(pos) is not BlockEntityFruitPress be)
+        {
+            Assert.Fail($"Expected BlockEntityFruitPress at {pos}.");
+            throw new InvalidOperationException();
+        }
+
+        return be;
+    }
+
+    static void StartScrew(BlockEntityFruitPress press)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        object? animUtil = typeof(BlockEntityFruitPress).GetProperty("animUtil", flags)?.GetValue(press);
+        Assert.NotNull(animUtil);
+        object? meta = typeof(BlockEntityFruitPress).GetField("compressAnimMeta", flags)?.GetValue(press);
+        Assert.NotNull(meta);
+        MethodInfo? start = animUtil!.GetType().GetMethod("StartAnimation", flags, null, [meta!.GetType()], null)
+            ?? animUtil.GetType().GetMethod("StartAnimation", flags);
+        Assert.NotNull(start);
+        start!.Invoke(animUtil, [meta]);
+        Assert.True(press.CompressAnimActive, "Expected the fruit press screw to be turning.");
+    }
+
+    static void RewindPressTransfer(BlockEntityFruitPress press, double hoursAgo)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        FieldInfo? field = typeof(BlockEntityFruitPress).GetField("lastLiquidTransferTotalHours", flags);
+        Assert.NotNull(field);
+        field!.SetValue(press, press.Api.World.Calendar.TotalHours - hoursAgo);
+    }
+
+    static void TickPress(BlockEntityFruitPress press)
+    {
+        MethodInfo? tick = typeof(BlockEntityFruitPress).GetMethod(
+            "onTick100msServer",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(tick);
+        tick!.Invoke(press, [0.1f]);
+    }
+
+    static ItemStack? JuiceIn(BlockEntityFruitPress press)
+    {
+        ItemStack? bucket = press.BucketSlot?.Itemstack;
+        if (bucket?.Collectible is not BlockLiquidContainerBase container)
+        {
+            return null;
+        }
+
+        return container.GetContent(bucket);
     }
 
     static bool BakeUntil(BlockEntityOven oven, int slot, string pathContains)

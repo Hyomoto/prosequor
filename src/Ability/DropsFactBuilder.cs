@@ -12,16 +12,29 @@ namespace Prosequor.Ability;
 /// </summary>
 public static class DropsFactBuilder
 {
-    public static AbilityAction ForBlock(IPlayer player, Block block, BlockPos pos) =>
-        EventFactBuilder.ForPlayer(
+    /// <summary>
+    /// Break-drop fact. Adds <see cref="TreeFellScope.Token"/> when <paramref name="pos"/>
+    /// is part of the active tree fell.
+    /// </summary>
+    public static AbilityAction ForBlock(IPlayer player, Block block, BlockPos pos)
+    {
+        AbilityAction fact = EventFactBuilder.ForPlayer(
             player,
             VerbIds.MutateDrops.Value,
             target: EventFactBuilder.CodeOf(block),
             held: EventFactBuilder.CallerOrHand(player),
             position: pos.Copy());
 
+        if (TreeFellScope.Contains(pos))
+        {
+            fact = EventFactBuilder.WithToken(fact, TreeFellScope.Token);
+        }
+
+        return fact;
+    }
+
     /// <summary>
-    /// Harvest interact / ripe-drop facts (same roles as break; no classification token).
+    /// Harvest interact / ripe-drop facts (same roles as a break drop).
     /// </summary>
     public static AbilityAction ForHarvest(IPlayer player, Block block, BlockPos pos) =>
         ForBlock(player, block, pos);

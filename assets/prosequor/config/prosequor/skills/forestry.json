@@ -85,7 +85,7 @@
                 "phase": "quantity",
                 "action": "prosequor:number",
                 "when": {
-                  "tags": [ "target:<wood>" ]
+                  "tags": [ "felled", "target:<wood>" ]
                 },
                 "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.01, "cap": 0.2 }
               }

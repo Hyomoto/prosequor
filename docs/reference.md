@@ -460,7 +460,7 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 | `harvest-bloomery` | `allow-right-click-harvest` | bool |
 | | `right-click-harvest-break-chance` | number |
 
-`mutate-drops`: block break drops. Fact `target` = block; `caller` = tool; during per-stack loop `drop` = current stack.
+`mutate-drops`: block break drops. Fact `target` = block; `caller` = tool; during per-stack loop `drop` = current stack. Token `felled` is present when that block is broken as part of felling a tree.
 
 `mutate-process`: kiln / barrel / similar process output. Tokens `fire-pottery` / `barrel`.
 
