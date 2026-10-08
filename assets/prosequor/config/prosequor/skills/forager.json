@@ -17,7 +17,16 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "harvested", "undomesticated", "target:<berry-bush, crop, mushroom>" ]
+        "tags": [ "block-broken", "is-wild", "target:<berry-bush, crop, mushroom>" ]
+      }
+    },
+    {
+      "id": "prosequor:forage-wild-produce-interact",
+      "amount": 0.01,
+      "pay": "quantity",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "harvested", "is-wild", "target:<berry-bush, crop>" ]
       }
     },
     {
@@ -25,7 +34,15 @@
       "amount": 0.05,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "harvested", "undomesticated", "target:<reed, stick, sap>" ]
+        "tags": [ "block-broken", "is-wild", "target:<reed, stick>" ]
+      }
+    },
+    {
+      "id": "prosequor:forage-wild-flat-interact",
+      "amount": 0.05,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "harvested", "is-wild", "target:<sap>" ]
       }
     }
   ],
@@ -36,7 +53,7 @@
       "phase": "quantity",
       "action": "prosequor:number",
       "when": {
-        "tags": [ "undomesticated", "target:<berry-bush, crop, mushroom, reed, stick, sap>" ]
+        "tags": [ "is-wild", "target:<berry-bush, crop, mushroom, reed, stick, sap>" ]
       },
       "params": { "op": "add", "base": 0, "perSkillLevel": 0.004, "cap": 0.2 }
     }

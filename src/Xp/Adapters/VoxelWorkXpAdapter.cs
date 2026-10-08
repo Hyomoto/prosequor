@@ -6,7 +6,7 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Voxel crafting XP. Progress is one flat <c>crafting</c> deed per novel voxel.
+/// Voxel crafting XP. Progress is one flat <c>voxel-work</c> deed per novel voxel.
 /// Completion is one <c>voxel-finished</c> deed whose subject is the output stack.
 /// </summary>
 public class VoxelWorkXpAdapter

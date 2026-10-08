@@ -202,7 +202,7 @@ Use a contribution. The file is a JSON array.
         "amount": 0.02,
         "when": {
           "activity": "prosequor:deed",
-          "tags": ["harvested", "target:mymod:reedplot"]
+          "tags": ["block-broken", "!is-wild", "target:mymod:reedplot"]
         }
       }
     ],

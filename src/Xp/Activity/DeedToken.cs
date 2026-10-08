@@ -9,7 +9,7 @@ public enum DeedToken
     BlockBroken,
     Harvested,
     Crafted,
-    /// <summary>Clay-form (and similar hand-shape) progress — not craft-grid <see cref="Crafted"/>.</summary>
+    /// <summary>One novel voxel edit on a clay form or anvil. Not craft-grid <see cref="Crafted"/>.</summary>
     Crafting,
     /// <summary>A clay, smithing, or knapping workpiece became its output item.</summary>
     VoxelFinished,
@@ -17,15 +17,15 @@ public enum DeedToken
     KilnFired,
     SaddleBreak,
     SaddleTame,
-    /// <summary>A domesticated growable advanced a growth stage (crop, bush, sapling, fruit tree, …).</summary>
+    /// <summary>A growable advanced a growth stage (crop, bush, sapling, fruit tree, …).</summary>
     Grown,
     /// <summary>Hoe converted soil into farmland (one emit per tilled tile).</summary>
     TillSoil,
     /// <summary>Knife / rip harvest of a dead animal below cleaver-certain generation.</summary>
     Butchered,
-    /// <summary>Player kill of a food animal below cleaver-certain generation.</summary>
+    /// <summary>Player kill of a food animal.</summary>
     Hunted,
-    /// <summary>Food animal caught in a basket / crate trap, below cleaver-certain generation.</summary>
+    /// <summary>Food animal caught in a basket / crate trap.</summary>
     Trapped,
     /// <summary>
     /// Player kill, or trap catch, of an animal at cleaver-certain generation
@@ -61,7 +61,15 @@ public static class DeedTokenTags
     public const string BlockBroken = "block-broken";
     public const string Harvested = "harvested";
     public const string Crafted = "crafted";
-    public const string Crafting = "crafting";
+
+    /// <summary>One novel voxel edit on a clay form or anvil.</summary>
+    public const string VoxelWork = "voxel-work";
+
+    /// <summary>The broken or harvested plant has no planter and no player-place mark.</summary>
+    public const string IsWild = "is-wild";
+
+    /// <summary>Animal generation is at or above <see cref="Prosequor.Xp.AnimalWeightCatalog.CleaverCertainGeneration"/>.</summary>
+    public const string CleaverCertain = "cleaver-certain";
 
     /// <summary>Voxel workpiece became its output item.</summary>
     public const string VoxelFinished = "voxel-finished";
@@ -103,10 +111,10 @@ public static class DeedTokenTags
     /// <summary>Dead-animal harvest below cleaver-certain generation. Quantity is meat + fat after cooking yield.</summary>
     public const string Butchered = "butchered";
 
-    /// <summary>Player kill of a food animal below cleaver-certain generation.</summary>
+    /// <summary>Player kill of a food animal.</summary>
     public const string Hunted = "hunted";
 
-    /// <summary>Food animal caught in a basket / crate trap, below cleaver-certain generation.</summary>
+    /// <summary>Food animal caught in a basket / crate trap.</summary>
     public const string Trapped = "trapped";
 
     /// <summary>Player kill or trap catch of an animal at cleaver-certain generation.</summary>
@@ -147,7 +155,7 @@ public static class DeedTokenTags
         DeedToken.BlockBroken => BlockBroken,
         DeedToken.Harvested => Harvested,
         DeedToken.Crafted => Crafted,
-        DeedToken.Crafting => Crafting,
+        DeedToken.Crafting => VoxelWork,
         DeedToken.VoxelFinished => VoxelFinished,
         DeedToken.FishingCatch => FishingCatch,
         DeedToken.KilnFired => KilnFired,
@@ -198,7 +206,7 @@ public static class DeedTokenTags
             return true;
         }
 
-        if (t.Equals(Crafting, StringComparison.OrdinalIgnoreCase))
+        if (t.Equals(VoxelWork, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Crafting;
             return true;

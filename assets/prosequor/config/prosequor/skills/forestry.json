@@ -44,7 +44,7 @@
       "payee": "maker",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["grown", "domesticated", "target:<sapling>"]
+        "tags": ["grown", "!is-wild", "target:<sapling>"]
       }
     }
   ],

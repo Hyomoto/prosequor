@@ -76,7 +76,16 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["slaughtered"]
+        "tags": ["hunted", "cleaver-certain"]
+      }
+    },
+    {
+      "id": "prosequor:slaughter-trap-husbandry",
+      "amount": [0.05, 2],
+      "pay": "effort",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["trapped", "cleaver-certain"]
       }
     },
     {

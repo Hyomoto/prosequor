@@ -1,5 +1,4 @@
 using Prosequor.Ability;
-using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
@@ -7,7 +6,8 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// XP from broken blocks. Dig/mine/chop → <c>block-broken</c>; harvest → <c>harvested</c>.
+/// XP from broken blocks. Every classified break emits <c>block-broken</c> once.
+/// The class fills drops, and <c>is-wild</c> when the wild check passes.
 /// Caller = tool, bomb, or <c>@hand</c>; target = broken block.
 /// </summary>
 public class BlockBreakXpAdapter
@@ -57,91 +57,12 @@ public class BlockBreakXpAdapter
         }
 
         IPlayer? player = byPlayer ?? sapi.World.PlayerByUid(playerUid);
-        string? classify = BlockBreakClassification.ClassifyToken(broken);
-        if (classify == null)
+        if (BlockBreakClassification.ClassifyToken(broken) == null)
         {
             return;
         }
 
-        float hardness = 0f;
-        DeedToken deedToken;
-        if (classify is BlockBreakClassification.TokenDig
-            or BlockBreakClassification.TokenMine
-            or BlockBreakClassification.TokenChop)
-        {
-            hardness = broken.Resistance;
-            deedToken = DeedToken.BlockBroken;
-        }
-        else if (classify == BlockBreakClassification.TokenHarvest)
-        {
-            if (player == null)
-            {
-                return;
-            }
-
-            // Crops / berry bushes / mushrooms: quantity + domesticated tokens.
-            // Fruit trees: DropHarvestScope → NotifyInteractHarvest (interact and ripe break).
-            if (AbilityBootstrap.IsFruitTreeBlock(broken))
-            {
-                return;
-            }
-
-            if (HarvestXp.IsCropOrBerry(broken) || ForageBlocks.IsMushroom(broken))
-            {
-                if (ForageBlocks.IsMushroom(broken)
-                    && !ForagePlayerPlaced.IsWild(sapi.World, broken, pos))
-                {
-                    return;
-                }
-
-                HarvestXp.NotifyBlockBroken(sapi, player, broken, pos);
-                return;
-            }
-
-            if (ForageBlocks.IsFlatForage(broken))
-            {
-                if (!ForagePlayerPlaced.IsWild(sapi.World, broken, pos))
-                {
-                    return;
-                }
-
-                EmitFlatForage(player, broken, pos);
-                return;
-            }
-
-            deedToken = DeedToken.Harvested;
-        }
-        else
-        {
-            return;
-        }
-
-        string caller = !string.IsNullOrWhiteSpace(callerOverride)
-            ? callerOverride.Trim()
-            : EventFactBuilder.CallerOrHand(player);
-        IReadOnlyList<Deed.QuantityUnit>? quantityUnits =
-            classify == BlockBreakClassification.TokenDig
-                ? HarvestXp.TakePendingUnits(broken, pos)
-                : null;
-
-        sapi.Logger.VerboseDebug(
-            "[prosequor] deed {0} {1} caller={2} hardness={3:0.###} units={4} by {5}",
-            deedToken.ToTag(),
-            broken.Code,
-            caller,
-            hardness,
-            SumUnits(quantityUnits),
-            player?.PlayerName ?? playerUid);
-
-        Deed.Emit(
-            sapi,
-            playerUid,
-            deedToken,
-            caller: caller,
-            target: EventFactBuilder.CodeOf(broken),
-            lastCraft: EventFactBuilder.LastCraftCode(playerUid),
-            position: pos?.Copy(),
-            outputs: quantityUnits);
+        HarvestXp.EmitBlockBroken(sapi, playerUid, player, broken, pos, callerOverride);
     }
 
     /// <summary>Classify token dig/mine/chop/harvest, or null.</summary>
@@ -171,40 +92,5 @@ public class BlockBreakXpAdapter
         lastClaimUid = playerUid;
         lastClaimPos = pos.Copy();
         return true;
-    }
-
-    void EmitFlatForage(IPlayer player, Block broken, BlockPos pos)
-    {
-        string caller = EventFactBuilder.CallerOrHand(player);
-        sapi.Logger.VerboseDebug(
-            "[prosequor] deed harvested+undomesticated {0} caller={1} by {2}",
-            broken.Code,
-            caller,
-            player.PlayerName);
-
-        Deed.Emit(
-            sapi,
-            player.PlayerUID,
-            [DeedToken.Harvested.ToTag(), HarvestXp.TokenUndomesticated],
-            caller: caller,
-            target: EventFactBuilder.CodeOf(broken),
-            lastCraft: EventFactBuilder.LastCraftCode(player),
-            position: pos?.Copy());
-    }
-
-    static int SumUnits(IReadOnlyList<Deed.QuantityUnit>? units)
-    {
-        if (units == null || units.Count == 0)
-        {
-            return 0;
-        }
-
-        int sum = 0;
-        for (int i = 0; i < units.Count; i++)
-        {
-            sum += Math.Max(0, units[i].Count);
-        }
-
-        return sum;
     }
 }

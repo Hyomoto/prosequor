@@ -318,6 +318,7 @@ Omit tags = no filter. Ability and XP share the same tags language.
 | `op:place` | Role `op` equals `place` | clay-form |
 | `damage:frost` | Damage kind present | on-damage |
 | bare token | Event token on the fact | `interacting`, `block-broken`, `crafted` |
+| `!token` | Event token is absent | `!is-wild`, `!cleaver-certain` |
 
 Known roles: `caller` (`held` is a legacy alias), `target`, `drop`, `last-craft`, `ground`, `mount`, `op`, `damage`, `input`.
 
@@ -373,15 +374,15 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 
 | Token | Meaning |
 | --- | --- |
-| `block-broken` | Block break (dig / mine / chop) |
-| `harvested` | Plant / forage harvest |
+| `block-broken` | Block break |
+| `harvested` | Produce taken while the block stays |
 | `butchered` | Dead-animal harvest when generation is below 3 |
-| `hunted` | Player kill of a food animal when generation is below 3 |
-| `trapped` | Food animal caught in a basket / crate trap when generation is below 3 |
-| `slaughtered` | Player kill or trap catch when generation is 3 or higher |
+| `hunted` | Player kill of a food animal |
+| `trapped` | Food animal caught in a basket / crate trap |
+| `cleaver-certain` | Animal generation is 3 or higher |
 | `dressed` | Dead-animal harvest when generation is 3 or higher |
 | `crafted` | A finished product. The caller says which station made it; omit the caller to match every station. |
-| `crafting` | Hand-shape progress (clay-form / smith); one flat deed per novel voxel |
+| `voxel-work` | Novel voxel edit (clay-form / smith); one flat deed per voxel |
 | `voxel-finished` | Voxel workpiece became its output. Subject is that stack, with the recipe key stamped |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
 | `till-soil` | Soil → farmland |
@@ -401,7 +402,7 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `aged-up` | Juvenile became adult |
 | `gave-birth` | Birth completed |
 | `skep-harvest` / `skep-propagate` | Skep honeycomb / swarm |
-| `domesticated` / `undomesticated` | Plant source tags |
+| `is-wild` | Plant has no planter and no player-place mark |
 | `pit-kiln` / `beehive-kiln` | Kiln caller identities |
 | `fire-pottery` / `barrel` / `fruit-press` | Process tokens |
 | `used-bait` | Bait consumed |
@@ -824,7 +825,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. Lifetime lerps against the live crop-growth-days catalog, then divides by the crop’s `GrowthStages`. For `hunted` and `slaughtered` deeds, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). For `trapped` deeds, the span is the subset of those animals with a trap chance above zero.
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. A block target publishes `Resistance` on the resistance channel; the span is that block’s break class (dig, mine, chop, or harvest) when the class has a catalog, otherwise 0–1. A crop publishes its growth days on lifetime; any other resolved block publishes 0 days and one stage against the crop-days catalog. Lifetime then divides by `GrowthStages`. For `hunted`, and for `trapped` when `cleaver-certain` is also present, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). For `trapped` without `cleaver-certain`, the span is the subset of those animals with a trap chance above zero.
 
 ### XP `when`
 

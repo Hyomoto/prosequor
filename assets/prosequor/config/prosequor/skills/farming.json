@@ -19,7 +19,17 @@
       "exclude": ["<seed>"],
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["harvested", "domesticated", "target:<crop, berry-bush, fruit-tree>"]
+        "tags": ["block-broken", "!is-wild", "target:<crop, berry-bush>"]
+      }
+    },
+    {
+      "id": "prosequor:harvest-interact-farming",
+      "amount": 0.025,
+      "pay": "quantity",
+      "exclude": ["<seed>"],
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": ["harvested", "!is-wild", "target:<crop, berry-bush, fruit-tree>"]
       }
     },
     {
@@ -37,7 +47,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["grown", "domesticated", "target:<crop>"]
+        "tags": ["grown", "!is-wild", "target:<crop>"]
       }
     },
     {
@@ -46,7 +56,7 @@
       "payee": "maker",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["grown", "domesticated", "target:<fruit-tree>"]
+        "tags": ["grown", "!is-wild", "target:<fruit-tree>"]
       }
     },
     {

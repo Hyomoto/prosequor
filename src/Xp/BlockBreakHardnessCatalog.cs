@@ -4,8 +4,8 @@ using Vintagestory.API.Common;
 namespace Prosequor.Xp;
 
 /// <summary>
-/// GameReady catalog of block <see cref="Block.Resistance"/> min/max per break domain
-/// (dig / mine / chop). Amount tables on <c>prosequor:deed</c> + <c>broken</c> normalize against these ranges.
+/// GameReady catalog of block <see cref="Block.Resistance"/> min/max per break class
+/// (dig / mine / chop / harvest). Amount tables normalize against the class span.
 /// </summary>
 public sealed class BlockBreakHardnessCatalog
 {
@@ -40,7 +40,7 @@ public sealed class BlockBreakHardnessCatalog
             }
 
             string? domain = BlockBreakClassification.ClassifyToken(block);
-            if (domain is not (DomainDig or DomainMine or DomainChop))
+            if (domain == null)
             {
                 continue;
             }

@@ -11,8 +11,8 @@ namespace Prosequor.Xp.Adapters;
 
 /// <summary>
 /// Food-animal kills and basket-trap catches, paid by animal weight.
-/// Generation at or above <see cref="AnimalWeightCatalog.CleaverCertainGeneration"/> pays husbandry
-/// (<c>slaughtered</c>); younger animals pay hunting (<c>hunted</c> / <c>trapped</c>).
+/// A kill emits <c>hunted</c>. A trap emits <c>trapped</c>.
+/// Generation at or above <see cref="AnimalWeightCatalog.CleaverCertainGeneration"/> also emits <c>cleaver-certain</c>.
 /// </summary>
 public static class HuntXp
 {
@@ -32,10 +32,10 @@ public static class HuntXp
             return;
         }
 
-        bool husbandry = AnimalWeightCatalog.CanCleaverSlaughter(victim);
+        bool cleaverCertain = AnimalWeightCatalog.CanCleaverSlaughter(victim);
         api.Logger.VerboseDebug(
-            "[prosequor] deed {0} {1} weight={2:0.###} by {3}",
-            husbandry ? DeedTokenTags.Slaughtered : DeedTokenTags.Hunted,
+            "[prosequor] deed hunted{0} {1} weight={2:0.###} by {3}",
+            cleaverCertain ? "+cleaver-certain" : "",
             victim.Code,
             victim.Properties?.Weight ?? 0f,
             player.PlayerName);
@@ -43,7 +43,7 @@ public static class HuntXp
         Deed.Emit(
             api,
             player.PlayerUID,
-            husbandry ? DeedToken.Slaughtered : DeedToken.Hunted,
+            CleaverTokens(DeedTokenTags.Hunted, cleaverCertain),
             caller: caller,
             target: EventFactBuilder.CodeOf(victim),
             position: victim.Pos?.AsBlockPos?.Copy());
@@ -80,10 +80,10 @@ public static class HuntXp
             return;
         }
 
-        bool husbandry = AnimalWeightCatalog.CanCleaverSlaughter(animal);
+        bool cleaverCertain = AnimalWeightCatalog.CanCleaverSlaughter(animal);
         api.Logger.VerboseDebug(
-            "[prosequor] deed {0} {1} weight={2:0.###} by {3}",
-            husbandry ? DeedTokenTags.Slaughtered : DeedTokenTags.Trapped,
+            "[prosequor] deed trapped{0} {1} weight={2:0.###} by {3}",
+            cleaverCertain ? "+cleaver-certain" : "",
             animal!.Code,
             animal.Properties?.Weight ?? 0f,
             uid);
@@ -91,10 +91,21 @@ public static class HuntXp
         Deed.Emit(
             api,
             uid.Trim(),
-            husbandry ? DeedToken.Slaughtered : DeedToken.Trapped,
+            CleaverTokens(DeedTokenTags.Trapped, cleaverCertain),
             caller: caller,
             target: EventFactBuilder.CodeOf(animal),
             position: trap.Pos?.Copy());
+    }
+
+    static List<string> CleaverTokens(string moment, bool cleaverCertain)
+    {
+        List<string> tokens = [moment];
+        if (cleaverCertain)
+        {
+            tokens.Add(DeedTokenTags.CleaverCertain);
+        }
+
+        return tokens;
     }
 
     static bool TryResolvePlayerKill(

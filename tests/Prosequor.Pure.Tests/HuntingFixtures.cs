@@ -77,14 +77,14 @@ public static class HuntingFixtures
             [0.1f, 10f],
             order: 1,
             collections,
-            tags: ["hunted"]);
+            tags: ["hunted", "!cleaver-certain"]);
         XpRule trapRule = AmountTableRule(
             "trapped-hunting",
             "hunting",
             [1f, 4f],
             order: 2,
             collections,
-            tags: ["trapped"]);
+            tags: ["trapped", "!cleaver-certain"]);
 
         IReadOnlyList<Deed.PlannedPay> light = Deed.PlanPays(
             new FixedAmountRules(weightRule),
@@ -144,6 +144,31 @@ public static class HuntingFixtures
         {
             Assert.Fail(
                 $"[prosequor] Hunted/trapped weight plan failed light={AmountOrNone(light)} heavy={AmountOrNone(heavy)} trapped={AmountOrNone(trapped)}.");
+        }
+
+        IReadOnlyList<Deed.PlannedPay> cleaverKill = Deed.PlanPays(
+            new FixedAmountRules(weightRule),
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                DeedTokenTags.Hunted,
+                DeedTokenTags.CleaverCertain
+            },
+            caller: "game:cleaver-copper",
+            target: "game:sheep-bighorn-adult-male",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 40f,
+            metricMin: 4f,
+            metricMax: 450f,
+            totalUnits: 0,
+            craftCount: 1,
+            metricDomain: AnimalWeightCatalog.MetricDomain);
+        if (cleaverKill.Count != 0)
+        {
+            Assert.Fail("[prosequor] cleaver-certain kill must not pay the hunting rule.");
         }
     }
 

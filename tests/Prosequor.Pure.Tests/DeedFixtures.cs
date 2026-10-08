@@ -133,7 +133,7 @@ public static class DeedFixtures
     {
         if (DeedToken.BlockBroken.ToTag() != DeedTokenTags.BlockBroken
             || DeedToken.Crafted.ToTag() != DeedTokenTags.Crafted
-            || DeedToken.Crafting.ToTag() != DeedTokenTags.Crafting
+            || DeedToken.Crafting.ToTag() != DeedTokenTags.VoxelWork
             || DeedToken.VoxelFinished.ToTag() != DeedTokenTags.VoxelFinished
             || !DeedTokenTags.TryParse("voxel-finished", out DeedToken voxelFinished)
             || voxelFinished != DeedToken.VoxelFinished
@@ -518,7 +518,7 @@ public static class DeedFixtures
         List<TagCriterion> grownCriteria =
         [
             new TokenCriterion { Token = DeedTokenTags.Grown },
-            new TokenCriterion { Token = HarvestXp.TokenDomesticated }
+            new AbsentTokenCriterion { Token = DeedTokenTags.IsWild }
         ];
         XpRule lifetimeRule = new()
         {
@@ -538,8 +538,7 @@ public static class DeedFixtures
         FixedAmountRules rules = new(lifetimeRule);
         HashSet<string> tokens = new(StringComparer.OrdinalIgnoreCase)
         {
-            DeedTokenTags.Grown,
-            HarvestXp.TokenDomesticated
+            DeedTokenTags.Grown
         };
 
         // Min knot 2 / 5 stages = 0.4
@@ -753,21 +752,21 @@ public static class DeedFixtures
             0.01f,
             order: 1,
             collections,
-            tags: ["crafting", "caller:<clayform>", "target:<clay-formed>"]);
+            tags: ["voxel-work", "caller:<clayform>", "target:<clay-formed>"]);
         XpRule smithWork = AmountRule(
             "prosequor:smith-work",
             "metalworking",
             0.01f,
             order: 1,
             collections,
-            tags: ["crafting", "caller:<anvil>", "target:<smithing-formed>"]);
+            tags: ["voxel-work", "caller:<anvil>", "target:<smithing-formed>"]);
 
         FixedAmountRules clayRules = new(clayVoxel);
         IReadOnlyList<Deed.PlannedPay> oneClay = Deed.PlanPays(
             clayRules,
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.VoxelWork },
             caller: "game:clayform",
             target: "game:bowl-blue",
             mount: null,
@@ -789,7 +788,7 @@ public static class DeedFixtures
             clayRules,
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.VoxelWork },
             caller: "game:clayform",
             target: "game:bowl-blue",
             mount: null,
@@ -821,7 +820,7 @@ public static class DeedFixtures
             smithRules,
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.VoxelWork },
             caller: "game:anvil-copper",
             target: "game:ingot-copper",
             mount: null,
@@ -990,7 +989,7 @@ public static class DeedFixtures
                     when = new XpRuleWhenJson
                     {
                         activity = Deed.Activity,
-                        tags = ["grown", "domesticated"]
+                        tags = ["grown", "!is-wild"]
                     }
                 },
                 "farming",
@@ -1295,7 +1294,7 @@ public static class DeedFixtures
                     when = new XpRuleWhenJson
                     {
                         activity = Deed.Activity,
-                        tags = ["harvested", "domesticated", "target:<crop, berry-bush, fruit-tree>"]
+                        tags = ["harvested", "!is-wild", "target:<crop, berry-bush, fruit-tree>"]
                     }
                 },
                 "farming",
@@ -1305,7 +1304,7 @@ public static class DeedFixtures
                 out string compileError))
         {
             Assert.Fail(string.Format(
-                "[prosequor] domesticated harvest compile failed: {0}",
+                "[prosequor] planted harvest compile failed: {0}",
                 compileError));
             return;
         }
@@ -1333,8 +1332,7 @@ public static class DeedFixtures
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                DeedTokenTags.Harvested,
-                HarvestXp.TokenDomesticated
+                DeedTokenTags.Harvested
             },
             caller: CallerIdentities.Hand,
             target: "game:crop-carrot-9",
@@ -1346,7 +1344,7 @@ public static class DeedFixtures
         if (withDomesticated.Count != 1 || Math.Abs(withDomesticated[0].Amount - 0.04f) > 0.0001f)
         {
             Assert.Fail(string.Format(
-                "[prosequor] domesticated harvest should pay 0.04, got count={0} amount={1}",
+                "[prosequor] planted harvest should pay 0.04, got count={0} amount={1}",
                 withDomesticated.Count,
                 withDomesticated.Count > 0 ? withDomesticated[0].Amount : 0f));
         }
@@ -1355,7 +1353,11 @@ public static class DeedFixtures
             new FixedAmountRules(rule),
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Harvested },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                DeedTokenTags.Harvested,
+                DeedTokenTags.IsWild
+            },
             caller: CallerIdentities.Hand,
             target: "game:crop-carrot-9",
             mount: null,
@@ -1365,7 +1367,7 @@ public static class DeedFixtures
 
         if (wild.Count != 0)
         {
-            Assert.Fail("[prosequor] harvest without domesticated should not match.");
+            Assert.Fail("[prosequor] harvest with is-wild should not match.");
         }
     }
 
@@ -1452,7 +1454,7 @@ public static class DeedFixtures
                     when = new XpRuleWhenJson
                     {
                         activity = Deed.Activity,
-                        tags = ["grown", "domesticated"]
+                        tags = ["grown", "!is-wild"]
                     }
                 },
                 "farming",
@@ -1561,8 +1563,7 @@ public static class DeedFixtures
 
         HashSet<string> grownTokens = new(StringComparer.OrdinalIgnoreCase)
         {
-            "grown",
-            "domesticated"
+            "grown"
         };
 
         IReadOnlyList<Deed.PlannedPay> makerPays = Deed.PlanPays(

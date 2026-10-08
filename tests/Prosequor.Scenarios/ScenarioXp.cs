@@ -112,7 +112,7 @@ static class ScenarioXp
     }
 
     /// <summary>
-    /// Clay/anvil voxel progress: one flat <c>crafting</c> deed per novel voxel
+    /// Clay/anvil voxel progress: one flat <c>voxel-work</c> deed per novel voxel
     /// (N emits × flat amount; not <c>pay: quantity</c>).
     /// </summary>
     public static float PlannedCraftingVoxels(
@@ -128,7 +128,7 @@ static class ScenarioXp
             Plan(
                 world,
                 playerUid,
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.VoxelWork },
                 caller,
                 target,
                 totalUnits: 0,

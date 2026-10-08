@@ -133,7 +133,7 @@ public class ClayFormXpScenarios : AtlasScenarioBase
             mod.XpRules,
             collections,
             player.PlayerUID,
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafting },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.VoxelWork },
             caller: "game:clayform",
             target: redBowl,
             mount: null,

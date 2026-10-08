@@ -30,7 +30,7 @@ public static class DropsStation
         HookId surface = hook ?? HookIds.BlockInteraction;
         if (block != null && pos != null && ForagePlayerPlaced.IsWild(world, block, pos))
         {
-            fact = EventFactBuilder.WithToken(fact, HarvestXp.TokenUndomesticated);
+            fact = EventFactBuilder.WithToken(fact, HarvestXp.TokenIsWild);
         }
 
         ItemStack[] current = drops ?? Array.Empty<ItemStack>();

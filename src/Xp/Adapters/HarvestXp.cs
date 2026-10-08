@@ -7,13 +7,13 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Harvest deeds for crops / berry bushes / fruit trees: quantity from drops,
-/// optional <c>domesticated</c> when the plant has a planter. Actor is the harvester.
+/// Harvest deeds for crops / berry bushes / fruit trees: quantity from drops.
+/// A break emits <c>block-broken</c>. An interact take emits <c>harvested</c>.
+/// <c>is-wild</c> is added when the plant has no planter and no place mark.
 /// </summary>
 public static class HarvestXp
 {
-    public const string TokenDomesticated = "domesticated";
-    public const string TokenUndomesticated = "undomesticated";
+    public const string TokenIsWild = DeedTokenTags.IsWild;
 
     [ThreadStatic]
     static List<Deed.QuantityUnit>? pendingUnits;
@@ -24,22 +24,11 @@ public static class HarvestXp
     [ThreadStatic]
     static int pendingBlockId;
 
-    /// <summary>
-    /// Remember GetDrops result for the matching break-path XP emit
-    /// (harvest crops/berries, or specialty dig clay/charcoal/saltpeter).
-    /// </summary>
+    /// <summary>Remember GetDrops for the matching break emit.</summary>
     public static void NoteBreakDrops(Block? block, BlockPos? pos, ItemStack[]? drops)
     {
         ClearPending();
         if (block == null || pos == null)
-        {
-            return;
-        }
-
-        if (!IsCropOrBerry(block)
-            && !ForageBlocks.IsMushroom(block)
-            && !AbilityBootstrap.IsFruitTreeBlock(block)
-            && !BlockBreakClassification.IsSpecialtyDigBlock(block))
         {
             return;
         }
@@ -68,25 +57,64 @@ public static class HarvestXp
         return units;
     }
 
-    /// <summary>
-    /// Break-path harvest: uses drops noted from GetDrops when present.
-    /// </summary>
+    /// <summary>Break-path harvest. Same <c>block-broken</c> emit as every other classified break.</summary>
     public static void NotifyBlockBroken(
         ICoreServerAPI sapi,
         IPlayer byPlayer,
         Block broken,
-        BlockPos pos)
+        BlockPos pos) =>
+        EmitBlockBroken(sapi, byPlayer?.PlayerUID, byPlayer, broken, pos, callerOverride: null);
+
+    /// <summary>
+    /// One <c>block-broken</c> emit. Drops are the noted GetDrops list.
+    /// <c>is-wild</c> is added when the wild check passes.
+    /// </summary>
+    public static void EmitBlockBroken(
+        ICoreAPI api,
+        string? playerUid,
+        IPlayer? byPlayer,
+        Block broken,
+        BlockPos pos,
+        string? callerOverride)
     {
-        if (!IsCropOrBerry(broken)
-            && !ForageBlocks.IsMushroom(broken)
-            && !AbilityBootstrap.IsFruitTreeBlock(broken))
+        if (api == null
+            || api.Side != EnumAppSide.Server
+            || string.IsNullOrWhiteSpace(playerUid)
+            || broken == null)
         {
-            ClearPending();
             return;
         }
 
         IReadOnlyList<Deed.QuantityUnit>? units = TakePendingUnits(broken, pos);
-        Emit(sapi, byPlayer, broken, pos, units);
+        List<string> tokens = [DeedToken.BlockBroken.ToTag()];
+        if (ForagePlayerPlaced.IsWild(api.World, broken, pos))
+        {
+            tokens.Add(TokenIsWild);
+        }
+
+        string caller = !string.IsNullOrWhiteSpace(callerOverride)
+            ? callerOverride.Trim()
+            : EventFactBuilder.CallerOrHand(byPlayer);
+
+        api.Logger.VerboseDebug(
+            "[prosequor] deed {0}{1} {2} caller={3} resistance={4:0.###} units={5} by {6}",
+            DeedToken.BlockBroken.ToTag(),
+            tokens.Contains(TokenIsWild) ? "+is-wild" : "",
+            broken.Code,
+            caller,
+            broken.Resistance,
+            SumUnits(units),
+            byPlayer?.PlayerName ?? playerUid);
+
+        Deed.Emit(
+            api,
+            playerUid,
+            tokens,
+            caller: caller,
+            target: EventFactBuilder.CodeOf(broken),
+            lastCraft: EventFactBuilder.LastCraftCode(playerUid),
+            position: pos?.Copy(),
+            outputs: units);
     }
 
     /// <summary>Interact / ripe-drop harvest (no block break).</summary>
@@ -97,18 +125,14 @@ public static class HarvestXp
         BlockPos pos,
         ItemStack[]? drops)
     {
-        if (ForageBlocks.IsSap(block))
-        {
-            Emit(api, byPlayer, block, pos, quantityUnits: null);
-            return;
-        }
-
-        if (!IsCropOrBerry(block) && !AbilityBootstrap.IsFruitTreeBlock(block))
+        if (!IsCropOrBerry(block)
+            && !AbilityBootstrap.IsFruitTreeBlock(block)
+            && !ForageBlocks.IsSap(block))
         {
             return;
         }
 
-        Emit(api, byPlayer, block, pos, ToUnits(drops));
+        Emit(api, byPlayer, block, pos, ToUnits(drops), DeedToken.Harvested.ToTag());
     }
 
     static void Emit(
@@ -116,7 +140,8 @@ public static class HarvestXp
         IPlayer byPlayer,
         Block block,
         BlockPos pos,
-        IReadOnlyList<Deed.QuantityUnit>? quantityUnits)
+        IReadOnlyList<Deed.QuantityUnit>? quantityUnits,
+        string moment)
     {
         if (api == null
             || api.Side != EnumAppSide.Server
@@ -131,21 +156,18 @@ public static class HarvestXp
             return;
         }
 
-        List<string> tokens = [DeedToken.Harvested.ToTag()];
-        if (OwnerCredit.TryResolvePlanter(api.World, block, pos, out _))
+        List<string> tokens = [moment];
+        if (ForagePlayerPlaced.IsWild(api.World, block, pos))
         {
-            tokens.Add(TokenDomesticated);
-        }
-        else if (ForagePlayerPlaced.IsWild(api.World, block, pos))
-        {
-            tokens.Add(TokenUndomesticated);
+            tokens.Add(TokenIsWild);
         }
 
         string caller = EventFactBuilder.CallerOrHand(serverPlayer);
 
         api.Logger.VerboseDebug(
-            "[prosequor] deed harvested{0} {1} caller={2} units={3} by {4}",
-            tokens.Contains(TokenDomesticated) ? "+domesticated" : "",
+            "[prosequor] deed {0}{1} {2} caller={3} units={4} by {5}",
+            moment,
+            tokens.Contains(TokenIsWild) ? "+is-wild" : "",
             block.Code,
             caller,
             SumUnits(quantityUnits),

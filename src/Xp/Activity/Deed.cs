@@ -1048,6 +1048,7 @@ public static class Deed
         && (domain.Equals(BlockBreakHardnessCatalog.DomainDig, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainMine, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(BlockBreakHardnessCatalog.DomainChop, StringComparison.OrdinalIgnoreCase)
+            || domain.Equals(BlockBreakClassification.TokenHarvest, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(AnimalWeightCatalog.MetricDomain, StringComparison.OrdinalIgnoreCase)
             || domain.Equals(AnimalWeightCatalog.MetricDomainTrappable, StringComparison.OrdinalIgnoreCase));
 
@@ -1168,16 +1169,18 @@ public static class Deed
             return false;
         }
 
+        resistance = block.Resistance;
         string? classify = BlockBreakClassification.ClassifyToken(block);
-        if (classify is not (BlockBreakClassification.TokenDig
-            or BlockBreakClassification.TokenMine
-            or BlockBreakClassification.TokenChop))
+        bool spanned = classify != null
+            && mod?.BlockBreakHardness != null
+            && mod.BlockBreakHardness.TryGetRange(classify, out min, out max);
+        if (!spanned)
         {
-            return false;
+            // No class catalog: the channel is still present, at the low end of 0–1.
+            min = 0f;
+            max = 1f;
         }
 
-        resistance = block.Resistance;
-        ResolveMetricRange(mod, classify, metricMin: null, metricMax: null, out min, out max);
         return true;
     }
 
@@ -1210,10 +1213,13 @@ public static class Deed
         }
 
         bool trapped = tokens.Contains(DeedTokenTags.Trapped);
+        bool cleaverCertain = tokens.Contains(DeedTokenTags.CleaverCertain);
         weight = props.Weight;
         ResolveMetricRange(
             mod,
-            trapped ? AnimalWeightCatalog.MetricDomainTrappable : AnimalWeightCatalog.MetricDomain,
+            trapped && !cleaverCertain
+                ? AnimalWeightCatalog.MetricDomainTrappable
+                : AnimalWeightCatalog.MetricDomain,
             metricMin: null,
             metricMax: null,
             out min,
@@ -1241,20 +1247,28 @@ public static class Deed
         max = 0f;
         stages = 0;
         Block? block = ResolveBlock(api, target);
-        if (block?.CropProps == null || !AbilityBootstrap.IsCropBlock(block))
+        if (block == null)
         {
             return false;
+        }
+
+        ResolveMetricRange(mod, MetricDomainCropLifetime, metricMin: null, metricMax: null, out min, out max);
+        if (block.CropProps == null || !AbilityBootstrap.IsCropBlock(block))
+        {
+            // Not a crop: the channel is still present, at 0 days and one stage.
+            days = 0f;
+            stages = 1;
+            return true;
         }
 
         float daysPerMonth = (float)(api.World?.Calendar?.DaysPerMonth ?? 0);
         days = CropLifetimeMath.TotalGrowthDays(block.CropProps, daysPerMonth);
-        if (days <= 0f)
+        if (days < 0f)
         {
-            return false;
+            days = 0f;
         }
 
         stages = CropLifetimeMath.GrowthStages(block.CropProps);
-        ResolveMetricRange(mod, MetricDomainCropLifetime, metricMin: null, metricMax: null, out min, out max);
         return true;
     }
 

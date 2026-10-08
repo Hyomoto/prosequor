@@ -53,19 +53,25 @@ public class PassiveSkillFixtures
             "forage-produce",
             0.01f,
             pay: "quantity",
-            tags: ["harvested", "undomesticated", "target:<berry-bush, crop, mushroom>"]);
+            tags: ["block-broken", "is-wild", "target:<berry-bush, crop, mushroom>"]);
         XpRule flat = CompileAmount(
             collections,
             "forage-flat",
             0.05f,
             pay: null,
-            tags: ["harvested", "undomesticated", "target:<reed, stick, sap>"]);
+            tags: ["block-broken", "is-wild", "target:<reed, stick>"]);
+        XpRule sapRule = CompileAmount(
+            collections,
+            "forage-sap",
+            0.05f,
+            pay: null,
+            tags: ["harvested", "is-wild", "target:<sap>"]);
         XpRule farming = CompileAmount(
             collections,
             "farming",
             0.01f,
             pay: "quantity",
-            tags: ["harvested", "domesticated", "target:<crop, berry-bush, fruit-tree>"]);
+            tags: ["harvested", "!is-wild", "target:<crop, berry-bush, fruit-tree>"]);
 
         Deed.Channels units = Quantity(
             new Deed.QuantityUnit("game:mushroom-fieldmushroom-normal", 3));
@@ -74,7 +80,7 @@ public class PassiveSkillFixtures
             new FixedRules(produce, farming),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:mushroom-fieldmushroom-normal",
             mount: null,
@@ -90,7 +96,7 @@ public class PassiveSkillFixtures
             new FixedRules(produce, farming),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:fruitingbush-blueberry-ripe",
             mount: null,
@@ -106,7 +112,7 @@ public class PassiveSkillFixtures
             new FixedRules(produce, farming),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:fruitingbush-blueberry-wild",
             mount: null,
@@ -122,7 +128,7 @@ public class PassiveSkillFixtures
             new FixedRules(produce, farming),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenDomesticated),
+            Tokens(DeedTokenTags.Harvested),
             caller: "prosequor:@hand",
             target: "game:crop-carrot-9",
             mount: null,
@@ -131,14 +137,14 @@ public class PassiveSkillFixtures
             Quantity(new Deed.QuantityUnit("game:carrot", 4)));
         if (planted.Count != 1 || planted[0].SkillId != "farming-skill")
         {
-            Assert.Fail("[prosequor] domesticated harvest must not pay forager.");
+            Assert.Fail("[prosequor] planted harvest must not pay forager.");
         }
 
         IReadOnlyList<Deed.PlannedPay> wildStick = Deed.PlanPays(
             new FixedRules(flat, produce),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:loosestick-free",
             mount: null,
@@ -154,7 +160,7 @@ public class PassiveSkillFixtures
             new FixedRules(flat, produce),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:flower-horsetail-free",
             mount: null,
@@ -167,10 +173,10 @@ public class PassiveSkillFixtures
         }
 
         IReadOnlyList<Deed.PlannedPay> wildSap = Deed.PlanPays(
-            new FixedRules(flat, produce),
+            new FixedRules(flat, sapRule, produce),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:log-resin-pine-ud",
             mount: null,
@@ -186,7 +192,7 @@ public class PassiveSkillFixtures
             new FixedRules(flat, produce),
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested),
+            Tokens(DeedTokenTags.BlockBroken),
             caller: "prosequor:@hand",
             target: "game:loosestick-free",
             mount: null,
@@ -195,7 +201,7 @@ public class PassiveSkillFixtures
             Quantity(new Deed.QuantityUnit("game:stick", 8)));
         if (placedPile.Count != 0)
         {
-            Assert.Fail("[prosequor] player-placed stick sources (no undomesticated) must not pay.");
+            Assert.Fail("[prosequor] player-placed stick sources (no is-wild) must not pay.");
         }
     }
 
@@ -220,10 +226,10 @@ public class PassiveSkillFixtures
             collections,
             ref sourceOrder,
             warnings.Add);
-        if (warnings.Count > 0 || rules.Count != 2)
+        if (warnings.Count > 0 || rules.Count != 4)
         {
             Assert.Fail(
-                "[prosequor] forager.json xpRules should compile to two amount rules: "
+                "[prosequor] forager.json xpRules should compile to four amount rules: "
                 + string.Join("; ", warnings));
         }
 
@@ -232,7 +238,7 @@ public class PassiveSkillFixtures
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:fruitingbush-wild-blueberry-free",
             mount: null,
@@ -248,7 +254,7 @@ public class PassiveSkillFixtures
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:mushroom-fieldmushroom-normal",
             mount: null,
@@ -264,7 +270,7 @@ public class PassiveSkillFixtures
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:loosestick-free",
             mount: null,
@@ -280,7 +286,7 @@ public class PassiveSkillFixtures
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:flower-horsetail-free",
             mount: null,
@@ -296,7 +302,7 @@ public class PassiveSkillFixtures
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenUndomesticated),
+            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenIsWild),
             caller: "prosequor:@hand",
             target: "game:log-resin-pine-ud",
             mount: null,

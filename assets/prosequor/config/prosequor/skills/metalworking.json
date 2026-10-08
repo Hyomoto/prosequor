@@ -22,7 +22,7 @@
       "amount": 0.025,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafting", "caller:<anvil>", "target:<smithing-formed>" ]
+        "tags": [ "voxel-work", "caller:<anvil>", "target:<smithing-formed>" ]
       }
     },
     {

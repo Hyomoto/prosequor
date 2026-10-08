@@ -45,7 +45,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "hunted" ]
+        "tags": [ "hunted", "!cleaver-certain" ]
       }
     },
     {
@@ -54,7 +54,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "trapped" ]
+        "tags": [ "trapped", "!cleaver-certain" ]
       }
     }
   ],

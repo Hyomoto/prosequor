@@ -173,6 +173,17 @@ public sealed class TokenCriterion : TagCriterion
         fact != null && fact.Tokens.Contains(Token);
 }
 
+/// <summary>Bare <c>!token</c>: matches when the event token is absent. Same specificity as a required token.</summary>
+public sealed class AbsentTokenCriterion : TagCriterion
+{
+    public required string Token { get; init; }
+
+    public override int SpecificityScore => 100;
+
+    public override bool Matches(AbilityAction? fact, CollectionIndex? collections) =>
+        fact != null && !fact.Tokens.Contains(Token);
+}
+
 public sealed class RoleIdentityCriterion : TagCriterion
 {
     /// <summary>Reserved identity: role has no code (empty hands, missing target, …).</summary>
@@ -336,6 +347,27 @@ public static class TagCriterionParser
         }
 
         string trimmed = raw.Trim();
+
+        if (trimmed.StartsWith('!'))
+        {
+            string denied = trimmed[1..].Trim();
+            if (denied.Length == 0
+                || denied.Contains(':')
+                || denied.Contains('<')
+                || denied.Contains('*')
+                || denied.Contains(' '))
+            {
+                error = "token denial is a bare token ('!is-wild').";
+                return false;
+            }
+
+            criterion = new AbsentTokenCriterion
+            {
+                Token = Xp.Activity.DeedTokenTags.Canonical(denied)
+            };
+            error = "";
+            return true;
+        }
 
         // Bare tag (no role:): collection → target collection; else open token.
         int colon = trimmed.IndexOf(':');

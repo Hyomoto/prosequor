@@ -26,8 +26,8 @@ public static class GrowthXp
     static BlockEntity? pendingFruitTreeRoot;
 
     /// <summary>
-    /// Emit <c>grown</c> + <c>domesticated</c> with blank actor, <c>makerUid</c> = planter,
-    /// and farmland contributor shares (synthesized planter weight 1 when the bag is empty).
+    /// Emit <c>grown</c>, plus <c>is-wild</c> when the wild check passes.
+    /// Blank actor. <c>makerUid</c> is the planter when one resolves.
     /// </summary>
     public static void EmitIfDomesticated(
         ICoreAPI? api,
@@ -37,15 +37,21 @@ public static class GrowthXp
     {
         if (api?.Side != EnumAppSide.Server
             || api.World == null
-            || targetBlock == null
-            || !ProsequorBlockPedigreeStation.TryGetPlanter(pedigreeBe, out string? planterUid)
-            || string.IsNullOrWhiteSpace(planterUid))
+            || targetBlock == null)
         {
             return;
         }
 
+        bool wild = ForagePlayerPlaced.IsWild(api.World, targetBlock, position);
+        if (!ProsequorBlockPedigreeStation.TryGetPlanter(pedigreeBe, out string? planterUid)
+            || string.IsNullOrWhiteSpace(planterUid))
+        {
+            EmitGrown(api, planterUid: "", targetBlock, position, contributors: null, wild);
+            return;
+        }
+
         IReadOnlyList<Deed.ContributorShare> shares = ResolveGrowthShares(pedigreeBe, planterUid!);
-        EmitGrown(api, planterUid!, targetBlock, position, shares);
+        EmitGrown(api, planterUid!, targetBlock, position, shares, wild);
     }
 
     /// <summary>
@@ -117,15 +123,23 @@ public static class GrowthXp
         string planterUid,
         Block? targetBlock,
         BlockPos? position,
-        IReadOnlyList<Deed.ContributorShare>? contributors = null)
+        IReadOnlyList<Deed.ContributorShare>? contributors,
+        bool wild)
     {
         if (targetBlock == null)
         {
             return;
         }
 
+        List<string> tokens = [DeedToken.Grown.ToTag()];
+        if (wild)
+        {
+            tokens.Add(DeedTokenTags.IsWild);
+        }
+
         api.Logger.VerboseDebug(
-            "[prosequor] deed grown+domesticated {0} maker={1} contributors={2}",
+            "[prosequor] deed grown{0} {1} maker={2} contributors={3}",
+            wild ? "+is-wild" : "",
             targetBlock.Code,
             planterUid,
             contributors?.Count ?? 0);
@@ -133,12 +147,12 @@ public static class GrowthXp
         Deed.Emit(
             api,
             playerUid: "",
-            [DeedToken.Grown.ToTag(), HarvestXp.TokenDomesticated],
+            tokens,
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(targetBlock),
             position: position,
             contributors: contributors,
-            makerUid: planterUid);
+            makerUid: string.IsNullOrWhiteSpace(planterUid) ? null : planterUid);
     }
 
     static bool TryResolveFruitTreeRoot(BlockEntityFruitTreePart? part, out BlockEntity? rootBe)
@@ -354,7 +368,8 @@ public static class GrowthXp
                 planterUid,
                 targetBlock,
                 position,
-                ResolveGrowthShares(null, planterUid));
+                ResolveGrowthShares(null, planterUid),
+                ForagePlayerPlaced.IsWild(api.World, targetBlock, position));
     }
 
     [HarmonyPatch(typeof(FruitTreeGrowingBranchBH), "TryGrowTo")]

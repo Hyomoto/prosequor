@@ -156,7 +156,7 @@ public static class EventFactBuilder
         };
     }
 
-    /// <summary>Copies <paramref name="fact"/> with an extra event token (e.g. <c>undomesticated</c>).</summary>
+    /// <summary>Copies <paramref name="fact"/> with an extra event token (e.g. <c>is-wild</c>).</summary>
     public static AbilityAction WithToken(AbilityAction fact, string token)
     {
         HashSet<string> tokens = new(fact.Tokens, StringComparer.OrdinalIgnoreCase);
