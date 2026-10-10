@@ -5,7 +5,7 @@ using Vintagestory.API.Common;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Finished pan: <c>panned</c> deed, quantity = stacks handed out after mutate-drops.
+/// Finished pan: <c>harvested</c> deed, quantity = stacks handed out after mutate-drops.
 /// A miss (no stacks) does not emit. Sift XP stays on effort.
 /// </summary>
 public static class PanningXp
@@ -48,7 +48,7 @@ public static class PanningXp
 
         string? caller = EventFactBuilder.CodeOf(pan);
         api.Logger.VerboseDebug(
-            "[prosequor] deed panned {0} caller={1} units={2} by {3}",
+            "[prosequor] deed harvested {0} caller={1} units={2} by {3}",
             fromBlockCode,
             caller,
             total,
@@ -57,7 +57,7 @@ public static class PanningXp
         Deed.Emit(
             api,
             player.PlayerUID,
-            DeedToken.Panned,
+            DeedToken.Harvested,
             caller: caller,
             target: fromBlockCode,
             outputs: units);

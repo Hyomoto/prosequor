@@ -21,12 +21,17 @@ public static class VoxelFinishScope
     {
         public IPlayer Player = null!;
         public string RecipeKey = "";
+        public string Caller = "";
         public bool InterceptGive;
         public ItemStack? OutputTemplate;
     }
 
     public static string? RecipeKey =>
         string.IsNullOrWhiteSpace(current?.RecipeKey) ? null : current.RecipeKey;
+
+    /// <summary>Station block code captured with the recipe, when a finish is in progress.</summary>
+    public static string? Caller =>
+        string.IsNullOrWhiteSpace(current?.Caller) ? null : current.Caller;
 
     public static void BeginClay(IPlayer? player, BlockEntityClayForm? form)
     {
@@ -40,14 +45,16 @@ public static class VoxelFinishScope
         {
             Player = player,
             RecipeKey = key.Trim(),
+            Caller = EventFactBuilder.CodeOf(form.Block) ?? "",
             InterceptGive = false,
             OutputTemplate = form.SelectedRecipe?.Output?.ResolvedItemstack?.Clone()
         };
     }
 
-    public static void BeginGive(IPlayer? player, string? recipeKey)
+    public static void BeginGive(IPlayer? player, string? recipeKey, Block? station)
     {
-        if (player == null || string.IsNullOrWhiteSpace(recipeKey))
+        string? caller = EventFactBuilder.CodeOf(station);
+        if (player == null || string.IsNullOrWhiteSpace(recipeKey) || string.IsNullOrWhiteSpace(caller))
         {
             return;
         }
@@ -56,6 +63,7 @@ public static class VoxelFinishScope
         {
             Player = player,
             RecipeKey = recipeKey.Trim(),
+            Caller = caller,
             InterceptGive = true
         };
     }
@@ -144,7 +152,7 @@ public static class VoxelFinishScope
         }
 
         ICoreAPI? api = current.Player.Entity?.World?.Api ?? current.Player.Entity?.Api;
-        ProsequorModSystem.For(api)?.VoxelWorkXp?.NotifyFinished(current.Player, stack);
+        ProsequorModSystem.For(api)?.VoxelWorkXp?.NotifyFinished(current.Player, stack, current.Caller);
     }
 
     /// <summary>

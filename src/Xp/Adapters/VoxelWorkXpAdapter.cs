@@ -7,7 +7,7 @@ namespace Prosequor.Xp.Adapters;
 
 /// <summary>
 /// Voxel crafting XP. Progress is one flat <c>voxel-work</c> deed per novel voxel.
-/// Completion is one <c>voxel-finished</c> deed whose subject is the output stack.
+/// Completion is one <c>crafted</c> deed. The caller is the station block.
 /// </summary>
 public class VoxelWorkXpAdapter
 {
@@ -49,12 +49,14 @@ public class VoxelWorkXpAdapter
     }
 
     /// <summary>
-    /// One completion deed for a finished voxel workpiece. Caller is <c>@hand</c>.
-    /// <paramref name="subject"/> carries the recipe stamp <c>pay: voxels</c> reads.
+    /// One <c>crafted</c> deed for a finished voxel workpiece.
+    /// <paramref name="caller"/> is the station block. <paramref name="subject"/> carries the recipe stamp
+    /// <c>pay: voxels</c> reads. Output units are the stack size. Maker and contributor shares are passed
+    /// when the stack already has them. An empty bag still emits.
     /// </summary>
-    public void NotifyFinished(IPlayer? byPlayer, ItemStack? subject)
+    public void NotifyFinished(IPlayer? byPlayer, ItemStack? subject, string? caller)
     {
-        if (byPlayer == null || subject == null)
+        if (byPlayer == null || subject == null || string.IsNullOrWhiteSpace(caller))
         {
             return;
         }
@@ -64,12 +66,34 @@ public class VoxelWorkXpAdapter
             return;
         }
 
+        string? target = EventFactBuilder.CodeOf(subject);
+        int count = Math.Max(0, subject.StackSize);
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null;
+        if (!string.IsNullOrWhiteSpace(target) && count > 0)
+        {
+            outputs = [new Deed.QuantityUnit(target, count)];
+        }
+
+        string? makerUid = CraftAttribution.TryGetMakerUid(subject);
+        IReadOnlyList<Deed.ContributorShare>? shares = null;
+        if (ProsequorStackPedigree.TryGetPrimaryBlob(subject, out ProsequorBlob blob))
+        {
+            IReadOnlyList<Deed.ContributorShare> fromBlob = blob.ToDeedShares();
+            if (fromBlob.Count > 0)
+            {
+                shares = fromBlob;
+            }
+        }
+
         Deed.Emit(
             sapi,
             serverPlayer.PlayerUID,
-            DeedToken.VoxelFinished,
-            caller: CallerIdentities.Hand,
-            target: EventFactBuilder.CodeOf(subject),
+            DeedToken.Crafted,
+            caller: caller.Trim(),
+            target: target,
+            outputs: outputs,
+            contributors: shares,
+            makerUid: makerUid,
             subject: subject);
     }
 }

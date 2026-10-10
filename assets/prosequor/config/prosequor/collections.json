@@ -234,7 +234,7 @@
   {
     "id": "bloomery",
     "includes": [
-      "game:bloomery-*"
+      "game:bloomerybase-*"
     ]
   },
   {
@@ -596,6 +596,7 @@
   { "id": "metal-crafts" },
   { "id": "clay-formed" },
   { "id": "smithing-formed" },
+  { "id": "kiln" },
   { "id": "liquid" },
   { "id": "graft" },
   { "id": "root" },

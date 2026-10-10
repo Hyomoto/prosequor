@@ -904,6 +904,11 @@ public static class AbilityBootstrap
         // Membership filled at GameReady from clayforming / smithing recipe outputs.
         index.EnsureKey("clay-formed");
         index.EnsureKey("smithing-formed");
+
+        // Synthetic kiln caller identities. They are not block codes, so pattern expansion cannot see them.
+        index.EnsureKey("kiln");
+        index.AddCode("kiln", Prosequor.Xp.Activity.DeedTokenTags.PitKiln);
+        index.AddCode("kiln", Prosequor.Xp.Activity.DeedTokenTags.BeehiveKiln);
     }
 
     /// <summary>

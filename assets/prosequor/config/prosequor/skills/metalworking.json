@@ -32,7 +32,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "mold-cast" ]
+        "tags": [ "crafted", "caller:@mold" ]
       }
     },
     {
@@ -40,7 +40,7 @@
       "amount": 3,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "bloomery-harvest" ]
+        "tags": [ "harvested", "target:<bloomery>" ]
       }
     },
     {
@@ -50,7 +50,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "cementation-fired" ]
+        "tags": [ "crafted", "caller:@cementation" ]
       }
     }
   ],

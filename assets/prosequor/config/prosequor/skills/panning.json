@@ -33,7 +33,7 @@
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "panned", "caller:<pan>" ]
+        "tags": [ "harvested", "caller:<pan>" ]
       }
     }
   ],

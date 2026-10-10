@@ -15,8 +15,8 @@ public static class ClayFireXpMath
     public const string TokenPitKiln = DeedTokenTags.PitKiln;
     public const string TokenBeehiveKiln = DeedTokenTags.BeehiveKiln;
 
-    /// <summary>Deed tokens for kiln settle.</summary>
-    public static List<string> BuildTokens() => [TokenKilnFired];
+    /// <summary>Deed token for kiln settle. The caller distinguishes the kiln.</summary>
+    public static List<string> BuildTokens() => [DeedTokenTags.Crafted];
 
     /// <summary>
     /// Snapshot weighted shares from a pedigree blob (empty when anonymous / missing).

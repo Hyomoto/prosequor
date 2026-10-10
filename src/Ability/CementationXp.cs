@@ -55,7 +55,7 @@ public static class CementationXp
         Deed.Emit(
             coffin.Api,
             playerUid: "",
-            DeedToken.CementationFired,
+            DeedToken.Crafted,
             caller: CallerIdentities.Cementation,
             target: target,
             outputs: [new Deed.QuantityUnit(target ?? "", quantity)],

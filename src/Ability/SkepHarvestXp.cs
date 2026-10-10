@@ -204,7 +204,7 @@ public static class SkepHarvestXp
         Deed.Emit(
             api,
             playerUid: harvesterUid,
-            tokens: [DeedTokenTags.SkepHarvest],
+            tokens: [DeedTokenTags.Harvested],
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(block),
             position: pos.Copy(),

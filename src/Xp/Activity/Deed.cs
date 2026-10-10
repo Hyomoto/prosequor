@@ -253,6 +253,7 @@ public static class Deed
             api,
             mod,
             tokenSet,
+            caller,
             resolvedTarget,
             subject,
             outputs,
@@ -717,6 +718,7 @@ public static class Deed
         ICoreAPI api,
         ProsequorModSystem? mod,
         IReadOnlySet<string> tokens,
+        string? caller,
         string? target,
         ItemStack? subject,
         IReadOnlyList<QuantityUnit>? outputs,
@@ -746,7 +748,7 @@ public static class Deed
             resistanceMin = rMin;
             resistanceMax = rMax;
         }
-        else if (TryMeasureAnimalWeight(api, mod, tokens, target, out float w, out float wMin, out float wMax))
+        else if (TryMeasureAnimalWeight(api, mod, tokens, caller, target, out float w, out float wMin, out float wMax))
         {
             hasResistance = true;
             resistance = w;
@@ -1188,6 +1190,7 @@ public static class Deed
         ICoreAPI api,
         ProsequorModSystem? mod,
         IReadOnlySet<string> tokens,
+        string? caller,
         string? target,
         out float weight,
         out float min,
@@ -1212,12 +1215,13 @@ public static class Deed
             return false;
         }
 
-        bool trapped = tokens.Contains(DeedTokenTags.Trapped);
+        bool trapCaller = mod?.Collections?.Index != null
+            && mod.Collections.Index.Contains("trap", caller);
         bool cleaverCertain = tokens.Contains(DeedTokenTags.CleaverCertain);
         weight = props.Weight;
         ResolveMetricRange(
             mod,
-            trapped && !cleaverCertain
+            trapCaller && !cleaverCertain
                 ? AnimalWeightCatalog.MetricDomainTrappable
                 : AnimalWeightCatalog.MetricDomain,
             metricMin: null,

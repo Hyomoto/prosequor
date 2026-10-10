@@ -42,7 +42,7 @@ public static class ClayFireXpFixtures
     static void VerifyBuildTokens()
     {
         List<string> tokens = ClayFireXpMath.BuildTokens();
-        if (tokens.Count != 1 || tokens[0] != ClayFireXpMath.TokenKilnFired)
+        if (tokens.Count != 1 || tokens[0] != DeedTokenTags.Crafted)
         {
             Assert.Fail("[prosequor] ClayFire XP fixture failed (build tokens).");
         }

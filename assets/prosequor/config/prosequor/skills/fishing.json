@@ -24,7 +24,7 @@
       "amount": 5,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<small-fish>" ]
+        "tags": [ "harvested", "caller:<fishingpole>", "target:<small-fish>" ]
       }
     },
     {
@@ -32,7 +32,7 @@
       "amount": 10,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<medium-fish>" ]
+        "tags": [ "harvested", "caller:<fishingpole>", "target:<medium-fish>" ]
       }
     },
     {
@@ -40,7 +40,7 @@
       "amount": 20,
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "fishing-catch", "caller:<fishingpole>", "target:<large-fish>" ]
+        "tags": [ "harvested", "caller:<fishingpole>", "target:<large-fish>" ]
       }
     }
   ],

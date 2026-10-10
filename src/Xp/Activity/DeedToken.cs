@@ -21,9 +21,13 @@ public enum DeedToken
     Grown,
     /// <summary>Hoe converted soil into farmland (one emit per tilled tile).</summary>
     TillSoil,
-    /// <summary>Knife / rip harvest of a dead animal below cleaver-certain generation.</summary>
+    /// <summary>A mob's harvestable inventory became drops. <c>cleaver-certain</c> rides along at the cleaver line.</summary>
+    MobHarvested,
+    /// <summary>Knife / rip harvest of a dead animal below cleaver-certain generation. Parser alias; emits are <see cref="MobHarvested"/>.</summary>
     Butchered,
-    /// <summary>Player kill of a food animal.</summary>
+    /// <summary>A mob died. Weapon or trap is the caller. <c>cleaver-certain</c> is the generation stipulation.</summary>
+    Killed,
+    /// <summary>Player kill of a food animal. Parser alias; emits are <see cref="Killed"/>.</summary>
     Hunted,
     /// <summary>Food animal caught in a basket / crate trap.</summary>
     Trapped,
@@ -108,10 +112,16 @@ public static class DeedTokenTags
     /// <summary>Hoe converted soil into farmland.</summary>
     public const string TillSoil = "till-soil";
 
-    /// <summary>Dead-animal harvest below cleaver-certain generation. Quantity is meat + fat after cooking yield.</summary>
+    /// <summary>A mob's harvestable inventory became drops.</summary>
+    public const string MobHarvested = "mob-harvested";
+
+    /// <summary>Dead-animal harvest below cleaver-certain generation. Parser alias; emits are <see cref="MobHarvested"/>.</summary>
     public const string Butchered = "butchered";
 
-    /// <summary>Player kill of a food animal.</summary>
+    /// <summary>A mob died.</summary>
+    public const string Killed = "killed";
+
+    /// <summary>Player kill of a food animal. Parser alias; emits are <see cref="Killed"/>.</summary>
     public const string Hunted = "hunted";
 
     /// <summary>Food animal caught in a basket / crate trap.</summary>
@@ -163,7 +173,9 @@ public static class DeedTokenTags
         DeedToken.SaddleTame => SaddleTame,
         DeedToken.Grown => Grown,
         DeedToken.TillSoil => TillSoil,
+        DeedToken.MobHarvested => MobHarvested,
         DeedToken.Butchered => Butchered,
+        DeedToken.Killed => Killed,
         DeedToken.Hunted => Hunted,
         DeedToken.Trapped => Trapped,
         DeedToken.Slaughtered => Slaughtered,
@@ -252,6 +264,18 @@ public static class DeedTokenTags
         if (t.Equals(TillSoil, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.TillSoil;
+            return true;
+        }
+
+        if (t.Equals(MobHarvested, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.MobHarvested;
+            return true;
+        }
+
+        if (t.Equals(Killed, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Killed;
             return true;
         }
 

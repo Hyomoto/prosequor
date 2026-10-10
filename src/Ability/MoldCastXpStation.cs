@@ -316,7 +316,7 @@ public static class MoldCastXpStation
         Deed.Emit(
             api,
             playerUid: "",
-            DeedToken.MoldCast,
+            DeedToken.Crafted,
             caller: CallerIdentities.Mold,
             target: target,
             inputs: [new Deed.QuantityUnit(target ?? "", ingredients)],

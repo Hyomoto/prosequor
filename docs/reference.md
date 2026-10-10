@@ -375,35 +375,26 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | Token | Meaning |
 | --- | --- |
 | `block-broken` | Block break |
-| `harvested` | Produce taken while the block stays |
-| `butchered` | Dead-animal harvest when generation is below 3 |
-| `hunted` | Player kill of a food animal |
-| `trapped` | Food animal caught in a basket / crate trap |
+| `harvested` | Drops taken from a block that stays. The caller is the tool or `@hand`; the target is the block or the fish |
+| `killed` | A mob died. The caller is the weapon or the trap. `cleaver-certain` marks generation 3 or higher |
+| `mob-harvested` | A mob's harvestable inventory became drops. `cleaver-certain` marks generation 3 or higher |
 | `cleaver-certain` | Animal generation is 3 or higher |
-| `dressed` | Dead-animal harvest when generation is 3 or higher |
-| `crafted` | A finished product. The caller says which station made it; omit the caller to match every station. |
+| `crafted` | Ingredients became products at a grid or station. The caller says which station; omit the caller to match every station. |
 | `voxel-work` | Novel voxel edit (clay-form / smith); one flat deed per voxel |
-| `voxel-finished` | Voxel workpiece became its output. Subject is that stack, with the recipe key stamped |
 | `grown` | Growth stage advanced (legacy alias `crop-grown`) |
 | `till-soil` | Soil → farmland |
 | `fertilizer-absorbed` | Fertilizer nutrient transfer |
-| `fishing-catch` | Fish catch |
-| `kiln-fired` | Kiln settle |
-| `mold-cast` | Mold cast hardened |
-| `bloomery-harvest` | Finished bloom taken |
-| `cementation-fired` | Cementation complete |
 | `reinforced` | Block reinforced with the plumb and square |
 | `healed` | Healing item successfully applied (bandage / poultice) |
-| `panned` | Pan finished; quantity is items received |
 | `saddle-break` / `saddle-tame` | Riding progress |
 | `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
 | `milked` | Successful milking |
 | `friendly` | Friendliness score > 5 at emit |
 | `aged-up` | Juvenile became adult |
 | `gave-birth` | Birth completed |
-| `skep-harvest` / `skep-propagate` | Skep honeycomb / swarm |
+| `skep-propagate` | Populated hive swarmed into an empty skep |
 | `is-wild` | Plant has no planter and no player-place mark |
-| `pit-kiln` / `beehive-kiln` | Kiln caller identities |
+| `pit-kiln` / `beehive-kiln` | Kiln caller identities. Both are members of the `kiln` collection |
 | `fire-pottery` / `barrel` / `fruit-press` | Process tokens |
 | `used-bait` | Bait consumed |
 | `block` | Craft-grid refund fact when the output is a block |
@@ -825,7 +816,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. A block target publishes `Resistance` on the resistance channel; the span is that block’s break class (dig, mine, chop, or harvest) when the class has a catalog, otherwise 0–1. A crop publishes its growth days on lifetime; any other resolved block publishes 0 days and one stage against the crop-days catalog. Lifetime then divides by `GrowthStages`. For `hunted`, and for `trapped` when `cleaver-certain` is also present, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). For `trapped` without `cleaver-certain`, the span is the subset of those animals with a trap chance above zero.
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. A block target publishes `Resistance` on the resistance channel; the span is that block’s break class (dig, mine, chop, or harvest) when the class has a catalog, otherwise 0–1. A crop publishes its growth days on lifetime; any other resolved block publishes 0 days and one stage against the crop-days catalog. Lifetime then divides by `GrowthStages`. For `killed`, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). When the caller is in `trap` and `cleaver-certain` is absent, the span is the subset of those animals with a trap chance above zero.
 
 ### XP `when`
 
@@ -895,7 +886,7 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 | `excludes` | Other collection ids subtracted after includes, before unions |
 | `unions` | Other collection ids copied into this key (multi-pass, after excludes) |
 
-Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, and `smithing-formed`. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
+Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, and `kiln` (`pit-kiln`, `beehive-kiln`). `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
 

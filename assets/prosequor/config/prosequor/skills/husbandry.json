@@ -58,7 +58,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["skep-harvest"]
+        "tags": ["harvested", "target:<skep>"]
       }
     },
     {
@@ -76,7 +76,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["hunted", "cleaver-certain"]
+        "tags": ["killed", "cleaver-certain"]
       }
     },
     {
@@ -85,7 +85,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["trapped", "cleaver-certain"]
+        "tags": ["killed", "caller:<trap>", "cleaver-certain"]
       }
     },
     {
@@ -95,7 +95,7 @@
       "include": ["<meat>", "<fat>"],
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["dressed"]
+        "tags": ["mob-harvested", "cleaver-certain"]
       }
     }
   ],

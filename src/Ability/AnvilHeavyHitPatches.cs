@@ -225,7 +225,10 @@ public static class AnvilCheckIfFinishedXpPatch
             return;
         }
 
-        VoxelFinishScope.BeginGive(byPlayer, AnvilXpStation.RecipeKeyOf(__instance.SelectedRecipe));
+        VoxelFinishScope.BeginGive(
+            byPlayer,
+            AnvilXpStation.RecipeKeyOf(__instance.SelectedRecipe),
+            __instance.Block);
     }
 
     [HarmonyPostfix]

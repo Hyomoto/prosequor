@@ -6,7 +6,7 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// XP from successful fish catches. <c>fishing-catch</c> + caller = pole + target = fish.
+/// XP from successful fish catches. <c>harvested</c> + caller = pole + target = fish.
 /// </summary>
 public class FishingCatchXpAdapter
 {
@@ -36,8 +36,16 @@ public class FishingCatchXpAdapter
         string? pole = fact.Caller ?? fact.Held;
         string caller = string.IsNullOrWhiteSpace(pole) ? CallerIdentities.Hand : pole;
 
+        string? fishCode = EventFactBuilder.CodeOf(caught);
+        int count = Math.Max(0, caught.StackSize);
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null;
+        if (!string.IsNullOrWhiteSpace(fishCode) && count > 0)
+        {
+            outputs = [new Deed.QuantityUnit(fishCode, count)];
+        }
+
         sapi.Logger.VerboseDebug(
-            "[prosequor] deed fish {0} caller={1} by {2}",
+            "[prosequor] deed harvested {0} caller={1} by {2}",
             caught.Collectible?.Code,
             caller,
             serverPlayer.PlayerName);
@@ -45,11 +53,12 @@ public class FishingCatchXpAdapter
         Deed.Emit(
             sapi,
             fact.ActorUid,
-            DeedToken.FishingCatch,
+            DeedToken.Harvested,
             caller: caller,
             target: fact.Target,
             lastCraft: fact.LastCraft,
             ground: fact.Ground,
-            position: fact.Position);
+            position: fact.Position,
+            outputs: outputs);
     }
 }

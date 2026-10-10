@@ -20,7 +20,10 @@ public static class KnappingCheckIfFinishedPatch
             return;
         }
 
-        VoxelFinishScope.BeginGive(byPlayer, KnappingRecipeCatalog.RecipeKeyOf(__instance.SelectedRecipe));
+        VoxelFinishScope.BeginGive(
+            byPlayer,
+            KnappingRecipeCatalog.RecipeKeyOf(__instance.SelectedRecipe),
+            __instance.Block);
     }
 
     [HarmonyFinalizer]

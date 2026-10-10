@@ -57,12 +57,21 @@ public static class BloomeryHarvestXp
             return;
         }
 
+        string? bloomCode = EventFactBuilder.CodeOf(bloom);
+        int count = Math.Max(0, bloom.StackSize);
+        IReadOnlyList<Prosequor.Xp.Activity.Deed.QuantityUnit>? outputs = null;
+        if (!string.IsNullOrWhiteSpace(bloomCode) && count > 0)
+        {
+            outputs = [new Prosequor.Xp.Activity.Deed.QuantityUnit(bloomCode, count)];
+        }
+
         Prosequor.Xp.Activity.Deed.Emit(
             byPlayer.Entity.World.Api,
             byPlayer.PlayerUID,
-            Prosequor.Xp.Activity.DeedToken.BloomeryHarvest,
+            Prosequor.Xp.Activity.DeedToken.Harvested,
             caller: CallerIdentities.Hand,
             target: EventFactBuilder.CodeOf(bloomeryBlock)
-                ?? EventFactBuilder.CodeOf(bloom));
+                ?? EventFactBuilder.CodeOf(bloom),
+            outputs: outputs);
     }
 }

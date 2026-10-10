@@ -7,8 +7,8 @@ using Vintagestory.API.Server;
 namespace Prosequor.Xp.Adapters;
 
 /// <summary>
-/// Dead-animal harvest. Generation below cleaver-certain pays <c>butchered</c> (hunting).
-/// Cleaver-certain generation pays <c>dressed</c> (husbandry). Rules keep meat and fat via <c>include</c>.
+/// A mob's harvestable inventory became drops. Always <c>mob-harvested</c>.
+/// <c>cleaver-certain</c> is added at the cleaver line. Rules keep meat and fat via <c>include</c>.
 /// </summary>
 public static class ButcherXp
 {
@@ -37,8 +37,16 @@ public static class ButcherXp
         string? tool = EventFactBuilder.HeldCode(serverPlayer);
         string caller = string.IsNullOrWhiteSpace(tool) ? CallerIdentities.Hand : tool;
 
+        bool cleaverCertain = AnimalWeightCatalog.CanCleaverSlaughter(entity);
+        List<string> tokens = [DeedTokenTags.MobHarvested];
+        if (cleaverCertain)
+        {
+            tokens.Add(DeedTokenTags.CleaverCertain);
+        }
+
         api.Logger.VerboseDebug(
-            "[prosequor] deed butchered {0} units={1} by {2}",
+            "[prosequor] deed mob-harvested{0} {1} units={2} by {3}",
+            cleaverCertain ? "+cleaver-certain" : "",
             entity.Code,
             SumUnits(units),
             serverPlayer.PlayerName);
@@ -46,7 +54,7 @@ public static class ButcherXp
         Deed.Emit(
             api,
             serverPlayer.PlayerUID,
-            AnimalWeightCatalog.CanCleaverSlaughter(entity) ? DeedToken.Dressed : DeedToken.Butchered,
+            tokens,
             caller: caller,
             target: EventFactBuilder.CodeOf(entity),
             lastCraft: EventFactBuilder.LastCraftCode(serverPlayer),

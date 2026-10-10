@@ -256,7 +256,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Deed.Emit(
             World.Api,
             playerUid: "",
-            DeedToken.MoldCast,
+            DeedToken.Crafted,
             caller: CallerIdentities.Mold,
             target: EventFactBuilder.CodeOf(targetStack),
             inputs: [new Deed.QuantityUnit(
@@ -288,17 +288,33 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         IPlayer player = joined.Player;
         IPlayerProgress progress = RequireProgress(player);
 
-        Block? bloomery = World.Api.World.GetBlock(new AssetLocation("game:bloomery-burned"))
-            ?? World.Api.World.GetBlock(new AssetLocation("game:bloomery-north"));
+        CollectionIndex? collections = ProsequorModSystem.For(World.Api)?.Collections?.Index;
+        Assert.NotNull(collections);
+        Block? bloomery = null;
+        foreach (string code in collections!.Codes("bloomery"))
+        {
+            Block? block = World.Api.World.GetBlock(new AssetLocation(code));
+            if (block != null && block.Id != 0)
+            {
+                bloomery = block;
+                break;
+            }
+        }
+
         Item? bloom = World.Api.World.GetItem(new AssetLocation("game:ironbloom"));
+        Assert.True(
+            bloomery != null,
+            "bloomery collection has no resolvable block. count=" + collections.CodeCount("bloomery"));
         Assert.NotNull(bloom);
 
         float expected = ScenarioXp.PlannedBloomeryHarvest(
             World.Api.World,
             Skill,
             player.PlayerUID,
-            EventFactBuilder.CodeOf(bloomery) ?? EventFactBuilder.CodeOf(new ItemStack(bloom)));
-        Assert.True(expected > 0f, "Expected bloomery-harvest rule to plan a positive grant.");
+            EventFactBuilder.CodeOf(bloomery),
+            EventFactBuilder.CodeOf(bloom),
+            bloomCount: 1);
+        Assert.True(expected > 0f, "Expected harvested bloomery rule to plan a positive grant.");
 
         float xpBefore = ScenarioXp.TotalSkill(progress, Skill);
         BloomeryHarvestXp.Settle(player, new ItemStack(bloom), bloomery);
@@ -333,7 +349,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Deed.Emit(
             World.Api,
             playerUid: "",
-            DeedToken.CementationFired,
+            DeedToken.Crafted,
             caller: CallerIdentities.Cementation,
             target: EventFactBuilder.CodeOf(targetStack),
             outputs: [new Deed.QuantityUnit(EventFactBuilder.CodeOf(targetStack) ?? "", quantity)],

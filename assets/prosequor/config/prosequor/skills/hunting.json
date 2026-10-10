@@ -36,7 +36,7 @@
       "include": ["<meat>", "<fat>"],
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "butchered" ]
+        "tags": [ "mob-harvested", "!cleaver-certain" ]
       }
     },
     {
@@ -45,7 +45,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "hunted", "!cleaver-certain" ]
+        "tags": [ "killed", "!cleaver-certain" ]
       }
     },
     {
@@ -54,7 +54,7 @@
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "trapped", "!cleaver-certain" ]
+        "tags": [ "killed", "caller:<trap>", "!cleaver-certain" ]
       }
     }
   ],

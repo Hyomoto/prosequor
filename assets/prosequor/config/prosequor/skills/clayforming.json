@@ -26,7 +26,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "kiln-fired" ]
+        "tags": [ "crafted", "caller:<kiln>" ]
       }
     }
   ],

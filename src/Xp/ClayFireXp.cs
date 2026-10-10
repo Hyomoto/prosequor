@@ -7,7 +7,8 @@ namespace Prosequor.Xp;
 
 /// <summary>
 /// Pays clayforming fire XP through <see cref="Deed.Emit"/> / FatherXp.
-/// One <c>kiln-fired</c> emit per finished piece; rule <c>payee: contributors</c> splits shares.
+/// One <c>crafted</c> emit per finished piece. The caller is <c>pit-kiln</c> or <c>beehive-kiln</c>.
+/// Rule <c>payee: contributors</c> splits shares.
 /// Voxels-per-unit are read from the fired stack's recipe stamp inside Emit.
 /// </summary>
 public static class ClayFireXp
@@ -53,13 +54,21 @@ public static class ClayFireXp
         }
 
         string? makerUid = CraftAttribution.TryGetMakerUid(stack);
+        string? target = targetCode ?? EventFactBuilder.CodeOf(stack);
+        int count = stack == null ? 0 : Math.Max(0, stack.StackSize);
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null;
+        if (!string.IsNullOrWhiteSpace(target) && count > 0)
+        {
+            outputs = [new Deed.QuantityUnit(target, count)];
+        }
 
         Deed.Emit(
             world.Api,
             playerUid: "",
             ClayFireXpMath.BuildTokens(),
             caller: caller,
-            target: targetCode ?? EventFactBuilder.CodeOf(stack),
+            target: target,
+            outputs: outputs,
             contributors: shares,
             makerUid: makerUid,
             subject: stack);

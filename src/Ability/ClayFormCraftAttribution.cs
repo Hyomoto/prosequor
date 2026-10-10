@@ -55,7 +55,11 @@ public static class ClayFormCraftAttribution
 
         if (ProsequorStackPedigree.TryGetRecipeKey(stack, out _))
         {
-            ProsequorModSystem.For(serverApi)?.VoxelWorkXp?.NotifyFinished(playerEntity.Player, stack);
+            string? caller = VoxelFinishScope.Caller ?? ClayFormCaller(playerEntity.Player);
+            ProsequorModSystem.For(serverApi)?.VoxelWorkXp?.NotifyFinished(
+                playerEntity.Player,
+                stack,
+                caller);
         }
     }
 
@@ -90,7 +94,10 @@ public static class ClayFormCraftAttribution
             if (stampRecipe)
             {
                 CraftAttribution.StampRecipe(slot.Itemstack, recipeKey);
-                ProsequorModSystem.For(form.Api)?.VoxelWorkXp?.NotifyFinished(player, slot.Itemstack);
+                ProsequorModSystem.For(form.Api)?.VoxelWorkXp?.NotifyFinished(
+                    player,
+                    slot.Itemstack,
+                    EventFactBuilder.CodeOf(form.Block));
             }
 
             slot.MarkDirty();
@@ -111,5 +118,21 @@ public static class ClayFormCraftAttribution
         }
 
         CraftAttribution.StampRecipe(stack, ClayFormXpStation.RecipeKeyOf(form.SelectedRecipe));
+    }
+
+    static string? ClayFormCaller(IPlayer player)
+    {
+        BlockSelection? sel = player.CurrentBlockSelection;
+        if (sel == null || serverApi == null)
+        {
+            return null;
+        }
+
+        if (serverApi.World.BlockAccessor.GetBlockEntity(sel.Position) is not BlockEntityClayForm form)
+        {
+            return null;
+        }
+
+        return EventFactBuilder.CodeOf(form.Block);
     }
 }

@@ -71,26 +71,28 @@ public static class HuntingFixtures
     static void VerifyHuntedWeightPlanPays()
     {
         CollectionIndex collections = new();
+        collections.EnsureKey("trap");
+        collections.AddCode("trap", "game:baskettrap-papyrus");
         XpRule weightRule = AmountTableRule(
             "hunted-hunting",
             "hunting",
             [0.1f, 10f],
             order: 1,
             collections,
-            tags: ["hunted", "!cleaver-certain"]);
+            tags: ["killed", "!cleaver-certain"]);
         XpRule trapRule = AmountTableRule(
             "trapped-hunting",
             "hunting",
             [1f, 4f],
             order: 2,
             collections,
-            tags: ["trapped", "!cleaver-certain"]);
+            tags: ["killed", "caller:<trap>", "!cleaver-certain"]);
 
         IReadOnlyList<Deed.PlannedPay> light = Deed.PlanPays(
             new FixedAmountRules(weightRule),
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Hunted },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Killed },
             caller: "game:arrow-flint",
             target: "game:hare-arctic-adult-male",
             mount: null,
@@ -106,7 +108,7 @@ public static class HuntingFixtures
             new FixedAmountRules(weightRule),
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Hunted },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Killed },
             caller: "game:spear-generic-copper",
             target: "game:deer-elk-adult-male",
             mount: null,
@@ -122,7 +124,7 @@ public static class HuntingFixtures
             new FixedAmountRules(trapRule),
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Trapped },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Killed },
             caller: "game:baskettrap-papyrus",
             target: "game:hare-arctic-adult-male",
             mount: null,
@@ -152,7 +154,7 @@ public static class HuntingFixtures
             "p",
             new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                DeedTokenTags.Hunted,
+                DeedTokenTags.Killed,
                 DeedTokenTags.CleaverCertain
             },
             caller: "game:cleaver-copper",
@@ -203,7 +205,7 @@ public static class HuntingFixtures
                     when = new XpRuleWhenJson
                     {
                         activity = Deed.Activity,
-                        tags = ["butchered"]
+                        tags = ["mob-harvested", "!cleaver-certain"]
                     }
                 },
                 "hunting",
@@ -239,7 +241,7 @@ public static class HuntingFixtures
             new FixedAmountRules(huntingButcher),
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Butchered },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.MobHarvested },
             caller: CallerIdentities.Hand,
             target: "game:hare-arctic-adult-male",
             mount: null,

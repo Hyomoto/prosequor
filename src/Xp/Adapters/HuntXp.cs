@@ -11,7 +11,7 @@ namespace Prosequor.Xp.Adapters;
 
 /// <summary>
 /// Food-animal kills and basket-trap catches, paid by animal weight.
-/// A kill emits <c>hunted</c>. A trap emits <c>trapped</c>.
+/// A kill and a trap both emit <c>killed</c>. The caller is the weapon or the trap block.
 /// Generation at or above <see cref="AnimalWeightCatalog.CleaverCertainGeneration"/> also emits <c>cleaver-certain</c>.
 /// </summary>
 public static class HuntXp
@@ -34,7 +34,7 @@ public static class HuntXp
 
         bool cleaverCertain = AnimalWeightCatalog.CanCleaverSlaughter(victim);
         api.Logger.VerboseDebug(
-            "[prosequor] deed hunted{0} {1} weight={2:0.###} by {3}",
+            "[prosequor] deed killed{0} {1} weight={2:0.###} by {3}",
             cleaverCertain ? "+cleaver-certain" : "",
             victim.Code,
             victim.Properties?.Weight ?? 0f,
@@ -43,7 +43,7 @@ public static class HuntXp
         Deed.Emit(
             api,
             player.PlayerUID,
-            CleaverTokens(DeedTokenTags.Hunted, cleaverCertain),
+            CleaverTokens(DeedTokenTags.Killed, cleaverCertain),
             caller: caller,
             target: EventFactBuilder.CodeOf(victim),
             position: victim.Pos?.AsBlockPos?.Copy());
@@ -82,7 +82,7 @@ public static class HuntXp
 
         bool cleaverCertain = AnimalWeightCatalog.CanCleaverSlaughter(animal);
         api.Logger.VerboseDebug(
-            "[prosequor] deed trapped{0} {1} weight={2:0.###} by {3}",
+            "[prosequor] deed killed{0} {1} weight={2:0.###} by {3}",
             cleaverCertain ? "+cleaver-certain" : "",
             animal!.Code,
             animal.Properties?.Weight ?? 0f,
@@ -91,7 +91,7 @@ public static class HuntXp
         Deed.Emit(
             api,
             uid.Trim(),
-            CleaverTokens(DeedTokenTags.Trapped, cleaverCertain),
+            CleaverTokens(DeedTokenTags.Killed, cleaverCertain),
             caller: caller,
             target: EventFactBuilder.CodeOf(animal),
             position: trap.Pos?.Copy());

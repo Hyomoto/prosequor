@@ -118,7 +118,7 @@ public static class ActivityWatchFixtures
             Deed.Activity,
             caller: "game:fishingrod-crude",
             target: "game:fish-perch",
-            tokens: [DeedTokenTags.FishingCatch]);
+            tokens: [DeedTokenTags.Harvested]);
         XpRule small = AmountRule(
             "fish-small",
             Deed.Activity,
@@ -126,7 +126,7 @@ public static class ActivityWatchFixtures
             1f,
             order: 1,
             collections,
-            tags: ["fishing-catch", "caller:<fishingpole>", "target:<small-fish>"]);
+            tags: ["harvested", "caller:<fishingpole>", "target:<small-fish>"]);
         XpRule med = AmountRule(
             "fish-medium",
             Deed.Activity,
@@ -134,7 +134,7 @@ public static class ActivityWatchFixtures
             2f,
             order: 2,
             collections,
-            tags: ["fishing-catch", "caller:<fishingpole>", "target:<medium-fish>"]);
+            tags: ["harvested", "caller:<fishingpole>", "target:<medium-fish>"]);
         XpRule large = AmountRule(
             "fish-large",
             Deed.Activity,
@@ -142,7 +142,7 @@ public static class ActivityWatchFixtures
             4f,
             order: 3,
             collections,
-            tags: ["fishing-catch", "caller:<fishingpole>", "target:<large-fish>"]);
+            tags: ["harvested", "caller:<fishingpole>", "target:<large-fish>"]);
 
         XpRule? winner = XpRuleMatcher.PickWinner(new[] { small, med, large }, medium, collections);
         if (winner?.Id != "fish-medium")

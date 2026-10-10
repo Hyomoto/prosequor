@@ -52,7 +52,7 @@ public static class DeedFixtures
                     when = new XpRuleWhenJson
                     {
                         activity = Deed.Activity,
-                        tags = ["panned", "caller:<pan>"]
+                        tags = ["harvested", "caller:<pan>"]
                     }
                 },
                 "panning",
@@ -110,7 +110,7 @@ public static class DeedFixtures
             rules,
             collections,
             "p",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Panned },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Harvested },
             caller: caller,
             target: "game:gravel-granite",
             mount: null,
@@ -1805,20 +1805,23 @@ public static class DeedFixtures
     static void VerifyOfflineMailboxFromPlan()
     {
         CollectionIndex collections = new();
+        collections.EnsureKey("kiln");
+        collections.AddCode("kiln", DeedTokenTags.PitKiln);
+        collections.AddCode("kiln", DeedTokenTags.BeehiveKiln);
         XpRule fired = AmountRule(
             "fired",
             "clayforming",
             4f,
             order: 1,
             collections,
-            tags: ["kiln-fired"]);
+            tags: ["crafted", "caller:<kiln>"]);
 
         FixedAmountRules rules = new(fired);
         IReadOnlyList<Deed.PlannedPay> pays = Deed.PlanPays(
             rules,
             collections,
             "offline-maker",
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.KilnFired },
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
             caller: DeedTokenTags.PitKiln,
             target: "game:bowl-blue",
             mount: null,

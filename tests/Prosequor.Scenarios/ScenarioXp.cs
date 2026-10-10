@@ -139,7 +139,7 @@ static class ScenarioXp
         return one * voxelCount;
     }
 
-    /// <summary>Same fact mold harden settle publishes (<c>mold-cast</c>, payee contributors).</summary>
+    /// <summary>Same fact mold harden settle publishes (<c>crafted</c> at <c>@mold</c>, payee contributors).</summary>
     public static float PlannedMoldCast(
         IWorldAccessor world,
         string skillId,
@@ -152,7 +152,7 @@ static class ScenarioXp
             Plan(
                 world,
                 playerUid: "",
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.MoldCast },
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
                 CallerIdentities.Mold,
                 target,
                 totalUnits: ingredients,
@@ -168,23 +168,31 @@ static class ScenarioXp
         IWorldAccessor world,
         string skillId,
         string playerUid,
-        string? target)
+        string? target,
+        string? bloomCode = null,
+        int bloomCount = 0)
     {
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null;
+        if (!string.IsNullOrWhiteSpace(bloomCode) && bloomCount > 0)
+        {
+            outputs = [new Deed.QuantityUnit(bloomCode, bloomCount)];
+        }
+
         return Sum(
             Plan(
                 world,
                 playerUid,
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.BloomeryHarvest },
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Harvested },
                 CallerIdentities.Hand,
                 target,
                 totalUnits: 0,
                 craftCount: 1,
-                quantityUnits: null),
+                quantityUnits: outputs),
             skillId,
             playerUid);
     }
 
-    /// <summary>Same fact <see cref="CementationXp.Settle"/> publishes (<c>payee: contributors</c>).</summary>
+    /// <summary>Same fact <see cref="CementationXp.Settle"/> publishes (<c>crafted</c> at <c>@cementation</c>, payee contributors).</summary>
     public static float PlannedCementationFired(
         IWorldAccessor world,
         string skillId,
@@ -196,7 +204,7 @@ static class ScenarioXp
             Plan(
                 world,
                 playerUid: "",
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.CementationFired },
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
                 CallerIdentities.Cementation,
                 target,
                 totalUnits: 0,
