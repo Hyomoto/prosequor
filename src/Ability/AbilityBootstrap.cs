@@ -909,6 +909,9 @@ public static class AbilityBootstrap
         index.EnsureKey("kiln");
         index.AddCode("kiln", Prosequor.Xp.Activity.DeedTokenTags.PitKiln);
         index.AddCode("kiln", Prosequor.Xp.Activity.DeedTokenTags.BeehiveKiln);
+
+        // Entity codes. The shared expander only walks blocks and items.
+        Prosequor.Xp.AnimalWeightCatalog.FillHuntableAnimals(api, index);
     }
 
     /// <summary>

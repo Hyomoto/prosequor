@@ -218,6 +218,30 @@ public sealed class CollectionIndex
         codesById[id.Trim()].Add(code.Trim());
     }
 
+    /// <summary>Drops one code from membership. Weighted pool entries for that code go with it.</summary>
+    public bool RemoveCode(string id, string? code)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(code))
+        {
+            return false;
+        }
+
+        string key = id.Trim();
+        if (!codesById.TryGetValue(key, out HashSet<string>? set))
+        {
+            return false;
+        }
+
+        string c = code.Trim();
+        if (!set.Remove(c))
+        {
+            return false;
+        }
+
+        RemoveWeighted(key, c);
+        return true;
+    }
+
     public void AddWeighted(string id, string? code, float weight = 1f)
     {
         if (string.IsNullOrWhiteSpace(code))

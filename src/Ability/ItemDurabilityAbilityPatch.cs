@@ -38,15 +38,15 @@ public static class BlockBreakDamageScopePatch
         }
     }
 
+    // Void so Harmony rethrows with the original stack. Returning Exception
+    // makes it throw from this patch and the crash report names only prosequor.
     [HarmonyFinalizer]
-    public static Exception? Finalizer(Exception? __exception, BlockBreakDamageScope? __state)
+    public static void Finalizer(BlockBreakDamageScope? __state)
     {
         if (__state != null && scopes is { Count: > 0 })
         {
             scopes.Pop();
         }
-
-        return __exception;
     }
 }
 

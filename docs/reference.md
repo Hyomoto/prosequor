@@ -816,7 +816,7 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 }
 ```
 
-`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. A block target publishes `Resistance` on the resistance channel; the span is that block’s break class (dig, mine, chop, or harvest) when the class has a catalog, otherwise 0–1. A crop publishes its growth days on lifetime; any other resolved block publishes 0 days and one stage against the crop-days catalog. Lifetime then divides by `GrowthStages`. For `killed`, `pay: effort` lerps against the GameReady catalog of animals whose harvest drops include raw meat or fat (resolved entity `weight`, including `weightByType`). When the caller is in `trap` and `cleaver-certain` is absent, the span is the subset of those animals with a trap chance above zero.
+`amount` arrays require a measure channel (`resistance` / `effort`, `voxels`, `ingredients`, or `lifetime`) and piecewise-lerp across that channel’s domain. Ingredient lerp domain is always 1–40. A block target publishes `Resistance` on the resistance channel; the span is that block’s break class (dig, mine, chop, or harvest) when the class has a catalog, otherwise 0–1. A crop publishes its growth days on lifetime; any other resolved block publishes 0 days and one stage against the crop-days catalog. Lifetime then divides by `GrowthStages`. For `killed`, `pay: effort` lerps against `huntable-animal` (resolved entity `weight`, including `weightByType`). When the caller is in `trap` and `cleaver-certain` is absent, the span is the subset of that collection with a trap chance above zero.
 
 ### XP `when`
 
@@ -886,7 +886,7 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 | `excludes` | Other collection ids subtracted after includes, before unions |
 | `unions` | Other collection ids copied into this key (multi-pass, after excludes) |
 
-Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, and `kiln` (`pit-kiln`, `beehive-kiln`). `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
+Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
 

@@ -10,6 +10,13 @@
     "id": "armor",
     "includes": [
       "*:*armor*"
+    ],
+    "excludes": [ "armor-schematic" ]
+  },
+  {
+    "id": "armor-schematic",
+    "includes": [
+      "*:*schematic*"
     ]
   },
   {
@@ -345,6 +352,8 @@
       "game:cobblestonefan-*",
       "game:cobbleslab-*",
       "game:cobblestonestairs-*",
+      "game:drystone-*",
+      "game:drystonefence-*",
       "game:stonebricks-*",
       "game:stonebrickslab-*",
       "game:stonebrickstairs-*",
@@ -399,6 +408,12 @@
     "id": "daub",
     "includes": [
       "game:daubraw-*"
+    ]
+  },
+  {
+    "id": "daub-block",
+    "includes": [
+      "game:daub-*"
     ]
   },
   {
@@ -582,11 +597,13 @@
     "includes": ["*:fishraw-*-juvenile", "*:creature-fish-*-juvenile"]
   },
   { "id": "soil" },
+  { "id": "huntable-animal" },
   { "id": "wood" },
   { "id": "leaves" },
   {
     "id": "stone",
-    "includes": ["*:stone-*"]
+    "includes": ["*:stone-*"],
+    "excludes": ["daub-block"]
   },
   { "id": "mature-crop" },
   { "id": "immature-crop" },

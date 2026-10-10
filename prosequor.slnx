@@ -2,7 +2,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Prosequor.Pure.Tests/Prosequor.Pure.Tests.csproj" />
     <Project Path="tests/Prosequor.Scenarios/Prosequor.Scenarios.csproj" />
-    <Project Path="tests/Prosequor.PackagedScenarios/Prosequor.PackagedScenarios.csproj" />
   </Folder>
   <Project Path="prosequor.csproj" />
 </Solution>

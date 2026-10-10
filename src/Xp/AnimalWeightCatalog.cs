@@ -8,7 +8,9 @@ using Vintagestory.API.Datastructures;
 namespace Prosequor.Xp;
 
 /// <summary>
-/// GameReady weights of animals whose harvest drops include raw meat or fat.
+/// GameReady weights of <c>huntable-animal</c> members.
+/// That collection is creatures whose harvest drops include raw meat or fat, plus
+/// authored entity includes, minus authored excludes.
 /// <see cref="MetricDomain"/> is that whole set. <see cref="MetricDomainTrappable"/> is the
 /// subset with a trap chance above zero. Amount tables with <c>pay: effort</c> lerp against
 /// one of those spans. Resolved <see cref="EntityProperties.Weight"/> already includes
@@ -16,6 +18,8 @@ namespace Prosequor.Xp;
 /// </summary>
 public sealed class AnimalWeightCatalog
 {
+    public const string HuntableAnimalId = "huntable-animal";
+
     public const string MetricDomain = "animal-weight";
 
     public const string MetricDomainTrappable = "animal-weight-trappable";
@@ -46,6 +50,59 @@ public sealed class AnimalWeightCatalog
 
     public int TrappableCount => trappable?.EntityCount ?? 0;
 
+    /// <summary>
+    /// Fills <see cref="HuntableAnimalId"/> from loaded entities.
+    /// Call after item patterns expand (meat and fat must already be members) and before excludes.
+    /// Include and exclude patterns are matched against entity codes here; the shared expander
+    /// only walks blocks and items.
+    /// </summary>
+    public static void FillHuntableAnimals(ICoreAPI api, CollectionIndex index)
+    {
+        if (index == null)
+        {
+            return;
+        }
+
+        index.EnsureKey(HuntableAnimalId);
+        if (api?.World?.EntityTypes == null)
+        {
+            return;
+        }
+
+        foreach (EntityProperties props in api.World.EntityTypes)
+        {
+            if (props?.Code == null)
+            {
+                continue;
+            }
+
+            string code = props.Code.ToString();
+            bool authored = MatchesAnyPattern(index.IncludePatterns(HuntableAnimalId), code);
+            bool food = props.Weight > 0f && DropsRawFood(props, index);
+            if (!authored && !food)
+            {
+                continue;
+            }
+
+            if (ExcludedByPattern(index, code))
+            {
+                continue;
+            }
+
+            index.AddCode(HuntableAnimalId, code);
+        }
+
+        // Item-expanded members can still name an entity. Strip those the exclude patterns name.
+        List<string> members = new(index.Codes(HuntableAnimalId));
+        for (int i = 0; i < members.Count; i++)
+        {
+            if (ExcludedByPattern(index, members[i]))
+            {
+                index.RemoveCode(HuntableAnimalId, members[i]);
+            }
+        }
+    }
+
     public static AnimalWeightCatalog Build(ICoreAPI api, CollectionIndex? collections)
     {
         if (api?.World?.EntityTypes == null || collections == null)
@@ -63,12 +120,17 @@ public sealed class AnimalWeightCatalog
 
         foreach (EntityProperties props in api.World.EntityTypes)
         {
-            if (props?.Code == null || props.Weight <= 0f || !DropsRawFood(props, collections))
+            if (props?.Code == null || props.Weight <= 0f)
             {
                 continue;
             }
 
             string code = props.Code.ToString();
+            if (!collections.Contains(HuntableAnimalId, code))
+            {
+                continue;
+            }
+
             codes.Add(code);
             float weight = props.Weight;
             foodMin = Math.Min(foodMin, weight);
@@ -185,6 +247,33 @@ public sealed class AnimalWeightCatalog
         min = range.Min;
         max = range.Max;
         return true;
+    }
+
+    static bool MatchesAnyPattern(IReadOnlyList<string> patterns, string code)
+    {
+        for (int i = 0; i < patterns.Count; i++)
+        {
+            if (CollectionIndex.MatchesPattern(patterns[i], code))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    static bool ExcludedByPattern(CollectionIndex index, string code)
+    {
+        IReadOnlyList<string> excludeIds = index.ExcludeIds(HuntableAnimalId);
+        for (int i = 0; i < excludeIds.Count; i++)
+        {
+            if (MatchesAnyPattern(index.IncludePatterns(excludeIds[i]), code))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     static bool DropsRawFood(EntityProperties props, CollectionIndex collections)

@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:craft-arrow-hunting",
-      "amount": 0.02,
+      "amount": 0.04,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
@@ -22,8 +22,7 @@
     },
     {
       "id": "prosequor:craft-bow-hunting",
-      "amount": 0.75,
-      "pay": "quantity",
+      "amount": 2,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "crafted", "caller:@grid", "target:<bow>" ]
@@ -41,20 +40,20 @@
     },
     {
       "id": "prosequor:hunted-hunting",
-      "amount": [0.1, 10],
+      "amount": [0.1, 24],
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "killed", "!cleaver-certain" ]
+        "tags": [ "killed", "target:<huntable-animal>", "!cleaver-certain" ]
       }
     },
     {
       "id": "prosequor:trapped-hunting",
-      "amount": [1, 4],
+      "amount": [1, 12],
       "pay": "effort",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "killed", "caller:<trap>", "!cleaver-certain" ]
+        "tags": [ "killed", "caller:<trap>", "target:<huntable-animal>", "!cleaver-certain" ]
       }
     }
   ],
