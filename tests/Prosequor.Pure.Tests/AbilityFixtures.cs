@@ -31,6 +31,7 @@ public static class AbilityFixtures
         VerifyContributionDisableAllAndXp();
         VerifyRequiresAndExcludes(hooks, actions);
         VerifyCatalogAlternateExclusion();
+        VerifyRawStoneClassification();
         VerifyOreGradeUpgrade();
         VerifyRuleIndex();
         VerifyItemFreshnessAction();
@@ -5130,6 +5131,81 @@ public static class AbilityFixtures
     }
 
 
+    static void VerifyRawStoneClassification()
+    {
+        Block cobble = StoneBlock(EnumBlockMaterial.Stone, "cobblestone-conglomerate", dropPath: null);
+        Block rock = StoneBlock(EnumBlockMaterial.Stone, "rock-conglomerate", "stone-conglomerate");
+        Block wildcardRock = StoneBlock(EnumBlockMaterial.Stone, "rock-granite", "stone-{rock}");
+        Block bricks = StoneBlock(EnumBlockMaterial.Stone, "stonebricks-granite", "stonebricks-granite");
+        Block ore = StoneBlock(EnumBlockMaterial.Ore, "ore-poor-nativecopper-granite", "ore-poor-nativecopper");
+
+        if (AbilityBootstrap.IsNaturalStoneBlock(cobble)
+            || BlockBreakClassification.ClassifyToken(cobble) != BlockBreakClassification.TokenMine
+            || !AbilityBootstrap.IsNaturalStoneBlock(rock)
+            || BlockBreakClassification.ClassifyToken(rock) != BlockBreakClassification.TokenMine
+            || !AbilityBootstrap.IsNaturalStoneBlock(wildcardRock)
+            || AbilityBootstrap.IsNaturalStoneBlock(bricks)
+            || BlockBreakClassification.ClassifyToken(bricks) != BlockBreakClassification.TokenMine
+            || AbilityBootstrap.IsNaturalStoneBlock(ore)
+            || BlockBreakClassification.ClassifyToken(ore) != BlockBreakClassification.TokenMine)
+        {
+            Assert.Fail("[prosequor] Natural stone fixture failed (masonry must stay mine-class, not natural).");
+        }
+
+        CollectionIndex split = new();
+        split.EnsureKey("natural-stone");
+        split.EnsureKey("crafted-stone");
+        split.EnsureKey("stone");
+        split.EnsureKey("daub-block");
+        split.AddCode("natural-stone", "game:rock-conglomerate");
+        split.AddCode("natural-stone", "game:stone-conglomerate");
+        split.AddCode("crafted-stone", "game:cobblestone-conglomerate");
+        split.AddCode("crafted-stone", "game:daub-ash-normal");
+        split.AddCode("daub-block", "game:daub-ash-normal");
+        split.AddExclude("crafted-stone", ["daub-block"]);
+        split.AddUnion("stone", ["natural-stone", "crafted-stone"]);
+        split.ApplyExcludes();
+        split.MaterializeUnions();
+        split.ApplyExcludes();
+        split.MaterializeUnions();
+
+        if (!split.Contains("natural-stone", "game:rock-conglomerate")
+            || !split.Contains("natural-stone", "game:stone-conglomerate")
+            || split.Contains("natural-stone", "game:cobblestone-conglomerate")
+            || !split.Contains("crafted-stone", "game:cobblestone-conglomerate")
+            || split.Contains("crafted-stone", "game:daub-ash-normal")
+            || !split.Contains("stone", "game:rock-conglomerate")
+            || !split.Contains("stone", "game:stone-conglomerate")
+            || !split.Contains("stone", "game:cobblestone-conglomerate")
+            || split.Contains("stone", "game:daub-ash-normal"))
+        {
+            Assert.Fail("[prosequor] Natural stone fixture failed (stone must union both subsets, without daub).");
+        }
+    }
+
+    static Block StoneBlock(EnumBlockMaterial material, string path, string? dropPath)
+    {
+        Block block = new()
+        {
+            BlockId = 1,
+            BlockMaterial = material,
+            Code = new AssetLocation("game", path)
+        };
+        if (dropPath != null)
+        {
+            block.Drops =
+            [
+                new BlockDropItemStack
+                {
+                    Type = EnumItemClass.Item,
+                    Code = new AssetLocation("game", dropPath)
+                }
+            ];
+        }
+
+        return block;
+    }
+
     static void VerifyOreGradeUpgrade()
     {
         if (!OreGradeUpgrade.TryNextGradeCode(
@@ -5183,6 +5259,16 @@ public static class AbilityFixtures
         if (catalog.CodeCount("clay") != 0 || !catalog.Exists("clay"))
         {
             Assert.Fail("[prosequor] Catalog fixture failed (empty membership / key).");
+        }
+
+        if (!AbilityBootstrap.IsStoneItemPath("stone-granite")
+            || !AbilityBootstrap.IsStoneItemPath("stone-{rock}")
+            || AbilityBootstrap.IsStoneItemPath("cobblestone-conglomerate")
+            || AbilityBootstrap.IsStoneItemPath("drystone-granite")
+            || AbilityBootstrap.IsStoneItemPath("stonebricks-granite")
+            || AbilityBootstrap.IsStoneItemPath("stonepath-granite"))
+        {
+            Assert.Fail("[prosequor] Catalog fixture failed (loose stone item paths).");
         }
 
         if (!AbilityBootstrap.IsRawClayBlockPath("rawclay-blue-none")

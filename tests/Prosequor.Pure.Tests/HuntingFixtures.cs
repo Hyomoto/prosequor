@@ -262,9 +262,11 @@ public static class HuntingFixtures
     {
         CollectionIndex collections = new();
         collections.EnsureKey("arrow");
-        collections.EnsureKey("bow");
+        collections.EnsureKey("bows");
+        collections.EnsureKey("slings");
         collections.AddCode("arrow", "game:arrow-flint");
-        collections.AddCode("bow", "game:bow-simple");
+        collections.AddCode("bows", "game:bow-simple");
+        collections.AddCode("slings", "game:sling");
 
         XpRule arrowRule = QuantityRule(
             "craft-arrows-hunting",
@@ -279,7 +281,7 @@ public static class HuntingFixtures
             0.75f,
             order: 2,
             collections,
-            tags: ["crafted", "caller:@grid", "target:<bow>"]);
+            tags: ["crafted", "caller:@grid", "target:<bows, slings>"]);
 
         IReadOnlyList<Deed.PlannedPay> arrows = Deed.PlanPays(
             new FixedAmountRules(arrowRule),
@@ -311,14 +313,31 @@ public static class HuntingFixtures
             metricMax: 0f,
             totalUnits: 0,
             craftCount: 1);
+        IReadOnlyList<Deed.PlannedPay> slings = Deed.PlanPays(
+            new FixedAmountRules(bowRule),
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
+            caller: CallerIdentities.Grid,
+            target: "game:sling",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 0f,
+            metricMin: 0f,
+            metricMax: 0f,
+            totalUnits: 0,
+            craftCount: 1);
 
         if (arrows.Count != 1
             || Math.Abs(arrows[0].Amount - 0.2f) > 0.0001f
             || bows.Count != 1
-            || Math.Abs(bows[0].Amount - 0.75f) > 0.0001f)
+            || Math.Abs(bows[0].Amount - 0.75f) > 0.0001f
+            || slings.Count != 1
+            || Math.Abs(slings[0].Amount - 0.75f) > 0.0001f)
         {
             Assert.Fail(
-                $"[prosequor] Arrow/bow craft plan failed arrows={AmountOrNone(arrows)} bows={AmountOrNone(bows)}.");
+                $"[prosequor] Arrow/bow craft plan failed arrows={AmountOrNone(arrows)} bows={AmountOrNone(bows)} slings={AmountOrNone(slings)}.");
         }
     }
 

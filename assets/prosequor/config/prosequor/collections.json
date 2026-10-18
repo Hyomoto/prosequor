@@ -60,10 +60,23 @@
     ]
   },
   {
-    "id": "bow",
+    "id": "bows",
     "includes": [
-      "*:bow-*",
+      "*:bow-*"
+    ]
+  },
+  {
+    "id": "slings",
+    "includes": [
+      "*:sling",
       "*:sling-*"
+    ]
+  },
+  {
+    "id": "ranged-weapons",
+    "unions": [
+      "bows",
+      "slings"
     ]
   },
   {
@@ -577,7 +590,7 @@
   },
   {
     "id": "weapon",
-    "unions": ["spear", "bow", "knife"],
+    "unions": ["spear", "bows", "knife"],
     "includes": ["*:blade-*", "*:club-*", "*:sword-*"]
   },
   {
@@ -600,10 +613,14 @@
   { "id": "huntable-animal" },
   { "id": "wood" },
   { "id": "leaves" },
+  { "id": "natural-stone" },
+  {
+    "id": "crafted-stone",
+    "excludes": ["daub-block"]
+  },
   {
     "id": "stone",
-    "includes": ["*:stone-*"],
-    "excludes": ["daub-block"]
+    "unions": ["natural-stone", "crafted-stone"]
   },
   { "id": "mature-crop" },
   { "id": "immature-crop" },

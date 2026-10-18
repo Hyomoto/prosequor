@@ -11,7 +11,8 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Bow / thrown-spear projectile folds: Nice Shot break chance, Fletcher flight speed, and Focus Shot damage.
+/// Projectile launch folds: Nice Shot break chance, Fletcher flight speed, and Focus Shot damage.
+/// Focus Shot applies when the weapon is in <c>ranged-weapons</c> and the charge was recorded.
 /// </summary>
 public static class HuntingProjectileStation
 {
@@ -41,7 +42,8 @@ public static class HuntingProjectileStation
             projectile.DropOnImpactChance = 1f - Math.Clamp(nextBreak, 0f, 1f);
         }
 
-        if (ItemBowFocusShotPatch.TryRead(out float drawnSeconds))
+        if (ItemBowFocusShotPatch.TryRead(out float drawnSeconds)
+            && IsRangedWeapon(projectile, byEntity))
         {
             projectile.Damage = FocusShot.ScaleDamage(
                 projectile.Damage,
@@ -49,6 +51,17 @@ public static class HuntingProjectileStation
                 PlayerInteractionStation.ResolveFocusShotHoldSeconds(ep.Player),
                 PlayerInteractionStation.ResolveFocusShotDamageFactor(ep.Player));
         }
+    }
+
+    static bool IsRangedWeapon(EntityProjectileBase projectile, EntityAgent byEntity)
+    {
+        ItemStack? weapon = projectile.WeaponStack;
+        if (weapon == null && byEntity is EntityPlayer holder)
+        {
+            weapon = holder.RightHandItemSlot?.Itemstack ?? holder.LeftHandItemSlot?.Itemstack;
+        }
+
+        return RangedAccAttributeMutator.InRangedWeapons(weapon, projectile.World ?? byEntity.World);
     }
 }
 
@@ -69,8 +82,10 @@ public static class FocusShot
 }
 
 /// <summary>
-/// Stashes the bow draw length for the launch fold on the same call, then clears it.
+/// Stashes a ranged-weapon charge length for the launch fold on the same call, then clears it.
+/// The patch attribute sits on the class so assembly PatchAll picks it up.
 /// </summary>
+[HarmonyPatch(typeof(ItemBow), nameof(ItemBow.OnHeldInteractStop))]
 public static class ItemBowFocusShotPatch
 {
     [ThreadStatic]
@@ -88,9 +103,7 @@ public static class ItemBowFocusShotPatch
         return false;
     }
 
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(ItemBow), nameof(ItemBow.OnHeldInteractStop))]
-    public static void Prefix(float secondsUsed, EntityAgent byEntity)
+    internal static void Note(float secondsUsed, EntityAgent? byEntity)
     {
         drawSeconds = null;
         if (byEntity?.World?.Side == EnumAppSide.Server)
@@ -99,9 +112,26 @@ public static class ItemBowFocusShotPatch
         }
     }
 
+    internal static void Clear() => drawSeconds = null;
+
+    [HarmonyPrefix]
+    public static void Prefix(float secondsUsed, EntityAgent byEntity) =>
+        Note(secondsUsed, byEntity);
+
     [HarmonyPostfix]
-    [HarmonyPatch(typeof(ItemBow), nameof(ItemBow.OnHeldInteractStop))]
-    public static void Postfix() => drawSeconds = null;
+    public static void Postfix() => Clear();
+}
+
+/// <summary>Same charge stash as <see cref="ItemBowFocusShotPatch"/>, for the sling.</summary>
+[HarmonyPatch(typeof(ItemSling), nameof(ItemSling.OnHeldInteractStop))]
+public static class ItemSlingFocusShotPatch
+{
+    [HarmonyPrefix]
+    public static void Prefix(float secondsUsed, EntityAgent byEntity) =>
+        ItemBowFocusShotPatch.Note(secondsUsed, byEntity);
+
+    [HarmonyPostfix]
+    public static void Postfix() => ItemBowFocusShotPatch.Clear();
 }
 
 /// <summary>Harmony adapters for projectile launch folds.</summary>

@@ -17,7 +17,7 @@
       "pay": "resistance",
       "when": {
         "activity": "prosequor:deed",
-        "tags": ["block-broken", "target:<stone,ore,gemstone>", "caller:<pickaxe,bombs>"]
+        "tags": ["block-broken", "target:<natural-stone,ore,gemstone>", "caller:<pickaxe,bombs>"]
       }
     },
     {
@@ -45,7 +45,7 @@
       "verb": "prosequor:interaction-speed",
       "action": "prosequor:number",
       "when": {
-        "tags": [ "target:<stone>", "caller:<pickaxe>" ]
+        "tags": [ "target:<natural-stone>", "caller:<pickaxe>" ]
       },
       "params": { "op": "scale", "base": 0, "perSkillLevel": 0.001 }
     },
@@ -221,7 +221,7 @@
                 "verb": "prosequor:interaction-speed",
                 "action": "prosequor:number",
                 "when": {
-                  "tags": [ "target:<stone, ore>", "caller:<pickaxe>" ]
+                  "tags": [ "target:<natural-stone, ore>", "caller:<pickaxe>" ]
                 },
                 "params": { "op": "add", "ofBase": true, "base": 0, "perSkillLevel": 0.001 }
               }
@@ -272,7 +272,7 @@
                 "phase": "quantity",
                 "action": "prosequor:number",
                 "when": {
-                  "tags": [ "target:<stone>", "caller:<pickaxe>" ]
+                  "tags": [ "target:<natural-stone>", "caller:<pickaxe>" ]
                 },
                 "params": { "op": "add", "base": 0.1, "perSkillLevel": 0.02, "cap": 0.3 }
               }
@@ -448,7 +448,7 @@
                 "phase": "stack",
                 "action": "prosequor:chance",
                 "when": {
-                  "tags": [ "target:<stone>", "caller:<pickaxe>", "drop:<stone>" ]
+                  "tags": [ "target:<natural-stone>", "caller:<pickaxe>", "drop:<natural-stone>" ]
                 },
                 "params": {
                   "chance": { "base": 0.02, "perSkillLevel": 0.01, "cap": 0.12 },

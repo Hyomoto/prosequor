@@ -21,6 +21,8 @@ public static class AbilityBootstrap
     public const string MaterialOreTag = "material:ore";
     public const string DirtTag = "dirt";
     public const string SoilTag = "soil";
+    public const string NaturalStoneTag = "natural-stone";
+    public const string CraftedStoneTag = "crafted-stone";
     public const string StoneTag = "stone";
     public const string OreTag = "ore";
     public const string GemstoneTag = "gemstone";
@@ -990,6 +992,10 @@ public static class AbilityBootstrap
             }
 
             AddFishSizeCollections(item, addItem);
+            if (IsStoneItemPath(item.Code.Path))
+            {
+                addItem(NaturalStoneTag, item);
+            }
         }
 
         int leavesBlocks = 0;
@@ -997,7 +1003,8 @@ public static class AbilityBootstrap
         int cropBlocks = 0;
         int matureCropBlocks = 0;
         int immatureCropBlocks = 0;
-        int stoneBlocks = 0;
+        int naturalStoneBlocks = 0;
+        int craftedStoneBlocks = 0;
 
         foreach (Block block in api.World.Blocks)
         {
@@ -1052,19 +1059,29 @@ public static class AbilityBootstrap
 
             if (block.BlockMaterial == EnumBlockMaterial.Stone)
             {
-                addBlock(StoneTag, block);
-                stoneBlocks++;
+                if (IsNaturalStoneBlock(block))
+                {
+                    addBlock(NaturalStoneTag, block);
+                    naturalStoneBlocks++;
+                }
+                else
+                {
+                    addBlock(CraftedStoneTag, block);
+                    craftedStoneBlocks++;
+                }
             }
         }
 
         api.Logger.Notification(
-            "[prosequor] Builtin collections: wood {0}, leaves {1}, crop {2} ({3} mature / {4} immature), stone {5}.",
+            "[prosequor] Builtin collections: wood {0}, leaves {1}, crop {2} ({3} mature / {4} immature), stone {5} ({6} natural / {7} crafted).",
             woodBlocks,
             leavesBlocks,
             cropBlocks,
             matureCropBlocks,
             immatureCropBlocks,
-            stoneBlocks);
+            naturalStoneBlocks + craftedStoneBlocks,
+            naturalStoneBlocks,
+            craftedStoneBlocks);
     }
 
     static void AddFishSizeCollections(Item item, Action<string, Item> addItem)
@@ -1238,8 +1255,59 @@ public static class AbilityBootstrap
     internal static bool IsPeatBlockPath(string path) =>
         path.StartsWith("peat-", StringComparison.OrdinalIgnoreCase);
 
-    internal static bool IsStoneItemPath(string path) =>
-        path.StartsWith("stone-", StringComparison.OrdinalIgnoreCase);
+    internal static bool IsStoneItemPath(string? path) =>
+        path != null && path.StartsWith("stone-", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// <c>natural-stone</c>: prospectable rock, surface stones, and any other
+    /// stone-material block whose drops include a <c>stone-*</c> code.
+    /// Other stone-material blocks are <c>crafted-stone</c>.
+    /// </summary>
+    internal static bool IsNaturalStoneBlock(Block block)
+    {
+        if (block == null || block.Id == 0 || block.BlockMaterial != EnumBlockMaterial.Stone)
+        {
+            return false;
+        }
+
+        if (block.Attributes?["propickable"].AsBool(false) == true)
+        {
+            return true;
+        }
+
+        if (block is BlockLooseStones or BlockLooseRock)
+        {
+            return true;
+        }
+
+        return DropsLooseStone(block);
+    }
+
+    static bool DropsLooseStone(Block block)
+    {
+        BlockDropItemStack[]? drops = block.Drops;
+        if (drops == null || drops.Length == 0)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < drops.Length; i++)
+        {
+            BlockDropItemStack? drop = drops[i];
+            if (drop == null)
+            {
+                continue;
+            }
+
+            string? path = drop.ResolvedItemstack?.Collectible?.Code?.Path ?? drop.Code?.Path;
+            if (IsStoneItemPath(path))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     internal static bool IsSaltpeterBlockPath(string path) =>
         path.StartsWith("saltpeter-", StringComparison.OrdinalIgnoreCase);

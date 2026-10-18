@@ -356,8 +356,10 @@ public static class ProgressionProfileFixtures
         followed["preset"] = ProgressionProfile.SinglePlayerPresetId;
         warnings.Clear();
         ServerProgressionConfig.Normalize(followed, presets, baseline, out ProgressionProfile followedProfile, warnings);
-        if (!IsFullTable(followed, ProgressionProfile.SinglePlayerPresetId, xpGain: 2)
+        if (!IsFullTable(followed, ProgressionProfile.SinglePlayerPresetId, xpGain: 2, skillPointsPerSkillLevel: "10..100^10")
             || Math.Abs(followedProfile.XpGain - 2f) > 0.0001f
+            || followedProfile.SkillPointsForSkillLevel(0, 100) != 10
+            || followedProfile.SkillPointsForPlayerLevel(1, 50) != 49
             || warnings.Count != 0)
         {
             Assert.Fail("[prosequor] Progression fixture failed (preset swap rewrites values that still match).");
@@ -438,14 +440,19 @@ public static class ProgressionProfileFixtures
         }
     }
 
-    static bool IsFullTable(JObject root, string presetId, int xpGain, string? specializationLevels = null)
+    static bool IsFullTable(
+        JObject root,
+        string presetId,
+        int xpGain,
+        string? specializationLevels = null,
+        string? skillPointsPerSkillLevel = null)
     {
         return root.Count == 7
             && root["preset"]?.Value<string>() == presetId
             && root["appliedPreset"]?.Value<string>() == presetId
             && root["maxPlayerLevel"]?.Value<int>() == 50
             && root["skillPointsPerPlayerLevel"]?.Value<string>() == "1..50"
-            && root["skillPointsPerSkillLevel"]?.Value<string>() == "20,40,60,80,100"
+            && root["skillPointsPerSkillLevel"]?.Value<string>() == (skillPointsPerSkillLevel ?? "20,40,60,80,100")
             && root["specializationLevels"]?.Value<string>() == (specializationLevels ?? "10,20,30,40,50")
             && root["xpGain"]?.Value<int>() == xpGain;
     }
@@ -458,6 +465,7 @@ public static class ProgressionProfileFixtures
             [ProgressionProfile.MultiplayerPresetId] = baseline,
             [ProgressionProfile.SinglePlayerPresetId] = baseline.With(
                 presetId: ProgressionProfile.SinglePlayerPresetId,
+                skillPointsPerSkillLevel: LevelSet.Parse("10..100^10", XpCurves.SkillMaxLevel),
                 xpGain: 2f),
             [ProgressionProfile.MmoPresetId] = baseline.With(
                 presetId: ProgressionProfile.MmoPresetId,

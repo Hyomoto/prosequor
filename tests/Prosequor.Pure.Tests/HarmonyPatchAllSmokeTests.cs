@@ -1016,12 +1016,20 @@ public class HarmonyPatchAllSmokeTests
         MethodInfo? spawn = AccessTools.Method(
             typeof(EntityProjectileBase),
             nameof(EntityProjectileBase.SpawnProjectile));
+        MethodInfo? bowStop = AccessTools.Method(
+            typeof(ItemBow),
+            nameof(ItemBow.OnHeldInteractStop));
+        MethodInfo? slingStop = AccessTools.Method(
+            typeof(ItemSling),
+            nameof(ItemSling.OnHeldInteractStop));
         MethodInfo? die = AccessTools.Method(
             typeof(Entity),
             nameof(Entity.Die),
             [typeof(EnumDespawnReason), typeof(DamageSource)]);
         MethodInfo? trap = AccessTools.Method(typeof(BlockEntityAnimalTrap), "TrapAnimal");
         Assert.NotNull(spawn);
+        Assert.NotNull(bowStop);
+        Assert.NotNull(slingStop);
         Assert.NotNull(die);
         Assert.NotNull(trap);
 
@@ -1033,6 +1041,12 @@ public class HarmonyPatchAllSmokeTests
         {
             harmony.PatchAll(mod);
             Assert.Contains(spawn, harmony.GetPatchedMethods());
+            Assert.True(
+                Harmony.GetPatchInfo(bowStop!)?.Prefixes.Count > 0,
+                "Expected ItemBow.OnHeldInteractStop focus-shot prefix.");
+            Assert.True(
+                Harmony.GetPatchInfo(slingStop!)?.Prefixes.Count > 0,
+                "Expected ItemSling.OnHeldInteractStop focus-shot prefix.");
             Assert.Contains(die, harmony.GetPatchedMethods());
             Assert.Contains(trap, harmony.GetPatchedMethods());
 

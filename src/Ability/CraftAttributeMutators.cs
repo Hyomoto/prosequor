@@ -1,3 +1,4 @@
+using Prosequor.Ability.Hooks;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.GameContent;
@@ -242,11 +243,15 @@ public sealed class FlightAttributeMutator : ICraftAttributeMutator
 }
 
 /// <summary>
-/// Bow accuracy factor (Bowyer). Storage-only; applied onto the holder&apos;s rangedWeaponsAcc.
+/// Ranged-weapon accuracy factor (Bowyer). Storage-only; applied onto the holder&apos;s rangedWeaponsAcc.
+/// Bows and any item that already publishes <c>rangedWeaponsAcc</c> accept it.
+/// Other members of <c>ranged-weapons</c> accept it when that collection is loaded.
 /// </summary>
 public sealed class RangedAccAttributeMutator : ICraftAttributeMutator
 {
     public const string KeyName = "rangedAcc";
+
+    public const string CollectionId = "ranged-weapons";
 
     public string Key => KeyName;
 
@@ -254,6 +259,21 @@ public sealed class RangedAccAttributeMutator : ICraftAttributeMutator
         stack?.Collectible?.Tool == EnumTool.Bow
         || (stack?.Collectible?.Attributes?["statModifier"]?["rangedWeaponsAcc"] != null
             && stack.Collectible.Attributes["statModifier"]["rangedWeaponsAcc"].Exists);
+
+    public bool Accepts(ItemStack stack, IWorldAccessor? world) =>
+        Accepts(stack) || InRangedWeapons(stack, world);
+
+    public static bool InRangedWeapons(ItemStack? stack, IWorldAccessor? world)
+    {
+        if (world?.Api == null)
+        {
+            return false;
+        }
+
+        string? code = EventFactBuilder.CodeOf(stack);
+        CollectionIndex? index = ProsequorModSystem.For(world.Api)?.Collections?.Index;
+        return index != null && index.Contains(CollectionId, code);
+    }
 
     public void OnStamped(ItemStack stack, float factor, float previousFactor, IWorldAccessor? world)
     {

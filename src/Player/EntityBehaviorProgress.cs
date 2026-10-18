@@ -485,7 +485,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
             fillBefore += skill.Fill;
         }
 
-        XpAwardService.ApplyDrain(state, nowTotalHours);
+        XpAwardService.ApplyDrain(state, nowTotalHours, ActiveProgression.XpGain);
 
         float fillAfter = 0f;
         foreach (SkillProgressState skill in state.Skills.Values)
@@ -967,7 +967,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         float toCommit = amount;
         if (mode == XpAwardMode.Earn)
         {
-            toCommit = XpAwardService.AwardSkill(state, skillId, amount, nowHours);
+            toCommit = XpAwardService.AwardSkill(state, skillId, amount, nowHours, ActiveProgression.XpGain);
             if (toCommit <= 0f)
             {
                 // Accrued / fill / lastAccrual may have changed (server-only; debounced persist).
@@ -977,7 +977,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         }
         else if (mode == XpAwardMode.GrantAndFill)
         {
-            XpAwardService.FillSkillMeters(state, skillId, amount, nowHours);
+            XpAwardService.FillSkillMeters(state, skillId, amount, nowHours, ActiveProgression.XpGain);
         }
 
         CommitSkillXp(skillId, registered, toCommit);
@@ -1070,14 +1070,18 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     void RefreshSkillCap(string skillId)
     {
         SkillProgressState skill = state.GetOrCreateSkill(skillId);
-        XpBucketFormulas.RefreshSkillCap(skill, ResolveSkillCapMultiplier(skillId));
+        XpBucketFormulas.RefreshSkillCap(
+            skill,
+            ResolveSkillCapMultiplier(skillId),
+            ActiveProgression.XpGain);
     }
 
     void RefreshAllSkillCaps()
     {
+        float xpGain = ActiveProgression.XpGain;
         foreach (KeyValuePair<string, SkillProgressState> kv in state.Skills)
         {
-            XpBucketFormulas.RefreshSkillCap(kv.Value, ResolveSkillCapMultiplier(kv.Key));
+            XpBucketFormulas.RefreshSkillCap(kv.Value, ResolveSkillCapMultiplier(kv.Key), xpGain);
         }
     }
 
@@ -1360,7 +1364,7 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
     {
         EnsureServer();
         state = PlayerProgressState.CreateNew(registry, ProsequorModSystem.For(entity.Api)?.AttributeStats);
-        XpBucketFormulas.RefreshAllCaps(state);
+        RefreshAllSkillCaps();
         loaded = true;
         SyncFullProgress();
         RebuildAbilityCache();

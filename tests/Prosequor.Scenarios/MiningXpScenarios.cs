@@ -90,6 +90,107 @@ public class MiningXpScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Xp")]
     [Trait("Kind", "Mining")]
+    public async Task StoneCollections_Should_KeepFullStone_AndSplitNaturalFromCrafted()
+    {
+        await World.JoinPlayer("StoneSplit");
+        CollectionIndex collections = RequireCollections();
+        IWorldAccessor world = World.Api.World;
+
+        Block rock = RequireBlock(world, "game:rock-conglomerate");
+        Block cobble = RequireBlock(world, "game:cobblestone-conglomerate");
+        Assert.True(AbilityBootstrap.IsNaturalStoneBlock(rock), Code(rock));
+        Assert.False(AbilityBootstrap.IsNaturalStoneBlock(cobble), Code(cobble));
+        Assert.Equal(BlockBreakClassification.TokenMine, BlockBreakClassification.ClassifyToken(rock));
+        Assert.Equal(BlockBreakClassification.TokenMine, BlockBreakClassification.ClassifyToken(cobble));
+
+        string rockCode = Code(rock);
+        string cobbleCode = Code(cobble);
+        Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, rockCode));
+        Assert.False(collections.Contains(AbilityBootstrap.CraftedStoneTag, rockCode));
+        Assert.True(collections.Contains(AbilityBootstrap.StoneTag, rockCode));
+        Assert.False(collections.Contains(AbilityBootstrap.NaturalStoneTag, cobbleCode));
+        Assert.True(collections.Contains(AbilityBootstrap.CraftedStoneTag, cobbleCode));
+        Assert.True(collections.Contains(AbilityBootstrap.StoneTag, cobbleCode));
+
+        Item? loose = world.GetItem(new AssetLocation("game:stone-conglomerate"));
+        Assert.NotNull(loose);
+        Assert.NotEqual(0, loose!.Id);
+        string looseCode = loose.Code.ToString();
+        Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, looseCode));
+        Assert.False(collections.Contains(AbilityBootstrap.CraftedStoneTag, looseCode));
+        Assert.True(collections.Contains(AbilityBootstrap.StoneTag, looseCode));
+
+        List<string> problems = [];
+        foreach (Block block in world.Blocks)
+        {
+            if (block?.Code == null || block.Id == 0)
+            {
+                continue;
+            }
+
+            string code = Code(block);
+            bool natural = collections.Contains(AbilityBootstrap.NaturalStoneTag, code);
+            bool crafted = collections.Contains(AbilityBootstrap.CraftedStoneTag, code);
+            bool stone = collections.Contains(AbilityBootstrap.StoneTag, code);
+            if (block.BlockMaterial != EnumBlockMaterial.Stone)
+            {
+                if (natural || crafted || stone)
+                {
+                    problems.Add($"{code} is {block.BlockMaterial} but is in a stone collection");
+                }
+
+                continue;
+            }
+
+            if (collections.Contains("daub-block", code))
+            {
+                if (natural || crafted || stone)
+                {
+                    problems.Add($"{code} is daub and must stay out of stone");
+                }
+
+                continue;
+            }
+
+            if (natural == crafted)
+            {
+                problems.Add($"{code} should be in exactly one of natural-stone or crafted-stone");
+            }
+            else if (!stone)
+            {
+                problems.Add($"{code} is missing from the stone union");
+            }
+            else if (natural != AbilityBootstrap.IsNaturalStoneBlock(block))
+            {
+                problems.Add($"{code} natural membership does not match the classifier");
+            }
+        }
+
+        foreach (Item item in world.Items)
+        {
+            if (item?.Code == null || item.Id == 0 || !AbilityBootstrap.IsStoneItemPath(item.Code.Path))
+            {
+                continue;
+            }
+
+            string code = item.Code.ToString();
+            if (!collections.Contains(AbilityBootstrap.NaturalStoneTag, code)
+                || !collections.Contains(AbilityBootstrap.StoneTag, code)
+                || collections.Contains(AbilityBootstrap.CraftedStoneTag, code))
+            {
+                problems.Add($"{code} loose stone item must be in natural-stone and stone");
+            }
+        }
+
+        Assert.True(
+            problems.Count == 0,
+            string.Join("; ", problems.Take(12))
+            + (problems.Count > 12 ? $" … +{problems.Count - 12} more" : ""));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "Mining")]
     public async Task NotifyBlockBrokenXp_Should_PayMining_When_PickaxeBreaksOre()
     {
         ITestPlayer joined = await World.JoinPlayer("MineOreNotify");
@@ -263,6 +364,14 @@ public class MiningXpScenarios : AtlasScenarioBase
 
         Assert.Fail("[prosequor] Expected a pickaxe item in the atlas world.");
         return null!;
+    }
+
+    static Block RequireBlock(IWorldAccessor world, string path)
+    {
+        Block? block = world.GetBlock(new AssetLocation(path));
+        Assert.NotNull(block);
+        Assert.NotEqual(0, block!.Id);
+        return block;
     }
 
     Block RequireOre()

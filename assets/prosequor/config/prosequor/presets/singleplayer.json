@@ -1,4 +1,5 @@
 {
   "id": "prosequor:singleplayer",
-  "xpGain": 2
+  "xpGain": 2,
+  "skillPointsPerSkillLevel": "10..100^10"
 }

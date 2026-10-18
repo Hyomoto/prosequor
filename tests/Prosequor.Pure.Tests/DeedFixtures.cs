@@ -379,7 +379,7 @@ public static class DeedFixtures
     static void VerifyBombCallerPaysMining()
     {
         CollectionIndex collections = new();
-        collections.EnsureKey("stone");
+        collections.EnsureKey("natural-stone");
         collections.EnsureKey("ore");
         collections.EnsureKey("gemstone");
         collections.EnsureKey("pickaxe");
@@ -394,7 +394,7 @@ public static class DeedFixtures
             3f,
             order: 1,
             collections,
-            tags: ["block-broken", "target:<stone,ore,gemstone>", "caller:<pickaxe,bombs>"]);
+            tags: ["block-broken", "target:<natural-stone,ore,gemstone>", "caller:<pickaxe,bombs>"]);
 
         FixedAmountRules rules = new(mine);
         IReadOnlyList<Deed.PlannedPay> bomb = Deed.PlanPays(

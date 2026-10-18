@@ -13,6 +13,12 @@ public interface ICraftAttributeMutator
 
     bool Accepts(ItemStack stack);
 
+    /// <summary>
+    /// Same as <see cref="Accepts(ItemStack)"/>. Mutators that need world membership
+    /// (for example a collection) override this. The default ignores <paramref name="world"/>.
+    /// </summary>
+    bool Accepts(ItemStack stack, IWorldAccessor? world) => Accepts(stack);
+
     /// <param name="previousFactor">Factor before this write (1 when unset).</param>
     /// <param name="world">Optional; required for mutators that touch perish state.</param>
     void OnStamped(ItemStack stack, float factor, float previousFactor, IWorldAccessor? world);
@@ -68,7 +74,7 @@ public sealed class CraftAttributeMutatorRegistry
             return false;
         }
 
-        if (!mutator.Accepts(stack))
+        if (!mutator.Accepts(stack, world))
         {
             return false;
         }
@@ -98,7 +104,7 @@ public sealed class CraftAttributeMutatorRegistry
             return false;
         }
 
-        if (!mutator.Accepts(stack))
+        if (!mutator.Accepts(stack, world))
         {
             return false;
         }
@@ -134,7 +140,7 @@ public sealed class CraftAttributeMutatorRegistry
                 continue;
             }
 
-            if (!mutator.Accepts(stack))
+            if (!mutator.Accepts(stack, world))
             {
                 continue;
             }

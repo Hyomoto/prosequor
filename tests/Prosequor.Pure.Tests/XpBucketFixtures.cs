@@ -143,7 +143,10 @@ public static class XpBucketFixtures
     {
         if (!Near(XpBucketFormulas.SkillCap(0), 25f)
             || !Near(XpBucketFormulas.SkillCap(10), 45f)
-            || !Near(XpBucketFormulas.SkillCap(99), 223f))
+            || !Near(XpBucketFormulas.SkillCap(99), 223f)
+            || !Near(XpBucketFormulas.SkillCap(0, xpGain: 2f), 50f)
+            || !Near(XpBucketFormulas.SkillCap(10, multiplier: 1.5f, xpGain: 2f), 135f)
+            || !Near(XpBucketFormulas.SkillCap(0, xpGain: 0f), 1f))
         {
             Assert.Fail("[prosequor] XP bucket fixture failed (cap formulas).");
             return;
@@ -272,6 +275,38 @@ public static class XpBucketFixtures
         if (!Near(fill, 4.9f))
         {
             Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (drain 0.01/s), fill={0}.", fill));
+            return;
+        }
+
+        // Same 10 game seconds at 2× gain: 0.02*10 = 0.2 drained.
+        fill = 5f;
+        lastAccrual = 100.0;
+        lastDrain = 101.0;
+        XpBucketFormulas.DrainMeter(
+            ref fill,
+            lastAccrual,
+            ref lastDrain,
+            nowHours: 101.0 + (10.0 / 3600.0),
+            xpGain: 2f);
+        if (!Near(fill, 4.8f))
+        {
+            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (drain scales with xp gain), fill={0}.", fill));
+            return;
+        }
+
+        // Below 1× the rate stays at 0.01/s: 0.1 drained, same as 1×.
+        fill = 5f;
+        lastAccrual = 100.0;
+        lastDrain = 101.0;
+        XpBucketFormulas.DrainMeter(
+            ref fill,
+            lastAccrual,
+            ref lastDrain,
+            nowHours: 101.0 + (10.0 / 3600.0),
+            xpGain: 0f);
+        if (!Near(fill, 4.9f))
+        {
+            Assert.Fail(string.Format("[prosequor] XP bucket fixture failed (drain floor), fill={0}.", fill));
             return;
         }
 

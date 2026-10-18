@@ -5,7 +5,7 @@ namespace Prosequor.Xp;
 /// <summary>Bucket-aware XP award / drain orchestration on <see cref="PlayerProgressState"/>.</summary>
 public static class XpAwardService
 {
-    public static void ApplyDrain(PlayerProgressState state, double nowHours)
+    public static void ApplyDrain(PlayerProgressState state, double nowHours, float xpGain = 1f)
     {
         foreach (SkillProgressState skill in state.Skills.Values)
         {
@@ -15,7 +15,8 @@ public static class XpAwardService
                 ref fill,
                 skill.LastAccrualTotalHours,
                 ref drain,
-                nowHours);
+                nowHours,
+                xpGain);
             skill.Fill = fill;
             skill.LastDrainTotalHours = drain;
         }
@@ -25,19 +26,24 @@ public static class XpAwardService
     /// Skill award: drain → mult from skill sat → accrue/flush → fill skill meter with raw.
     /// Returns lifetime skill XP to commit (0 if held in accrued).
     /// </summary>
-    public static float AwardSkill(PlayerProgressState state, string skillId, float raw, double nowHours)
+    public static float AwardSkill(
+        PlayerProgressState state,
+        string skillId,
+        float raw,
+        double nowHours,
+        float xpGain = 1f)
     {
         if (raw <= 0f || string.IsNullOrWhiteSpace(skillId))
         {
             return 0f;
         }
 
-        ApplyDrain(state, nowHours);
+        ApplyDrain(state, nowHours, xpGain);
 
         SkillProgressState skill = state.GetOrCreateSkill(skillId);
         if (skill.CachedCap <= 0f)
         {
-            XpBucketFormulas.RefreshSkillCap(skill);
+            XpBucketFormulas.RefreshSkillCap(skill, xpGain: xpGain);
         }
 
         float skillAccrued = skill.Accrued;
@@ -60,14 +66,19 @@ public static class XpAwardService
     /// GrantAndFill: bump skill fill by <paramref name="raw"/> without accruing or sat-scaling.
     /// Updates last-accrual so drain grace matches Earn.
     /// </summary>
-    public static void FillSkillMeters(PlayerProgressState state, string skillId, float raw, double nowHours)
+    public static void FillSkillMeters(
+        PlayerProgressState state,
+        string skillId,
+        float raw,
+        double nowHours,
+        float xpGain = 1f)
     {
         if (raw <= 0f || string.IsNullOrWhiteSpace(skillId))
         {
             return;
         }
 
-        ApplyDrain(state, nowHours);
+        ApplyDrain(state, nowHours, xpGain);
 
         SkillProgressState skill = state.GetOrCreateSkill(skillId);
         skill.Fill += raw;

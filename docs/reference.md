@@ -886,7 +886,7 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 | `excludes` | Other collection ids subtracted after includes, before unions |
 | `unions` | Other collection ids copied into this key (multi-pass, after excludes) |
 
-Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
+Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `natural-stone`, `crafted-stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `natural-stone` is loose stone items (path `stone-*`) and stone-material blocks that drop those items or are prospectable rock. `crafted-stone` is every other stone-material block; `daub-block` is excluded. `stone` is the union of `natural-stone` and `crafted-stone`. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
 
@@ -1068,9 +1068,9 @@ Path: `presets/<name>.json`. One object. `id` is the preset id. Other keys are t
 | Field | Meaning |
 | --- | --- |
 | `id` | Preset id. If omitted, the file name is the id |
-| `xpGain` | Number ≥ 0. Multiplies skill XP earned from play. Default 1. Admin grant modes are not multiplied |
+| `xpGain` | Number ≥ 0. Multiplies skill XP earned from play, and multiplies each skill's saturation bucket capacity and idle drain rate by the same amount. Idle drain does not drop below 0.01 fill per game second. Default 1. Admin grant modes are not multiplied |
 
-Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xpGain` 2), `prosequor:mmo` (`specializationLevels` `"20,40"`).
+Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xpGain` 2, `skillPointsPerSkillLevel` `"10..100^10"`), `prosequor:mmo` (`specializationLevels` `"20,40"`).
 
 ### Server config
 

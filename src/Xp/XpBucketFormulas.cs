@@ -11,11 +11,14 @@ public static class XpBucketFormulas
     public const int MaxSatExponent = 20;
     public const double GameSecondsPerHour = 3600.0;
 
-    /// <summary>Base skill bucket capacity. Optional multiplier reserved for future profession/nodes.</summary>
-    public static float SkillCap(int skillLevel, float multiplier = 1f)
+    /// <summary>
+    /// Skill bucket capacity. <paramref name="multiplier"/> is the skill-bucket cap fold.
+    /// <paramref name="xpGain"/> mirrors progression XP gain so a higher earn rate fills the same number of tiers in the same play time.
+    /// </summary>
+    public static float SkillCap(int skillLevel, float multiplier = 1f, float xpGain = 1f)
     {
         float baseCap = 25f + 2f * Math.Max(0, skillLevel);
-        return Math.Max(1f, baseCap * Math.Max(0f, multiplier));
+        return Math.Max(1f, baseCap * Math.Max(0f, multiplier) * XpGainFactor(xpGain));
     }
 
     public static int SatLevel(float fill, float cachedCap)
@@ -38,26 +41,28 @@ public static class XpBucketFormulas
     public static float Multiplier(float fill, float cachedCap) =>
         Multiplier(SatLevel(fill, cachedCap));
 
-    public static void RefreshSkillCap(SkillProgressState skill, float multiplier = 1f) =>
-        skill.CachedCap = SkillCap(skill.Level, multiplier);
+    public static void RefreshSkillCap(SkillProgressState skill, float multiplier = 1f, float xpGain = 1f) =>
+        skill.CachedCap = SkillCap(skill.Level, multiplier, xpGain);
 
-    public static void RefreshAllCaps(PlayerProgressState state)
+    public static void RefreshAllCaps(PlayerProgressState state, float xpGain = 1f)
     {
         foreach (SkillProgressState skill in state.Skills.Values)
         {
-            RefreshSkillCap(skill);
+            RefreshSkillCap(skill, xpGain: xpGain);
         }
     }
 
     /// <summary>
     /// Drains <paramref name="fill"/> using calendar time after the idle grace past last accrual.
+    /// Rate is <see cref="DrainPerGameSecond"/> times <paramref name="xpGain"/>, and never below <see cref="DrainPerGameSecond"/>.
     /// Updates <paramref name="lastDrainTotalHours"/> to <paramref name="nowHours"/>.
     /// </summary>
     public static void DrainMeter(
         ref float fill,
         double lastAccrualTotalHours,
         ref double lastDrainTotalHours,
-        double nowHours)
+        double nowHours,
+        float xpGain = 1f)
     {
         if (nowHours < lastDrainTotalHours)
         {
@@ -81,9 +86,12 @@ public static class XpBucketFormulas
         }
 
         double gameSeconds = (nowHours - from) * GameSecondsPerHour;
-        fill = Math.Max(0f, fill - (float)(DrainPerGameSecond * gameSeconds));
+        float rate = Math.Max(DrainPerGameSecond, DrainPerGameSecond * XpGainFactor(xpGain));
+        fill = Math.Max(0f, fill - (float)(rate * gameSeconds));
         lastDrainTotalHours = nowHours;
     }
+
+    static float XpGainFactor(float xpGain) => xpGain < 0f ? 1f : xpGain;
 
     /// <summary>
     /// Accrue raw XP after multiplier. Returns amount to commit when accrued crosses MinAward (0 if held).
