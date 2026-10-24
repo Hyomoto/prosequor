@@ -533,7 +533,7 @@
   "unlock-metalworking-hammer-cadence": "Ритм молота",
   "unlockdesc-metalworking-hammer-cadence": "Каждый удар молота уменьшает последующее остывание заготовки на {0}.",
   "unlock-metalworking-bloom-brigand": "Кричный добытчик",
-  "unlockdesc-metalworking-bloom-brigand": "Присядьте и щёлкните правой кнопкой по сыродутной печи, чтобы извлечь крицу. Шанс сломать крицу: {0}.",
+  "unlockdesc-metalworking-bloom-brigand": "Присядьте и щёлкните правой кнопкой по сыродутной печи, чтобы забрать готовый продукт. Шанс сломать сыродутную печь: {0}.",
   "unlock-metalworking-thrifty-smithing": "Экономная ковка",
   "unlockdesc-metalworking-thrifty-smithing": "За каждые {0} операций разделения металла на заготовке вы получаете один кусочек металла.",
   "unlock-metalworking-blacksmith": "Кузнец",

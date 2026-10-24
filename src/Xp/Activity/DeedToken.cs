@@ -56,7 +56,13 @@ public enum DeedToken
     Healed,
 
     /// <summary>Pan finished and handed out items. Quantity is the stacks received.</summary>
-    Panned
+    Panned,
+
+    /// <summary>Quench stats were applied to a quenchable metal item.</summary>
+    Quenched,
+
+    /// <summary>Temper stats were applied to a quenchable metal item.</summary>
+    Tempered
 }
 
 /// <summary>String forms for <see cref="DeedToken"/> (JSON <c>when.tags</c> / fact tokens).</summary>
@@ -154,6 +160,12 @@ public static class DeedTokenTags
     /// <summary>Pan finished and handed out items.</summary>
     public const string Panned = "panned";
 
+    /// <summary>Quench stats were applied to a quenchable metal item.</summary>
+    public const string Quenched = "quenched";
+
+    /// <summary>Temper stats were applied to a quenchable metal item.</summary>
+    public const string Tempered = "tempered";
+
     /// <summary>Caller identity for pit kilns.</summary>
     public const string PitKiln = "pit-kiln";
 
@@ -188,6 +200,8 @@ public static class DeedTokenTags
         DeedToken.Reinforced => Reinforced,
         DeedToken.Healed => Healed,
         DeedToken.Panned => Panned,
+        DeedToken.Quenched => Quenched,
+        DeedToken.Tempered => Tempered,
         _ => token.ToString().ToLowerInvariant()
     };
 
@@ -355,6 +369,18 @@ public static class DeedTokenTags
         if (t.Equals(Panned, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Panned;
+            return true;
+        }
+
+        if (t.Equals(Quenched, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Quenched;
+            return true;
+        }
+
+        if (t.Equals(Tempered, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.Tempered;
             return true;
         }
 

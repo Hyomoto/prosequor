@@ -19,7 +19,7 @@
     },
     {
       "id": "prosequor:smith-work",
-      "amount": 0.025,
+      "amount": 0.5,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "voxel-work", "caller:<anvil>", "target:<smithing-formed>" ]
@@ -32,7 +32,7 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "caller:@mold" ]
+        "tags": [ "crafted", "caller:<mold>" ]
       }
     },
     {
@@ -50,7 +50,23 @@
       "payee": "contributors",
       "when": {
         "activity": "prosequor:deed",
-        "tags": [ "crafted", "caller:@cementation" ]
+        "tags": [ "crafted", "caller:<cementation>" ]
+      }
+    },
+    {
+      "id": "prosequor:quench",
+      "amount": 1,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "quenched" ]
+      }
+    },
+    {
+      "id": "prosequor:temper",
+      "amount": 1,
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "tempered" ]
       }
     }
   ],

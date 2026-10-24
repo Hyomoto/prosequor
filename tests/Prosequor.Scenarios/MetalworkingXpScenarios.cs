@@ -16,7 +16,8 @@ using Xunit;
 namespace Prosequor.Scenarios;
 
 /// <summary>
-/// Metalworking XP: grid metal tools, anvil voxel high-water, mold harden settle.
+/// Metalworking XP: grid metal tools, anvil voxel high-water, mold harden settle,
+/// quench, and temper.
 /// </summary>
 public class MetalworkingXpScenarios : AtlasScenarioBase
 {
@@ -173,24 +174,35 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         IPlayer player = joined.Player;
         EntityBehaviorProgress progress = RequireBehavior(player);
 
-        BlockEntityAnvil anvil = PrepareAnvil(player, out _, out List<Vec3i> goods);
+        BlockEntityAnvil anvil = PrepareAnvil(player, out SmithingRecipe recipe, out List<Vec3i> goods);
         Vec3i cell = goods[0];
+        string? target = recipe.Output?.Code?.ToString()
+            ?? recipe.Output?.ResolvedItemstack?.Collectible?.Code?.ToString();
+        float one = ScenarioXp.PlannedCraftingVoxels(
+            World.Api.World,
+            Skill,
+            player.PlayerUID,
+            target,
+            voxelCount: 1,
+            caller: EventFactBuilder.CodeOf(anvil.Block)!);
+        Assert.True(one > 0f, "Expected smith-work rule to plan a positive grant.");
 
+        float before = ScenarioXp.TotalSkill(progress, Skill);
         AnvilHitScope.Begin(player);
         try
         {
             anvil.Voxels[cell.X, cell.Y, cell.Z] = AnvilVoxelGrid.Metal;
             AnvilXpStation.TryAwardProgress(anvil, player);
-            float afterPlace = progress.State.GetOrCreateSkill(Skill).Accrued;
-            Assert.True(afterPlace >= 0.009f);
+            float afterPlace = ScenarioXp.TotalSkill(progress, Skill);
+            ScenarioXp.AssertPaid(afterPlace - before, one, "one anvil good voxel");
 
             anvil.Voxels[cell.X, cell.Y, cell.Z] = AnvilVoxelGrid.Empty;
             AnvilXpStation.TryAwardProgress(anvil, player);
-            Assert.Equal(afterPlace, progress.State.GetOrCreateSkill(Skill).Accrued, precision: 4);
+            Assert.Equal(afterPlace, ScenarioXp.TotalSkill(progress, Skill), precision: 4);
 
             anvil.Voxels[cell.X, cell.Y, cell.Z] = AnvilVoxelGrid.Metal;
             AnvilXpStation.TryAwardProgress(anvil, player);
-            Assert.Equal(afterPlace, progress.State.GetOrCreateSkill(Skill).Accrued, precision: 4);
+            Assert.Equal(afterPlace, ScenarioXp.TotalSkill(progress, Skill), precision: 4);
         }
         finally
         {
@@ -243,11 +255,13 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Assert.NotNull(copper);
         ItemStack targetStack = new(copper, 1);
         const int fill = 100;
+        string mold = RequireCollectionCode(World.Api, "mold");
 
         float expected = ScenarioXp.PlannedMoldCast(
             World.Api.World,
             Skill,
             player.PlayerUID,
+            mold,
             EventFactBuilder.CodeOf(targetStack),
             fill);
         Assert.True(expected > 0f, "Expected mold-cast rule to plan a positive grant.");
@@ -257,7 +271,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             World.Api,
             playerUid: "",
             DeedToken.Crafted,
-            caller: CallerIdentities.Mold,
+            caller: mold,
             target: EventFactBuilder.CodeOf(targetStack),
             inputs: [new Deed.QuantityUnit(
                 EventFactBuilder.CodeOf(targetStack) ?? "",
@@ -335,11 +349,13 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Assert.NotNull(blister);
         ItemStack targetStack = new(blister, 16);
         const int quantity = 16;
+        string furnace = RequireCollectionCode(World.Api, "cementation");
 
         float expected = ScenarioXp.PlannedCementationFired(
             World.Api.World,
             Skill,
             player.PlayerUID,
+            furnace,
             EventFactBuilder.CodeOf(targetStack),
             quantity);
         Assert.True(expected > 0f, "Expected cementation-fired rule to plan a positive grant.");
@@ -350,7 +366,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             World.Api,
             playerUid: "",
             DeedToken.Crafted,
-            caller: CallerIdentities.Cementation,
+            caller: furnace,
             target: EventFactBuilder.CodeOf(targetStack),
             outputs: [new Deed.QuantityUnit(EventFactBuilder.CodeOf(targetStack) ?? "", quantity)],
             contributors: [new Deed.ContributorShare(player.PlayerUID, 1f)]);
@@ -367,6 +383,76 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
                 ref was,
                 ref paid),
             "Second complete tick must not repay.");
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "Metalworking")]
+    public async Task HeatTreat_Should_PayOneEach_ForQuenchAndTemper()
+    {
+        ITestPlayer joined = await World.JoinPlayer("MwHeatTreat");
+        IPlayer player = joined.Player;
+        IPlayerProgress progress = RequireProgress(player);
+        IWorldAccessor world = World.Api.World;
+
+        Item? pick = world.GetItem(new AssetLocation("game:pickaxehead-iron"));
+        Assert.NotNull(pick);
+        Assert.NotNull(pick!.GetBehavior<CollectibleBehaviorQuenchable>());
+
+        ItemStack loose = new(pick, 1);
+        float beforeLoose = ScenarioXp.TotalSkill(progress, Skill);
+        SettleHeatTreat(world, loose, "quench", "lastinquenchrangetotalhours", world.Calendar.ElapsedHours);
+        Assert.Equal(1, loose.Attributes.GetInt("quenchIteration", 0));
+        Assert.Equal(beforeLoose, ScenarioXp.TotalSkill(progress, Skill));
+
+        ItemSlot hand = player.InventoryManager.ActiveHotbarSlot;
+        Assert.NotNull(hand);
+        hand.Itemstack = new ItemStack(pick, 1);
+        hand.MarkDirty();
+        ItemStack stack = hand.Itemstack!;
+        Assert.NotNull(stack.Collectible.GetBehavior<CollectibleBehaviorQuenchable>());
+
+        float beforeQuench = ScenarioXp.TotalSkill(progress, Skill);
+        SettleHeatTreat(world, stack, "quench", "lastinquenchrangetotalhours", world.Calendar.ElapsedHours - 1.0);
+        Assert.Equal(0, stack.Attributes.GetInt("quenchIteration", 0));
+        Assert.Equal(beforeQuench, ScenarioXp.TotalSkill(progress, Skill));
+
+        SettleHeatTreat(world, stack, "quench", "lastinquenchrangetotalhours", world.Calendar.ElapsedHours);
+        Assert.Equal(1, stack.Attributes.GetInt("quenchIteration", 0));
+        ScenarioXp.AssertPaid(
+            ScenarioXp.TotalSkill(progress, Skill) - beforeQuench,
+            1f,
+            "quench");
+
+        float beforeEarlyTemper = ScenarioXp.TotalSkill(progress, Skill);
+        SettleHeatTreat(world, stack, "temper", "lastintemperrangetotalhours", world.Calendar.ElapsedHours);
+        Assert.Equal(0, stack.Attributes.GetInt("temperIteration", 0));
+        Assert.Equal(beforeEarlyTemper, ScenarioXp.TotalSkill(progress, Skill));
+
+        float beforeTemper = ScenarioXp.TotalSkill(progress, Skill);
+        SettleHeatTreat(world, stack, "temper", "lastintemperrangetotalhours", world.Calendar.ElapsedHours - 2.0);
+        Assert.Equal(1, stack.Attributes.GetInt("temperIteration", 0));
+        ScenarioXp.AssertPaid(
+            ScenarioXp.TotalSkill(progress, Skill) - beforeTemper,
+            1f,
+            "temper");
+
+        float beforeRepeat = ScenarioXp.TotalSkill(progress, Skill);
+        SettleHeatTreat(world, stack, "temper", "lastintemperrangetotalhours", world.Calendar.ElapsedHours - 2.0);
+        Assert.Equal(1, stack.Attributes.GetInt("temperIteration", 0));
+        Assert.Equal(beforeRepeat, ScenarioXp.TotalSkill(progress, Skill));
+    }
+
+    static void SettleHeatTreat(
+        IWorldAccessor world,
+        ItemStack stack,
+        string state,
+        string hoursAttr,
+        double hours)
+    {
+        stack.Attributes.SetString("metalworkingstate", state);
+        stack.Attributes.SetDouble(hoursAttr, hours);
+        stack.Collectible.SetTemperature(world, stack, 20f, false);
     }
 
     BlockEntityAnvil PrepareAnvil(IPlayer player, out SmithingRecipe recipe, out List<Vec3i> goods)
@@ -447,6 +533,22 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         return ClayFormingRecipeCatalog.CountWantedVoxels(
             recipe.Voxels,
             Math.Min(6, recipe.QuantityLayers));
+    }
+
+    static string RequireCollectionCode(ICoreAPI api, string collectionId)
+    {
+        CollectionIndex? collections = ProsequorModSystem.For(api)?.Collections?.Index;
+        Assert.NotNull(collections);
+        foreach (string code in collections!.Codes(collectionId))
+        {
+            if (!string.IsNullOrWhiteSpace(code))
+            {
+                return code;
+            }
+        }
+
+        Assert.Fail($"Collection '{collectionId}' has no codes.");
+        return "";
     }
 
     static IEnumerable<string> RecipeOutputCodes(SmithingRecipe recipe)

@@ -7,13 +7,14 @@ namespace Prosequor.Ability;
 
 /// <summary>
 /// Pays metalworking cementation XP through <see cref="Deed.Emit"/>.
-/// One <c>cementation-fired</c> emit per finished carburization; rule
-/// <c>payee: contributors</c> splits shares; <c>pay: quantity</c> uses blister stack size.
+/// One <c>cementation-fired</c> emit per finished carburization. The caller is the
+/// coffin block. Rule <c>payee: contributors</c> splits shares; <c>pay: quantity</c>
+/// uses blister stack size.
 /// </summary>
 public static class CementationXp
 {
     /// <summary>
-    /// Settle one finished cementation run. Blank actor; contributor shares from the coffin BE.
+    /// Settle one finished cementation run. Caller is the coffin block; contributor shares from the coffin BE.
     /// </summary>
     public static void Settle(
         BlockEntityStoneCoffin? coffin,
@@ -51,12 +52,18 @@ public static class CementationXp
             blister = coffin.Inventory[CementationXpStation.IngotSlotIndex]?.Itemstack;
         }
 
-        string? target = EventFactBuilder.CodeOf(blister) ?? EventFactBuilder.CodeOf(coffin.Block);
+        string? caller = EventFactBuilder.CodeOf(coffin.Block);
+        if (string.IsNullOrWhiteSpace(caller))
+        {
+            return;
+        }
+
+        string? target = EventFactBuilder.CodeOf(blister) ?? caller;
         Deed.Emit(
             coffin.Api,
             playerUid: "",
             DeedToken.Crafted,
-            caller: CallerIdentities.Cementation,
+            caller: caller,
             target: target,
             outputs: [new Deed.QuantityUnit(target ?? "", quantity)],
             contributors: shares);

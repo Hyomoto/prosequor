@@ -36,7 +36,9 @@ public static class BloomeryAbilityPatches
     }
 
     /// <summary>
-    /// Sneak + empty hand + Bloom Brigand: extract finished bloom (or shatter it).
+    /// Sneak + empty hand + Bloom Brigand: take any finished product.
+    /// The break chance is the chance the bloomery itself breaks. The product
+    /// still comes out: a failed roll breaks the bloomery, a passed roll leaves it.
     /// Plain right-click stays vanilla fuel/ore/chimney.
     /// </summary>
     [HarmonyPatch(typeof(BlockBloomery), nameof(BlockBloomery.OnBlockInteractStart))]
@@ -91,27 +93,26 @@ public static class BloomeryAbilityPatches
                 __instance,
                 blockSel.Position);
 
-            ItemStack bloom = bloomStack.Clone();
-            outSlot.Itemstack = null;
-            be.MarkDirty(true);
-
-            if (breakChance > 0f && world.Rand.NextDouble() < breakChance)
+            double roll = BloomeryHarvestXp.BreakRollForTests ?? world.Rand.NextDouble();
+            if (breakChance > 0f && roll < breakChance)
             {
-                world.PlaySoundAt(
-                    new AssetLocation("sounds/effect/anvilhit"),
-                    blockSel.Position,
-                    0,
-                    byPlayer);
+                // Same result as the player breaking the bloomery, product included.
+                world.BlockAccessor.BreakBlock(blockSel.Position, byPlayer);
                 __result = true;
                 return false;
             }
 
-            BloomeryHarvestXp.Settle(byPlayer, bloom, __instance);
+            ItemStack product = bloomStack.Clone();
+            outSlot.Itemstack = null;
+            be.MarkDirty(true);
 
-            if (!byPlayer.InventoryManager.TryGiveItemstack(bloom, true))
+            BloomeryHarvestXp.Settle(byPlayer, product, __instance);
+
+            byPlayer.InventoryManager.TryGiveItemstack(product, true);
+            if (product.StackSize > 0)
             {
                 world.SpawnItemEntity(
-                    bloom,
+                    product,
                     blockSel.Position.ToVec3d().Add(0.5, 0.5, 0.5));
             }
 

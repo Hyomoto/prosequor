@@ -258,6 +258,19 @@
     ]
   },
   {
+    "id": "mold",
+    "includes": [
+      "*:toolmold-*-fired-*",
+      "*:ingotmold-*-fired"
+    ]
+  },
+  {
+    "id": "cementation",
+    "includes": [
+      "*:stonecoffinsection-*"
+    ]
+  },
+  {
     "id": "meat",
     "includes": [
       "game:redmeat-*",

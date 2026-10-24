@@ -139,11 +139,12 @@ static class ScenarioXp
         return one * voxelCount;
     }
 
-    /// <summary>Same fact mold harden settle publishes (<c>crafted</c> at <c>@mold</c>, payee contributors).</summary>
+    /// <summary>Same fact mold harden settle publishes (<c>crafted</c> at a <c>mold</c> block, payee contributors).</summary>
     public static float PlannedMoldCast(
         IWorldAccessor world,
         string skillId,
         string pourerUid,
+        string caller,
         string? target,
         int fillLevel)
     {
@@ -153,7 +154,7 @@ static class ScenarioXp
                 world,
                 playerUid: "",
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
-                CallerIdentities.Mold,
+                caller,
                 target,
                 totalUnits: ingredients,
                 craftCount: 1,
@@ -192,11 +193,12 @@ static class ScenarioXp
             playerUid);
     }
 
-    /// <summary>Same fact <see cref="CementationXp.Settle"/> publishes (<c>crafted</c> at <c>@cementation</c>, payee contributors).</summary>
+    /// <summary>Same fact <see cref="CementationXp.Settle"/> publishes (<c>crafted</c> at a <c>cementation</c> block, payee contributors).</summary>
     public static float PlannedCementationFired(
         IWorldAccessor world,
         string skillId,
         string contributorUid,
+        string caller,
         string? target,
         int blisterQuantity)
     {
@@ -205,7 +207,7 @@ static class ScenarioXp
                 world,
                 playerUid: "",
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
-                CallerIdentities.Cementation,
+                caller,
                 target,
                 totalUnits: 0,
                 craftCount: blisterQuantity,

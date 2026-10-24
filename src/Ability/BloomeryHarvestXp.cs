@@ -5,11 +5,17 @@ using Vintagestory.GameContent;
 namespace Prosequor.Ability;
 
 /// <summary>
-/// Bloomery harvest XP: finished bloom taken by breaking the bloomery or Bloom Brigand extract.
+/// Bloomery harvest XP: finished product taken by breaking the bloomery or Bloom Brigand extract.
 /// Flat deed — pays once per successful harvest.
 /// </summary>
 public static class BloomeryHarvestXp
 {
+    /// <summary>
+    /// When set, Bloom Brigand uses this value instead of <c>world.Rand.NextDouble()</c>.
+    /// A roll under the break chance breaks the bloomery. Always clear it afterward.
+    /// </summary>
+    internal static double? BreakRollForTests { get; set; }
+
     static readonly AccessTools.FieldRef<BlockEntityBloomery, InventoryGeneric>? InvField =
         AccessTools.FieldRefAccess<BlockEntityBloomery, InventoryGeneric>("bloomeryInv");
 
@@ -34,7 +40,7 @@ public static class BloomeryHarvestXp
     public static ItemStack? TryGetOutStack(BlockEntityBloomery? be) =>
         TryGetOutSlot(be)?.Itemstack;
 
-    /// <summary>True when the bloomery has finished product ready to take.</summary>
+    /// <summary>True when the bloomery has finished product ready to take (bloom, glass, or otherwise).</summary>
     public static bool HasFinishedBloom(BlockEntityBloomery? be)
     {
         ItemStack? outStack = TryGetOutStack(be);

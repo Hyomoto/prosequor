@@ -57,8 +57,8 @@
           "Description": "prosequor:imm-xp-gain-desc",
           "Map": "xpGain",
           "Min": 0,
-          "Max": 1000,
-          "Step": 0.1
+          "Max": 20,
+          "Step": 1
         },
         {
           "Type": "String",

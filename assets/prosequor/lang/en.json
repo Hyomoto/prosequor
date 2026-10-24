@@ -588,7 +588,7 @@
   "unlock-metalworking-hammer-cadence": "Hammer Cadence",
   "unlockdesc-metalworking-hammer-cadence": "Each hammer strike reduces pending temperature decay by {0}.",
   "unlock-metalworking-bloom-brigand": "Bloom Brigand",
-  "unlockdesc-metalworking-bloom-brigand": "Sneak + right-click a bloomery to extract the bloom. Chance to break the bloom: {0}.",
+  "unlockdesc-metalworking-bloom-brigand": "Sneak + right-click a bloomery to extract finished goods. Chance to break the bloomery: {0}.",
   "unlock-metalworking-thrifty-smithing": "Thrifty Smithing",
   "unlockdesc-metalworking-thrifty-smithing": "Receive one metal bit for every {0} metal splits on a piece of work.",
   "unlock-metalworking-blacksmith": "Blacksmith",

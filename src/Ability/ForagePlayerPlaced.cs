@@ -64,8 +64,8 @@ public static class ForagePlayerPlaced
     }
 
     /// <summary>
-    /// Wild forage for XP and drop bonuses. Crops and berry bushes use planter
-    /// pedigree; mushrooms, reeds, and loose sticks use the place mark.
+    /// Wild forage for XP and drop bonuses. Crops, berry bushes, and fruit trees
+    /// use planter pedigree; mushrooms, reeds, and loose sticks use the place mark.
     /// </summary>
     public static bool IsWild(IWorldAccessor? world, Block? block, BlockPos? pos)
     {
@@ -79,7 +79,9 @@ public static class ForagePlayerPlaced
             return false;
         }
 
-        if (AbilityBootstrap.IsCropBlock(block) || AbilityBootstrap.IsBerryBushBlock(block))
+        if (AbilityBootstrap.IsCropBlock(block)
+            || AbilityBootstrap.IsBerryBushBlock(block)
+            || AbilityBootstrap.IsFruitTreeBlock(block))
         {
             return !OwnerCredit.TryResolvePlanter(world, block, pos, out _);
         }

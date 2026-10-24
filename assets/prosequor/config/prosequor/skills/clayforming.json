@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:clay-form-voxel",
-      "amount": 0.01,
+      "amount": 0.1,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "voxel-work", "caller:<clayform>", "target:<clay-formed>" ]

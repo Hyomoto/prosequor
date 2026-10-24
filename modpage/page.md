@@ -28,6 +28,10 @@ Doing things gains xp which causes your skills to level, when your skills level 
 
 Skill levels also contribute toward attributes. At certain player levels, the attribute with the most accumulated growth gains a point. You can see that growth in the character screen, so your stats reflect what you have spent time doing.
 
+::: details Presets
+Prosequor offers three presets out-of-the-box if you use Integrated Mod Manager: Singleplayer, Multiplayer and MMO.  Singleplayer doubles XP and skill point gain, and MMO reduces the number of specializations you can choose.  These are meant as quick, one-click tuning options.  You can modify the config manually as well.
+:::
+
 ## Playing together
 
 Prosequor keeps track of who created, grew, or prepared things, including items that can be stacked together when their credit matches. Shared work can credit contributors for XP: tending crops and animals, using kilns, and other activities do not depend only on who makes the final click. XP from some work that finishes while you are away is awarded when you return, so you are not penalized for logging out.
@@ -39,6 +43,10 @@ The progression pace is aimed at servers where people play together over time an
 Each skill fills a 'bucket' whenever it gains XP, when the bucket gets full a penalty is applied to XP gain and it starts over again.  If you keep grinding out a skill, this value will eventually just reach zero.  To recover from this, you simply need to take time doing something else.  This is tied to the in-game clock, so sleeping will refresh your buckets.  On a server, however, logging off, roleplaying or just doing other tasks is the intended solution.
 
 While this may seem like it's designed to prevent you from levelling up, the design is intended to prevent players from feeling grinding is necessary.  The goal of Prosequor is not to be your primary task, I do not want to incentivize performing activities solely for the sake of gaining XP.  I want you to play Vintage Story and enjoy watching your skills and attributes grow over time, so that when your server has been going for a few weeks you still have goals to work towards and the other players naturally grow in different ways.  This also helps, somewhat, to bridge the gap between someone who is always on vice someone who may have more limited time.  The first person is always going to advance more quickly, Prosequor is not designed to stop grinding, but if you want to maximize mining you will need to do more than wear out your pickaxe.
+
+::: details Scaling the buckets
+Bucket sizes increase with your skill level, so the higher it goes, the larger the bucket is to account for needing more XP.  If you scale XP gain in the mod, the size of the buckets and their refresh rates will also scale.
+:::
 
 ## Modding and Prosequor
 

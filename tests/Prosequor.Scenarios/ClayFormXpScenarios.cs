@@ -22,7 +22,6 @@ namespace Prosequor.Scenarios;
 public class ClayFormXpScenarios : AtlasScenarioBase
 {
     const string Skill = "clayforming";
-    const float XpPerVoxel = 0.01f;
 
     [AtlasScenario]
     [Trait("Layer", "Xp")]
@@ -37,8 +36,8 @@ public class ClayFormXpScenarios : AtlasScenarioBase
         List<Vec3i> goods = CollectGoodVoxels(recipe, max: 12);
         Assert.True(goods.Count >= 10, $"Expected a recipe with ≥10 voxels, got {goods.Count}.");
 
-        float xpBefore = progress.GetSkillXp(Skill);
-        float accruedBefore = progress.State.GetOrCreateSkill(Skill).Accrued;
+        float expected = PlannedVoxels(player, form, recipe, voxelCount: 10);
+        float before = ScenarioXp.TotalSkill(progress, Skill);
 
         for (int i = 0; i < 10; i++)
         {
@@ -47,13 +46,10 @@ public class ClayFormXpScenarios : AtlasScenarioBase
                 $"Expected good place at {goods[i]}.");
         }
 
-        float xpAfter = progress.GetSkillXp(Skill);
-        float accruedAfter = progress.State.GetOrCreateSkill(Skill).Accrued;
-        // 0.01f is not binary-exact; ten clicks may sit entirely in Accrued below MinAward.
-        float gained = (xpAfter - xpBefore) + (accruedAfter - accruedBefore);
-        Assert.True(
-            gained >= 0.099f,
-            $"Expected ~{10 * XpPerVoxel} clayforming XP from 10 good voxels (xp {xpBefore}->{xpAfter}, accrued {accruedBefore}->{accruedAfter}), got {gained}.");
+        ScenarioXp.AssertPaid(
+            ScenarioXp.TotalSkill(progress, Skill) - before,
+            expected,
+            "10 clay good voxels");
     }
 
     [AtlasScenario]
@@ -67,23 +63,20 @@ public class ClayFormXpScenarios : AtlasScenarioBase
 
         BlockEntityClayForm form = PrepareForm(player, out ClayFormingRecipe recipe);
         Vec3i good = CollectGoodVoxels(recipe, max: 1)[0];
+        float one = PlannedVoxels(player, form, recipe, voxelCount: 1);
+        Assert.True(one > 0f, "Expected clay-form voxel rule to plan a positive grant.");
 
+        float before = ScenarioXp.TotalSkill(progress, Skill);
         Assert.True(ClayFormVoxelOps.OnAdd(form, good.Y, good, radius: 0, player));
-        float accruedAfterPlace = progress.State.GetOrCreateSkill(Skill).Accrued;
-        Assert.Equal(XpPerVoxel, accruedAfterPlace, precision: 4);
+        float afterPlace = ScenarioXp.TotalSkill(progress, Skill);
+        ScenarioXp.AssertPaid(afterPlace - before, one, "one clay good voxel");
 
         Assert.True(
             ClayFormVoxelOps.OnRemove(form, good.Y, good, BlockFacing.UP, radius: 0, player));
-        Assert.Equal(
-            accruedAfterPlace,
-            progress.State.GetOrCreateSkill(Skill).Accrued,
-            precision: 4);
+        Assert.Equal(afterPlace, ScenarioXp.TotalSkill(progress, Skill), precision: 4);
 
         Assert.True(ClayFormVoxelOps.OnAdd(form, good.Y, good, radius: 0, player));
-        Assert.Equal(
-            accruedAfterPlace,
-            progress.State.GetOrCreateSkill(Skill).Accrued,
-            precision: 4);
+        Assert.Equal(afterPlace, ScenarioXp.TotalSkill(progress, Skill), precision: 4);
     }
 
     /// <summary>
@@ -161,12 +154,22 @@ public class ClayFormXpScenarios : AtlasScenarioBase
         Vec3i? wrong = FindWrongVoxelInBounds(recipe);
         Assert.NotNull(wrong);
 
-        float accruedBefore = progress.State.GetOrCreateSkill(Skill).Accrued;
+        float before = ScenarioXp.TotalSkill(progress, Skill);
         Assert.True(ClayFormVoxelOps.OnAdd(form, wrong!.Y, wrong, radius: 0, player));
-        Assert.Equal(
-            accruedBefore,
-            progress.State.GetOrCreateSkill(Skill).Accrued,
-            precision: 4);
+        Assert.Equal(before, ScenarioXp.TotalSkill(progress, Skill), precision: 4);
+    }
+
+    static float PlannedVoxels(IPlayer player, BlockEntityClayForm form, ClayFormingRecipe recipe, int voxelCount)
+    {
+        string? target = recipe.Output?.Code?.ToString()
+            ?? recipe.Output?.ResolvedItemstack?.Collectible?.Code?.ToString();
+        return ScenarioXp.PlannedCraftingVoxels(
+            form.Api.World,
+            Skill,
+            player.PlayerUID,
+            target,
+            voxelCount,
+            EventFactBuilder.CodeOf(form.Block)!);
     }
 
     static EntityBehaviorProgress RequireBehavior(IPlayer player)

@@ -17,12 +17,6 @@ public static class CallerIdentities
     /// <summary>Animal ate a dropped ground stack.</summary>
     public const string Loose = "@loose";
 
-    /// <summary>Liquid metal mold (tool / ingot) casting settle.</summary>
-    public const string Mold = "@mold";
-
-    /// <summary>Cementation furnace (stone coffin) carburization settle.</summary>
-    public const string Cementation = "@cementation";
-
     public static bool IsReserved(string? identity)
     {
         if (string.IsNullOrWhiteSpace(identity))
@@ -35,9 +29,7 @@ public static class CallerIdentities
             || t.Equals(Grid, StringComparison.OrdinalIgnoreCase)
             || t.Equals(Trough, StringComparison.OrdinalIgnoreCase)
             || t.Equals(Crop, StringComparison.OrdinalIgnoreCase)
-            || t.Equals(Loose, StringComparison.OrdinalIgnoreCase)
-            || t.Equals(Mold, StringComparison.OrdinalIgnoreCase)
-            || t.Equals(Cementation, StringComparison.OrdinalIgnoreCase);
+            || t.Equals(Loose, StringComparison.OrdinalIgnoreCase);
     }
 
     public static bool TryNormalizeReserved(string? raw, out string identity)
@@ -76,18 +68,6 @@ public static class CallerIdentities
         if (t.Equals(Loose, StringComparison.OrdinalIgnoreCase))
         {
             identity = Loose;
-            return true;
-        }
-
-        if (t.Equals(Mold, StringComparison.OrdinalIgnoreCase))
-        {
-            identity = Mold;
-            return true;
-        }
-
-        if (t.Equals(Cementation, StringComparison.OrdinalIgnoreCase))
-        {
-            identity = Cementation;
             return true;
         }
 

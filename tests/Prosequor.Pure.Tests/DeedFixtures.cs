@@ -35,6 +35,7 @@ public static class DeedFixtures
         VerifyTaglessDeedWarns();
         VerifyTailoringClothLeatherAndHidePays();
         VerifyPanningCompletePays();
+        VerifyQuenchAndTemperPayOne();
     }
 
     static void VerifyPanningCompletePays()
@@ -99,6 +100,68 @@ public static class DeedFixtures
             Assert.Fail("[prosequor] panning complete should not pay a non-pan caller.");
         }
     }
+
+    static void VerifyQuenchAndTemperPayOne()
+    {
+        CollectionIndex collections = new();
+        XpRule quench = AmountRule(
+            "prosequor:quench",
+            "metalworking",
+            1f,
+            order: 1,
+            collections,
+            tags: ["quenched"]);
+        XpRule temper = AmountRule(
+            "prosequor:temper",
+            "metalworking",
+            1f,
+            order: 2,
+            collections,
+            tags: ["tempered"]);
+        FixedAmountRules rules = new(quench, temper);
+
+        IReadOnlyList<Deed.PlannedPay> quenched = PlanHeatTreat(rules, collections, DeedTokenTags.Quenched);
+        if (quenched.Count != 1
+            || quenched[0].SkillId != "metalworking"
+            || Math.Abs(quenched[0].Amount - 1f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Quench must pay 1 metalworking XP.");
+        }
+
+        IReadOnlyList<Deed.PlannedPay> tempered = PlanHeatTreat(rules, collections, DeedTokenTags.Tempered);
+        if (tempered.Count != 1
+            || tempered[0].SkillId != "metalworking"
+            || Math.Abs(tempered[0].Amount - 1f) > 0.0001f)
+        {
+            Assert.Fail("[prosequor] Temper must pay 1 metalworking XP.");
+        }
+
+        IReadOnlyList<Deed.PlannedPay> other = PlanHeatTreat(rules, collections, DeedTokenTags.Crafted);
+        if (other.Count != 0)
+        {
+            Assert.Fail("[prosequor] Heat-treat rules must not match a crafted deed.");
+        }
+    }
+
+    static IReadOnlyList<Deed.PlannedPay> PlanHeatTreat(
+        FixedAmountRules rules,
+        CollectionIndex collections,
+        string token) =>
+        Deed.PlanPays(
+            rules,
+            collections,
+            "p",
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { token },
+            caller: CallerIdentities.Hand,
+            target: "game:pickaxe-copper",
+            mount: null,
+            ground: null,
+            lastCraft: null,
+            metric: 0f,
+            metricMin: 0f,
+            metricMax: 0f,
+            totalUnits: 1,
+            craftCount: 1);
 
     static IReadOnlyList<Deed.PlannedPay> PlanPanning(
         FixedAmountRules rules,
@@ -171,6 +234,12 @@ public static class DeedFixtures
             || DeedToken.Panned.ToTag() != DeedTokenTags.Panned
             || !DeedTokenTags.TryParse("panned", out DeedToken panned)
             || panned != DeedToken.Panned
+            || DeedToken.Quenched.ToTag() != DeedTokenTags.Quenched
+            || !DeedTokenTags.TryParse("quenched", out DeedToken quenched)
+            || quenched != DeedToken.Quenched
+            || DeedToken.Tempered.ToTag() != DeedTokenTags.Tempered
+            || !DeedTokenTags.TryParse("tempered", out DeedToken tempered)
+            || tempered != DeedToken.Tempered
             || Deed.Activity != "prosequor:deed")
         {
             Assert.Fail("[prosequor] DeedToken tag map failed.");

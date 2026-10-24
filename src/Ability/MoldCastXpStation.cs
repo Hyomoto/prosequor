@@ -158,6 +158,7 @@ public static class MoldCastXpStation
         ProsequorBlockPedigreeStation.Mutate(mold, b => b.MoldToolPaid = true);
         EmitCast(
             mold.Api,
+            EventFactBuilder.CodeOf(mold.Block),
             host.MoldToolPourerUid,
             TargetFromTool(mold),
             IngredientsFromFill(fill));
@@ -283,7 +284,12 @@ public static class MoldCastXpStation
                 b.MoldLeftPaid = true;
             }
         });
-        EmitCast(mold.Api, pourer, target, IngredientsFromFill(fill));
+        EmitCast(
+            mold.Api,
+            EventFactBuilder.CodeOf(mold.Block),
+            pourer,
+            target,
+            IngredientsFromFill(fill));
     }
 
     static string? TargetFromTool(BlockEntityToolMold mold)
@@ -304,9 +310,15 @@ public static class MoldCastXpStation
         return EventFactBuilder.CodeOf(mold.MetalContent);
     }
 
-    static void EmitCast(ICoreAPI? api, string? pourerUid, string? target, int ingredients)
+    static void EmitCast(
+        ICoreAPI? api,
+        string? caller,
+        string? pourerUid,
+        string? target,
+        int ingredients)
     {
         if (api?.Side != EnumAppSide.Server
+            || string.IsNullOrWhiteSpace(caller)
             || string.IsNullOrWhiteSpace(pourerUid)
             || ingredients <= 0)
         {
@@ -317,7 +329,7 @@ public static class MoldCastXpStation
             api,
             playerUid: "",
             DeedToken.Crafted,
-            caller: CallerIdentities.Mold,
+            caller: caller.Trim(),
             target: target,
             inputs: [new Deed.QuantityUnit(target ?? "", ingredients)],
             contributors: [new Deed.ContributorShare(pourerUid.Trim(), 1f)]);

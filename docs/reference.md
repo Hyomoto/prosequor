@@ -12,6 +12,8 @@ layout    →  where it draws relative to parents (presentation)
 excludes  →  who you cannot also own
 ```
 
+
+
 ## Contents
 
 - [Skill file root](#skill-file-root)
@@ -23,9 +25,9 @@ excludes  →  who you cannot also own
 - [Layout](#layout)
 - [Tiers & replicate](#tiers--replicate)
 - [Description params](#description-params)
-  - [`totalParams`](#totalparams)
+  - `[totalParams](#totalparams)`
 - [Effects](#effects)
-  - [Ability `when`](#ability-when)
+  - [Ability](#ability-when) `when`
 - [Tags](#tags)
   - [Criterion forms](#criterion-forms)
   - [Fact roles](#fact-roles)
@@ -49,9 +51,9 @@ excludes  →  who you cannot also own
   - [Contract: stacks](#contract-stacks)
   - [Gates](#gates)
 - [XP rules](#xp-rules)
-  - [XP `when`](#xp-when)
+  - [XP](#xp-when) `when`
   - [Activities](#activities)
-  - [`pay` / `payee` / `include` / `exclude`](#pay--payee--include--exclude)
+  - `pay` [/](#pay--payee--include--exclude) `payee` [/](#pay--payee--include--exclude) `include` [/](#pay--payee--include--exclude) `exclude`
 - [Collections](#collections)
 - [Pools](#pools)
 - [Affix lists](#affix-lists)
@@ -65,35 +67,41 @@ excludes  →  who you cannot also own
 
 ---
 
+
+
 ## Skill file root
 
 Path: `skills/<id>.json` (one object per file).
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Stable skill id (required) |
-| `nameLang` | List title lang key (default `skill-{id}`) |
-| `descriptionLang` | C-menu list-hover blurb (default `skilldesc-{id}`) |
-| `descriptionParams` | Optional `{0}`… args for `descriptionLang` (same grammar as [nodes](#description-params)) |
-| `icon` | Texture path (default `textures/icons/{id}-skill.svg`; bare paths resolve under `prosequor:`) |
-| `hobby` | `true` = hobby skill (see [kind](#kind--level-caps)) |
-| `optional` | `true` = omitted from the shared class skill set (trait `skills` can still grant it). Default `false` |
-| `maxLevel` | Ignored if present; caps are derived |
-| `attributeScores` | Optional bucket fill on each skill level gained |
-| `xpRules` | XP amount/rate rules owned by this skill |
-| `effects` | Always-on baseline rules |
-| `tree` | Unlock tree (`{ "nodes": [ … ] }`); omit/empty → passive |
 
-Root `effects` are always active. Tier `effects` are active only for the owned tier — lower tiers do not stack. Multi-tier nodes must [`replicate`](#replicate) prior effects.
+| Field               | Meaning                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `id`                | Stable skill id (required)                                                                            |
+| `nameLang`          | List title lang key (default `skill-{id}`)                                                            |
+| `descriptionLang`   | C-menu list-hover blurb (default `skilldesc-{id}`)                                                    |
+| `descriptionParams` | Optional `{0}`… args for `descriptionLang` (same grammar as [nodes](#description-params))             |
+| `icon`              | Texture path (default `textures/icons/{id}-skill.svg`; bare paths resolve under `prosequor:`)         |
+| `hobby`             | `true` = hobby skill (see [kind](#kind--level-caps))                                                  |
+| `optional`          | `true` = omitted from the shared class skill set (trait `skills` can still grant it). Default `false` |
+| `maxLevel`          | Ignored if present; caps are derived                                                                  |
+| `attributeScores`   | Optional bucket fill on each skill level gained                                                       |
+| `xpRules`           | XP amount/rate rules owned by this skill                                                              |
+| `effects`           | Always-on baseline rules                                                                              |
+| `tree`              | Unlock tree (`{ "nodes": [ … ] }`); omit/empty → passive                                              |
+
+
+Root `effects` are always active. Tier `effects` are active only for the owned tier — lower tiers do not stack. Multi-tier nodes must `[replicate](#replicate)` prior effects.
 
 ### Kind & level caps
 
-| Kind | Cap | Classification |
-| --- | --- | --- |
-| Hobby | 20 | `"hobby": true` (wins over everything) |
+
+| Kind           | Cap | Classification                                    |
+| -------------- | --- | ------------------------------------------------- |
+| Hobby          | 20  | `"hobby": true` (wins over everything)            |
 | Specialization | 100 | Tree has at least one `specialization: true` node |
-| Minor | 50 | Non-empty tree, no specialization nodes |
-| Passive | 50 | No tree / empty tree |
+| Minor          | 50  | Non-empty tree, no specialization nodes           |
+| Passive        | 50  | No tree / empty tree                              |
+
 
 Hobby skills strip `specialization` flags at compile. They use local unlock points ([below](#hobby-unlock-points)), not global points.
 
@@ -110,10 +118,12 @@ Cost-0 tiers do not contribute. Global points cannot buy hobby nodes.
 
 On each skill level gained (natural XP commit), each entry’s `value` is added to that attribute’s growth bucket, multiplied by levels gained. Fill runs before player XP.
 
-| Field | Values |
-| --- | --- |
-| `id` | A loaded attribute-stat id (`stats/<id>.json`) |
-| `value` | Finite number `> 0` |
+
+| Field   | Values                                         |
+| ------- | ---------------------------------------------- |
+| `id`    | A loaded attribute-stat id (`stats/<id>.json`) |
+| `value` | Finite number `> 0`                            |
+
 
 Duplicate ids last-win. Omitted or empty = no fill.
 
@@ -126,31 +136,39 @@ Duplicate ids last-win. Omitted or empty = no fill.
 
 ---
 
+
+
 ## Node identity / unlock
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Stable node id (unique within the skill) |
-| `nameLang` / `descriptionLang` | Lang keys |
-| `descriptionParams` | `{0}`, `{1}`… from effect params |
-| `totalParams` | Optional live totals for the owned-rank tooltip |
-| `icon` | Texture path |
-| `cost` | Unlock points (global for normal skills; hobby spendable for hobbies; tier can override; default `1`) |
-| `minSkillLevel` | Floor for first tier (tier can override; default `0`) |
-| `specialization` | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [progression](#progression) `specializationLevels` |
-| `tiers` | Ranks; later tiers usually `replicate` earlier effects |
-| `layout` | Visual grid hints |
-| `requires` / `excludes` | Prerequisites and mutual exclusion |
-| `replaces` | Contribution-only: remove named node and rewrite deps |
+
+| Field                          | Meaning                                                                                                                                                                     |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                           | Stable node id (unique within the skill)                                                                                                                                    |
+| `nameLang` / `descriptionLang` | Lang keys                                                                                                                                                                   |
+| `descriptionParams`            | `{0}`, `{1}`… from effect params                                                                                                                                            |
+| `totalParams`                  | Optional live totals for the owned-rank tooltip                                                                                                                             |
+| `icon`                         | Texture path                                                                                                                                                                |
+| `cost`                         | Unlock points (global for normal skills; hobby spendable for hobbies; tier can override; default `1`)                                                                       |
+| `minSkillLevel`                | Floor for first tier (tier can override; default `0`)                                                                                                                       |
+| `specialization`               | `true` = spends a shared specialization slot; must be exactly 1 tier. Stripped on hobby skills. Slot capacity comes from [progression](#progression) `specializationLevels` |
+| `tiers`                        | Ranks; later tiers usually `replicate` earlier effects                                                                                                                      |
+| `layout`                       | Visual grid hints                                                                                                                                                           |
+| `requires` / `excludes`        | Prerequisites and mutual exclusion                                                                                                                                          |
+| `replaces`                     | Contribution-only: remove named node and rewrite deps                                                                                                                       |
+
 
 ---
 
+
+
 ## Prerequisites & exclusivity
 
-| Field | Meaning |
-| --- | --- |
-| `requires` | Groups: **OR inside**, **AND across** |
+
+| Field      | Meaning                                          |
+| ---------- | ------------------------------------------------ |
+| `requires` | Groups: **OR inside**, **AND across**            |
 | `excludes` | Mutual lock; one-sided is symmetrized at compile |
+
 
 ```json
 "requires": ["a", "b"]
@@ -162,14 +180,18 @@ Any owned tier of a prereq counts.
 
 ---
 
+
+
 ## Layout
 
-| Field | Values | Effect |
-| --- | --- | --- |
-| `layerOffset` | `1` (default) | Next row under deepest parent |
-| | `0` | Same row as parent |
-| `columnBias` | `"left"` / `"right"` | Soft nudge among legal columns; omit = barycenter (downward) or prefer right (same-row) |
-| `compact` | `true` (default) / `false` | `false` = don’t pull this node upward in shake-out |
+
+| Field         | Values                     | Effect                                                                                  |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| `layerOffset` | `1` (default)              | Next row under deepest parent                                                           |
+|               | `0`                        | Same row as parent                                                                      |
+| `columnBias`  | `"left"` / `"right"`       | Soft nudge among legal columns; omit = barycenter (downward) or prefer right (same-row) |
+| `compact`     | `true` (default) / `false` | `false` = don’t pull this node upward in shake-out                                      |
+
 
 Roots (`requires` empty) ignore `layerOffset` / `columnBias`.
 
@@ -187,13 +209,17 @@ Constraints:
 
 ---
 
+
+
 ## Tiers & replicate
 
-| Field | Meaning |
-| --- | --- |
-| `descriptionLang` / `descriptionParams` / `totalParams` | Optional per-tier overrides |
-| `cost` / `minSkillLevel` | Optional per-tier overrides |
-| `effects` | Rules active only while this tier is owned |
+
+| Field                                                   | Meaning                                    |
+| ------------------------------------------------------- | ------------------------------------------ |
+| `descriptionLang` / `descriptionParams` / `totalParams` | Optional per-tier overrides                |
+| `cost` / `minSkillLevel`                                | Optional per-tier overrides                |
+| `effects`                                               | Rules active only while this tier is owned |
+
 
 If `tiers` is omitted, the compiler creates one implicit tier with no effects.
 
@@ -212,6 +238,8 @@ On tier 2+: `"replicate": 0` copies previous-tier effect index 0, then overlays 
 
 ---
 
+
+
 ## Description params
 
 Array of positional args for `descriptionLang` (`{0}`, `{1}`, …).
@@ -220,14 +248,16 @@ Array of positional args for `descriptionLang` (`{0}`, `{1}`, …).
 
 **Skill root (list hover):** optional on the skill object. Specs evaluate at hover from authored coefficients + ownership. Unowned node operands in a `sum` contribute `0`.
 
-| Form | Meaning |
-| --- | --- |
-| `"0.base"` | Effect index 0, param `base` (current tier on nodes; root effects on skill hover) |
-| `"root.0.perSkillLevel"` | Skill root `effects` |
-| `"prev.0.base"` | Previous tier (nodes only; missing treated as 0 in sums) |
-| `"axeexpert.0.perLevel"` | Skill hover only: owned tier of node `axeexpert` (0 if unowned) |
-| `{ "sum": ["0.base", "prev.0.base"], "format": "percent" }` | Sum selectors; `format` optional: `percent` \| `fractionPercent`. A negative value prints as its magnitude in red |
+
+| Form                                                               | Meaning                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"0.base"`                                                         | Effect index 0, param `base` (current tier on nodes; root effects on skill hover)                                                                                                                                                        |
+| `"root.0.perSkillLevel"`                                           | Skill root `effects`                                                                                                                                                                                                                     |
+| `"prev.0.base"`                                                    | Previous tier (nodes only; missing treated as 0 in sums)                                                                                                                                                                                 |
+| `"axeexpert.0.perLevel"`                                           | Skill hover only: owned tier of node `axeexpert` (0 if unowned)                                                                                                                                                                          |
+| `{ "sum": ["0.base", "prev.0.base"], "format": "percent" }`        | Sum selectors; `format` optional: `percent` | `fractionPercent`. A negative value prints as its magnitude in red                                                                                                                         |
 | `{ "table": "0.table", "end": "max", "format": "qualityPercent" }` | One knot from a number-array param. `end` is `min` (first entry) or `max` (last entry); omit `end` for `max`. Prints as `fractionPercent`. Does not use `sum`. A missing array, an empty array, or a non-number entry is a compile error |
+
 
 Bare `"base"` resolves across all current-tier effects (ambiguous if several share the key) — prefer scoped `index.param`.
 
@@ -241,24 +271,30 @@ Optional live total for the **owned** rank tooltip. Omitted or empty = no bracke
 ]
 ```
 
-| Field | Meaning |
-| --- | --- |
+
+| Field    | Meaning                                      |
+| -------- | -------------------------------------------- |
 | `target` | Effect index on that tier (post-`replicate`) |
-| `format` | `percent` or `fractionPercent` |
+| `format` | `percent` or `fractionPercent`               |
+
 
 Compile rejects a missing / out-of-range target, or a target that is not a `prosequor:number` spec.
 
 ---
 
+
+
 ## Effects
 
-| Field | Role |
-| --- | --- |
+
+| Field                                | Role                                                                                                   |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `hook` / `verb` / `phase` / `action` | Surface → moment → facet (omit phase → `default`) → mutation. Action must fulfill the phase’s contract |
-| `when` | Filter — `tags` AND |
-| `params` | Action-specific |
-| `priority` | Lower runs first, then registration order (default `0`) |
-| `replicate` | Tier overlay only |
+| `when`                               | Filter — `tags` AND                                                                                    |
+| `params`                             | Action-specific                                                                                        |
+| `priority`                           | Lower runs first, then registration order (default `0`)                                                |
+| `replicate`                          | Tier overlay only                                                                                      |
+
 
 Bare `hook` / `verb` / `action` ids normalize to `prosequor:`. Legacy `type` and `when.verb` are compile errors. `contract` is not authored.
 
@@ -278,9 +314,11 @@ Matching rules on a hook+verb+phase all run. Nested gate children (`chance`, `ha
 
 ### Ability `when`
 
-| Field | Meaning |
-| --- | --- |
+
+| Field  | Meaning                                 |
+| ------ | --------------------------------------- |
 | `tags` | Every listed criterion must match (AND) |
+
 
 Omit tags = no filter. Ability and XP share the same tags language.
 
@@ -296,29 +334,35 @@ Omit tags = no filter. Ability and XP share the same tags language.
 
 ---
 
+
+
 ## Tags
 
 1. Every listed criterion must match (AND). Case-insensitive. No OR across the list. Omit = no filter.
 2. `<key>` looks up a collection (builtins + `collections.json` + pools). Unknown `<key>` fails compile. Comma lists inside one ref (`<a, b>`) match if the role identity is in **any** listed collection (OR inside that criterion only).
 3. First colon splits a known role from the rest; otherwise the whole string is a target identity.
 
+
+
 ### Criterion forms
 
-| Form | Meaning | Example |
-| --- | --- | --- |
-| `role:<collection>` | Role identity is in collection | `caller:<axe>`, `target:<clay>`, `drop:<seed>` |
-| `role:<a, b>` | Role identity is in any listed collection | `last-craft:<clothing, armor>` |
-| `role:code` | Exact identity on that role | `caller:game:torch` |
-| `role:none` | Role has no code | `caller:none`, `target:none` |
-| `caller:@hand` | [Reserved caller](#reserved-callers) | `caller:@grid` |
-| `mount:<collection>` | Mount / boat entity in collection | `mount:<watercraft>` |
-| `<collection>` | Same as `target:<collection>` | `<crop>` |
-| `<a, b>` | Same as `target:<a, b>` | `<clothing, armor>` |
-| `code` | Same as `target:code` (use `target:` when the code contains `:`) | `target:game:torch` |
-| `op:place` | Role `op` equals `place` | clay-form |
-| `damage:frost` | Damage kind present | on-damage |
-| bare token | Event token on the fact | `interacting`, `block-broken`, `crafted` |
-| `!token` | Event token is absent | `!is-wild`, `!cleaver-certain` |
+
+| Form                 | Meaning                                                          | Example                                        |
+| -------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
+| `role:<collection>`  | Role identity is in collection                                   | `caller:<axe>`, `target:<clay>`, `drop:<seed>` |
+| `role:<a, b>`        | Role identity is in any listed collection                        | `last-craft:<clothing, armor>`                 |
+| `role:code`          | Exact identity on that role                                      | `caller:game:torch`                            |
+| `role:none`          | Role has no code                                                 | `caller:none`, `target:none`                   |
+| `caller:@hand`       | [Reserved caller](#reserved-callers)                             | `caller:@grid`                                 |
+| `mount:<collection>` | Mount / boat entity in collection                                | `mount:<watercraft>`                           |
+| `<collection>`       | Same as `target:<collection>`                                    | `<crop>`                                       |
+| `<a, b>`             | Same as `target:<a, b>`                                          | `<clothing, armor>`                            |
+| `code`               | Same as `target:code` (use `target:` when the code contains `:`) | `target:game:torch`                            |
+| `op:place`           | Role `op` equals `place`                                         | clay-form                                      |
+| `damage:frost`       | Damage kind present                                              | on-damage                                      |
+| bare token           | Event token on the fact                                          | `interacting`, `block-broken`, `crafted`       |
+| `!token`             | Event token is absent                                            | `!is-wild`, `!cleaver-certain`                 |
+
 
 Known roles: `caller` (`held` is a legacy alias), `target`, `drop`, `last-craft`, `ground`, `mount`, `op`, `damage`, `input`.
 
@@ -327,98 +371,118 @@ Known roles: `caller` (`held` is a legacy alias), `target`, `drop`, `last-craft`
 - Collections are not allowed on `op` / `damage`.
 - Wildcards belong in `collections.json` `includes`, not in `when.tags`.
 
+
+
 ### Fact roles
 
-| Role | Content |
-| --- | --- |
-| `caller` | Actor tool / reserved identity (`@hand`, `@grid`, …) |
-| `target` | The thing this event is about |
-| `drop` | Current stack code during mutate-drops quantity/stack |
-| `last-craft` | Last craft-grid product code when remembered |
-| `ground` | Underfoot / water when distinct from target |
-| `mount` | Mount / boat entity |
-| `op` | Voxel operation (`place`, `remove`, `finish`, …) |
-| `damage` | Damage kinds (`frost`, `weather`) |
-| `input` | Craft-grid / feed ingredient codes |
-| tokens | Effort / deed / event tokens |
+
+| Role         | Content                                               |
+| ------------ | ----------------------------------------------------- |
+| `caller`     | Actor tool / reserved identity (`@hand`, `@grid`, …)  |
+| `target`     | The thing this event is about                         |
+| `drop`       | Current stack code during mutate-drops quantity/stack |
+| `last-craft` | Last craft-grid product code when remembered          |
+| `ground`     | Underfoot / water when distinct from target           |
+| `mount`      | Mount / boat entity                                   |
+| `op`         | Voxel operation (`place`, `remove`, `finish`, …)      |
+| `damage`     | Damage kinds (`frost`, `weather`)                     |
+| `input`      | Craft-grid / feed ingredient codes                    |
+| tokens       | Effort / deed / event tokens                          |
+
+
+
 
 ### Reserved callers
 
-| Identity | Meaning |
-| --- | --- |
-| `@hand` | Empty hand / default deed caller |
-| `@grid` | Craft-grid |
-| `@trough` | Trough feed |
-| `@crop` | Crop pilfer feed |
-| `@loose` | Loose-item feed |
-| `@mold` | Cast mold |
-| `@cementation` | Cementation furnace |
+
+| Identity       | Meaning                          |
+| -------------- | -------------------------------- |
+| `@hand`        | Empty hand / default deed caller |
+| `@grid`        | Craft-grid                       |
+| `@trough`      | Trough feed                      |
+| `@crop`        | Crop pilfer feed                 |
+| `@loose`       | Loose-item feed                  |
+
+
+
 
 ### Effort tokens
 
-| Token | Typical use |
-| --- | --- |
-| `interacting` | Held interact pulse (pan, watering, …) |
-| `mounted` | On a mount |
-| `riding` | Land mount |
-| `boating` | Boat |
-| `helmsman` | Boat captain |
-| `fishing` | Pole out |
-| `moving` | In motion |
-| `sprinting` / `swimming` / `sneaking` | Locomotion |
-| `temporal-drain` | Temporal stability drain |
+
+| Token                                 | Typical use                            |
+| ------------------------------------- | -------------------------------------- |
+| `interacting`                         | Held interact pulse (pan, watering, …) |
+| `mounted`                             | On a mount                             |
+| `riding`                              | Land mount                             |
+| `boating`                             | Boat                                   |
+| `helmsman`                            | Boat captain                           |
+| `fishing`                             | Pole out                               |
+| `moving`                              | In motion                              |
+| `sprinting` / `swimming` / `sneaking` | Locomotion                             |
+| `temporal-drain`                      | Temporal stability drain               |
+
 
 Custom bare tokens (no `:`) are allowed on effort facts.
 
 ### Deed tokens
 
-| Token | Meaning |
-| --- | --- |
-| `block-broken` | Block break |
-| `harvested` | Drops taken from a block that stays. The caller is the tool or `@hand`; the target is the block or the fish |
-| `killed` | A mob died. The caller is the weapon or the trap. `cleaver-certain` marks generation 3 or higher |
-| `mob-harvested` | A mob's harvestable inventory became drops. `cleaver-certain` marks generation 3 or higher |
-| `cleaver-certain` | Animal generation is 3 or higher |
-| `crafted` | Ingredients became products at a grid or station. The caller says which station; omit the caller to match every station. |
-| `voxel-work` | Novel voxel edit (clay-form / smith); one flat deed per voxel |
-| `grown` | Growth stage advanced (legacy alias `crop-grown`) |
-| `till-soil` | Soil → farmland |
-| `fertilizer-absorbed` | Fertilizer nutrient transfer |
-| `reinforced` | Block reinforced with the plumb and square |
-| `healed` | Healing item successfully applied (bandage / poultice) |
-| `saddle-break` / `saddle-tame` | Riding progress |
-| `fed-animal` | Animal ate (legacy alias `trough-eaten`) |
-| `milked` | Successful milking |
-| `friendly` | Friendliness score > 5 at emit |
-| `aged-up` | Juvenile became adult |
-| `gave-birth` | Birth completed |
-| `skep-propagate` | Populated hive swarmed into an empty skep |
-| `is-wild` | Plant has no planter and no player-place mark |
-| `pit-kiln` / `beehive-kiln` | Kiln caller identities. Both are members of the `kiln` collection |
-| `fire-pottery` / `barrel` / `fruit-press` | Process tokens |
-| `used-bait` | Bait consumed |
-| `block` | Craft-grid refund fact when the output is a block |
+
+| Token                                     | Meaning                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `block-broken`                            | Block break                                                                                                              |
+| `harvested`                               | Drops taken from a block that stays. The caller is the tool or `@hand`; the target is the block or the fish              |
+| `killed`                                  | A mob died. The caller is the weapon or the trap. `cleaver-certain` marks generation 3 or higher                         |
+| `mob-harvested`                           | A mob's harvestable inventory became drops. `cleaver-certain` marks generation 3 or higher                               |
+| `cleaver-certain`                         | Animal generation is 3 or higher                                                                                         |
+| `crafted`                                 | Ingredients became products at a grid or station. The caller says which station; omit the caller to match every station. |
+| `voxel-work`                              | Novel voxel edit (clay-form / smith); one flat deed per voxel                                                            |
+| `grown`                                   | Growth stage advanced (legacy alias `crop-grown`)                                                                        |
+| `till-soil`                               | Soil → farmland                                                                                                          |
+| `fertilizer-absorbed`                     | Fertilizer nutrient transfer                                                                                             |
+| `reinforced`                              | Block reinforced with the plumb and square                                                                               |
+| `healed`                                  | Healing item successfully applied (bandage / poultice)                                                                   |
+| `quenched`                                | Quench stats were applied. The target is the item                                                                        |
+| `tempered`                                | Temper stats were applied. The target is the item                                                                        |
+| `saddle-break` / `saddle-tame`            | Riding progress                                                                                                          |
+| `fed-animal`                              | Animal ate (legacy alias `trough-eaten`)                                                                                 |
+| `milked`                                  | Successful milking                                                                                                       |
+| `friendly`                                | Friendliness score > 5 at emit                                                                                           |
+| `aged-up`                                 | Juvenile became adult                                                                                                    |
+| `gave-birth`                              | Birth completed                                                                                                          |
+| `skep-propagate`                          | Populated hive swarmed into an empty skep                                                                                |
+| `is-wild`                                 | Plant has no planter and no player-place mark                                                                            |
+| `pit-kiln` / `beehive-kiln`               | Kiln caller identities. Both are members of the `kiln` collection                                                        |
+| `fire-pottery` / `barrel` / `fruit-press` | Process tokens                                                                                                           |
+| `used-bait`                               | Bait consumed                                                                                                            |
+| `block`                                   | Craft-grid refund fact when the output is a block                                                                        |
+
 
 Custom bare tokens are allowed. Tagless `prosequor:deed` / `prosequor:effort` rules warn at compile.
 
 ---
 
+
+
 ## Contracts
 
 A contract is the kind of value a phase folds. It is implied by the phase; it is not written in JSON.
 
-| Contract | Meaning |
-| --- | --- |
-| `number` | Scalar fold |
-| `bool` | 0/1 flag fold |
-| `stack` | Mutate one drop/output stack |
+
+| Contract | Meaning                                    |
+| -------- | ------------------------------------------ |
+| `number` | Scalar fold                                |
+| `bool`   | 0/1 flag fold                              |
+| `stack`  | Mutate one drop/output stack               |
 | `stacks` | Append / replace / filter a list of stacks |
-| `refund` | Ingredient refund fold |
-| *(none)* | Side-effect phase (e.g. bait restock) |
+| `refund` | Ingredient refund fold                     |
+| *(none)* | Side-effect phase (e.g. bait restock)      |
+
 
 Gates (`chance`, `has-unlock`) keep the outer phase’s contract.
 
 ---
+
+
 
 ## Hooks
 
@@ -426,31 +490,33 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 
 ### `prosequor:block-interaction`
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `mutate-drops` | `quantity` | number |
-| | `stack` | stack |
-| | `stacks` | stacks |
-| `mutate-process` | `quantity` | number |
-| | `stacks` | stacks |
-| `heat-structure-damage` | `skip` | number |
-| `interaction-speed` | `default` | number |
-| `plant-sapling` | `default` | number |
-| | `growth` | number |
-| `plant-bush-cutting` | `default` | number |
-| | `growth` | number |
-| `establish-cutting` | `default` | number |
-| `seek-bobber` | `default` | number |
-| `fertilize` | `default` | number |
-| `plant-crop` | `default` | number |
-| `field-work` | `size` | number |
-| `scythe-multibreak` | `quantity` | number |
-| `trough-fill` | `quantity` | number |
-| `spawn-bees-chance` | `default` | number |
-| `harvest-skep` | `allow-right-click-harvest` | bool |
-| | `right-click-harvest-break-chance` | number |
-| `harvest-bloomery` | `allow-right-click-harvest` | bool |
-| | `right-click-harvest-break-chance` | number |
+
+| Verb                    | Phase                              | Contract |
+| ----------------------- | ---------------------------------- | -------- |
+| `mutate-drops`          | `quantity`                         | number   |
+|                         | `stack`                            | stack    |
+|                         | `stacks`                           | stacks   |
+| `mutate-process`        | `quantity`                         | number   |
+|                         | `stacks`                           | stacks   |
+| `heat-structure-damage` | `skip`                             | number   |
+| `interaction-speed`     | `default`                          | number   |
+| `plant-sapling`         | `default`                          | number   |
+|                         | `growth`                           | number   |
+| `plant-bush-cutting`    | `default`                          | number   |
+|                         | `growth`                           | number   |
+| `establish-cutting`     | `default`                          | number   |
+| `seek-bobber`           | `default`                          | number   |
+| `fertilize`             | `default`                          | number   |
+| `plant-crop`            | `default`                          | number   |
+| `field-work`            | `size`                             | number   |
+| `scythe-multibreak`     | `quantity`                         | number   |
+| `trough-fill`           | `quantity`                         | number   |
+| `spawn-bees-chance`     | `default`                          | number   |
+| `harvest-skep`          | `allow-right-click-harvest`        | bool     |
+|                         | `right-click-harvest-break-chance` | number   |
+| `harvest-bloomery`      | `allow-right-click-harvest`        | bool     |
+|                         | `right-click-harvest-break-chance` | number   |
+
 
 `mutate-drops`: block break drops. Fact `target` = block; `caller` = tool; during per-stack loop `drop` = current stack. Token `felled` is present when that block is broken as part of felling a tree.
 
@@ -460,32 +526,34 @@ Bare ids normalize to `prosequor:`. Phases are per `(hook, verb)`.
 
 ### `prosequor:item-interaction`
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `mutate-drops` | `quantity` | number |
-| | `stack` | stack |
-| | `stacks` | stacks |
-| `interaction-speed` | `default` | number |
-| `block-damaged` | `amount` | number |
-| `item-damage` | `amount` | number |
-| `craft-damaged` | `amount` | number |
-| `consume-bait` | `restock` | *(none)* |
-| `repair` | `add-durability` | number |
-| `clay-form` | `assist-radius` | number |
-| | `auto-finish` | number |
-| | `place-conservation` | number |
-| `anvil-heavy-hit` | `slag-radius` | number |
-| | `assist-radius` | number |
-| | `move-count` | number |
-| `anvil-split` | `bits-refund` | number |
-| `anvil-strike` | `decay-shrink` | number |
-| `voxel-copy` | `default` | number |
-| `voxel-refill` | `default` | number |
-| `reinforce` | `strength` | number |
-| `tend` | `health` | number |
-| | `application-rate` | number |
-| `revive` | `health` | number |
-| | `duration` | number |
+
+| Verb                | Phase                | Contract |
+| ------------------- | -------------------- | -------- |
+| `mutate-drops`      | `quantity`           | number   |
+|                     | `stack`              | stack    |
+|                     | `stacks`             | stacks   |
+| `interaction-speed` | `default`            | number   |
+| `block-damaged`     | `amount`             | number   |
+| `item-damage`       | `amount`             | number   |
+| `craft-damaged`     | `amount`             | number   |
+| `consume-bait`      | `restock`            | *(none)* |
+| `repair`            | `add-durability`     | number   |
+| `clay-form`         | `assist-radius`      | number   |
+|                     | `auto-finish`        | number   |
+|                     | `place-conservation` | number   |
+| `anvil-heavy-hit`   | `slag-radius`        | number   |
+|                     | `assist-radius`      | number   |
+|                     | `move-count`         | number   |
+| `anvil-split`       | `bits-refund`        | number   |
+| `anvil-strike`      | `decay-shrink`       | number   |
+| `voxel-copy`        | `default`            | number   |
+| `voxel-refill`      | `default`            | number   |
+| `reinforce`         | `strength`           | number   |
+| `tend`              | `health`             | number   |
+|                     | `application-rate`   | number   |
+| `revive`            | `health`             | number   |
+|                     | `duration`           | number   |
+
 
 Durability: `caller` = damaged collectible; `target` = broken block when known. `block-damaged` = while breaking; `item-damage` = other loss; `craft-damaged` = craft-grid tool ingredient.
 
@@ -499,18 +567,20 @@ Durability: `caller` = damaged collectible; `target` = broken block when known. 
 
 ### `prosequor:crafting-interaction`
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `mutate-output` | `quantity` | number |
-| | `output` | stack |
-| | `attributes` | stack |
-| | `refund` | refund |
-| `apply-quality` | `quality-base` | number |
-| | `quality-window` | number |
-| | `quality-rolls` | number |
-| | `quality-bonus` | number |
-| | `attributes` | stack |
-| `recipe-available` | `default` | bool |
+
+| Verb               | Phase            | Contract |
+| ------------------ | ---------------- | -------- |
+| `mutate-output`    | `quantity`       | number   |
+|                    | `output`         | stack    |
+|                    | `attributes`     | stack    |
+|                    | `refund`         | refund   |
+| `apply-quality`    | `quality-base`   | number   |
+|                    | `quality-window` | number   |
+|                    | `quality-rolls`  | number   |
+|                    | `quality-bonus`  | number   |
+|                    | `attributes`     | stack    |
+| `recipe-available` | `default`        | bool     |
+
 
 Fact `target` = output code. `refund` runs after ingredient consume; gate with `input:<collection>`. When the output is a block, the refund fact also carries token `block`.
 
@@ -522,31 +592,33 @@ Fact `target` = output code. `refund` runs after ingredient consume; gate with `
 
 Fact `target` = animal / mount / boat code.
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `mounted` | `move-speed` | number |
-| | `turn-speed` | number |
-| | `saddle-break` | number |
-| | `hunger-rate` | number |
-| | `fall-damage` | number |
-| | `melee-damage` | number |
-| | `ratline-stamina` | number |
-| | `can-ride` | bool |
-| `animal-flee` | `chance` | number |
-| | `multiplier` | number |
-| `animal-seek` | `chance` | number |
-| | `multiplier` | number |
-| `animal-melee` | `chance` | number |
-| | `multiplier` | number |
-| `animal-brood` | `chance` | number |
-| | `multiplier` | number |
-| `animal-milk` | `chance` | number |
-| | `multiplier` | number |
-| `animal-pet` | `default` | bool |
-| `trough-eaten` | `chance` | number |
-| `mutate-drops` | `quantity` | number |
-| | `stack` | stack |
-| | `stacks` | stacks |
+
+| Verb           | Phase             | Contract |
+| -------------- | ----------------- | -------- |
+| `mounted`      | `move-speed`      | number   |
+|                | `turn-speed`      | number   |
+|                | `saddle-break`    | number   |
+|                | `hunger-rate`     | number   |
+|                | `fall-damage`     | number   |
+|                | `melee-damage`    | number   |
+|                | `ratline-stamina` | number   |
+|                | `can-ride`        | bool     |
+| `animal-flee`  | `chance`          | number   |
+|                | `multiplier`      | number   |
+| `animal-seek`  | `chance`          | number   |
+|                | `multiplier`      | number   |
+| `animal-melee` | `chance`          | number   |
+|                | `multiplier`      | number   |
+| `animal-brood` | `chance`          | number   |
+|                | `multiplier`      | number   |
+| `animal-milk`  | `chance`          | number   |
+|                | `multiplier`      | number   |
+| `animal-pet`   | `default`         | bool     |
+| `trough-eaten` | `chance`          | number   |
+| `mutate-drops` | `quantity`        | number   |
+|                | `stack`           | stack    |
+|                | `stacks`          | stacks   |
+
 
 `mounted`: filter with `mount:<raft>` / `sailboat`; boats also use `ground` water and tokens `moving` / `helmsman`. Entity `mutate-drops` / `stack` supports `chance` and `upgrade-hide-size`.
 
@@ -554,21 +626,23 @@ Fact `target` = animal / mount / boat code.
 
 ### `prosequor:player-interaction`
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `ranged-damage` / `ranged-distance` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `walk-speed` / `hunger-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` / `mechanicals-damage` | `default` | number |
-| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` / `crit-damage` | `default` | number |
-| `unaware-damage` | `amount` | number |
-| | `threshold` | number |
-| `track-mark` | `range` | number |
-| | `focus` | number |
-| | `angle` | number |
-| `focus-shot` | `hold` | number |
-| | `amount` | number |
-| `cat-eyes` | `default` | number |
-| `on-damage` | `amount` | number |
-| | `last-stand` | number |
-| `bleed-out` | `rate` | number |
+
+| Verb                                                                                                                                                                                                                                                                                                                                                                                | Phase        | Contract |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | -------- |
+| `health` / `satiety` / `hunger-delay` / `armor-walk` / `melee-damage` / `basic-slots` / `ranged-speed` / `ranged-acc` / `ranged-damage` / `ranged-distance` / `fall-damage-factor` / `fall-damage-threshold` / `temporal-recover-rate` / `temporal-drain-rate` / `walk-speed` / `hunger-rate` / `animal-threat` / `crit-chance` / `whole-vessel-loot-chance` / `mechanicals-damage` | `default`    | number   |
+| `sprint-speed` / `swim-speed` / `sneak-speed` / `animal-sense-range` / `animal-threat-sneak` / `arrow-break` / `crit-damage`                                                                                                                                                                                                                                                        | `default`    | number   |
+| `unaware-damage`                                                                                                                                                                                                                                                                                                                                                                    | `amount`     | number   |
+|                                                                                                                                                                                                                                                                                                                                                                                     | `threshold`  | number   |
+| `track-mark`                                                                                                                                                                                                                                                                                                                                                                        | `range`      | number   |
+|                                                                                                                                                                                                                                                                                                                                                                                     | `focus`      | number   |
+|                                                                                                                                                                                                                                                                                                                                                                                     | `angle`      | number   |
+| `focus-shot`                                                                                                                                                                                                                                                                                                                                                                        | `hold`       | number   |
+|                                                                                                                                                                                                                                                                                                                                                                                     | `amount`     | number   |
+| `cat-eyes`                                                                                                                                                                                                                                                                                                                                                                          | `default`    | number   |
+| `on-damage`                                                                                                                                                                                                                                                                                                                                                                         | `amount`     | number   |
+|                                                                                                                                                                                                                                                                                                                                                                                     | `last-stand` | number   |
+| `bleed-out`                                                                                                                                                                                                                                                                                                                                                                         | `rate`       | number   |
+
 
 `animal-threat`: player threat-emission percent for the animal alert meter (pipeline percent ÷ 100; inconspicuity maps score 0→18 to 180→80). Does not write the vanilla `animalSeekingRange` entity stat. Passive prey (ungated flee from the player, and no ungated player seek or melee) flee for as long as the meter is committed; vanilla player-flee on those animals does not run. Creatures that hunt the player keep vanilla AI.
 
@@ -590,14 +664,18 @@ Fact `target` = animal / mount / boat code.
 
 ### `prosequor:progress`
 
-| Verb | Phase | Contract |
-| --- | --- | --- |
-| `skill-xp` | `amount` | number |
-| `skill-bucket` | `cap` | number |
+
+| Verb           | Phase    | Contract |
+| -------------- | -------- | -------- |
+| `skill-xp`     | `amount` | number   |
+| `skill-bucket` | `cap`    | number   |
+
 
 `skill-xp`: after an xpRule wins, before commit. Own-skill only.
 
 ---
+
+
 
 ## Actions
 
@@ -611,15 +689,19 @@ Same action id can bind to several hook+verb+phases. Nested `chance` / `has-unlo
 
 Used by `prosequor:number` and nested chance/freshness/attribute operands.
 
-| Param | |
-| --- | --- |
-| `op` | `add` \| `scale` \| `set` |
-| Operand | literal `value` **or** skill-scaled `base` / `perSkillLevel` / `cap` (optional `skill`) |
-| `ofBase` | add only: multiply addend by frozen context base |
+
+| Param    |                                                                                         |
+| -------- | --------------------------------------------------------------------------------------- |
+| `op`     | `add` | `scale` | `set`                                                                 |
+| Operand  | literal `value` **or** skill-scaled `base` / `perSkillLevel` / `cap` (optional `skill`) |
+| `ofBase` | add only: multiply addend by frozen context base                                        |
+
 
 Skill-scaled operand: `min(cap, base + perSkillLevel × skillLevel)`. Same units as literal `value`. `cap: 0` = uncapped. Scale: `value * (1 + amount)`.
 
 ### Contract: number
+
+
 
 #### `prosequor:number`
 
@@ -633,19 +715,23 @@ NumberSpec. Surface: block / plant-crop / `default`.
 
 #### `prosequor:add-mapped-number`
 
-| Param | |
-| --- | --- |
-| `from` | Two-number score span `[low, high]` |
-| `to` | Value list (≥ 2 numbers) across that span |
-| `curve` | Optional `linear` (default) or `ease` |
-| `op` | `add` (default) or `multiply` (`value * mapped`) |
-| `round` | Optional `ceil` \| `floor` \| `round`; omit for fractional |
+
+| Param   |                                                          |
+| ------- | -------------------------------------------------------- |
+| `from`  | Two-number score span `[low, high]`                      |
+| `to`    | Value list (≥ 2 numbers) across that span                |
+| `curve` | Optional `linear` (default) or `ease`                    |
+| `op`    | `add` (default) or `multiply` (`value * mapped`)         |
+| `round` | Optional `ceil` | `floor` | `round`; omit for fractional |
+
 
 `linear` spaces `to` evenly across `from` (value passes through every entry). `ease` repeats the first and last `to` values, then evaluates one Bernstein polynomial (two entries → smoothstep ease-in/out). A score below `from[0]` maps to `0`; a score above `from[1]` maps to the last `to` entry.
 
 Surfaces: player-interaction mapped verbs/`default`; cat-eyes/`default`; on-damage `amount` / `last-stand`; block-interaction interaction-speed/`default`.
 
 ### Contract: bool / none / refund
+
+
 
 #### `prosequor:allow-mounted-ride-without-saddle`
 
@@ -673,15 +759,19 @@ Optional `amount` (≥1; default 1). Surface: consume-bait/`restock`.
 
 #### `prosequor:refund-ingredients`
 
-| Param | |
-| --- | --- |
-| `match` | Collection id |
-| `amount` | ≥ 0 |
-| `retain` | ≥ 0 |
+
+| Param    |               |
+| -------- | ------------- |
+| `match`  | Collection id |
+| `amount` | ≥ 0           |
+| `retain` | ≥ 0           |
+
 
 Surface: mutate-output/`refund`.
 
 ### Contract: stack
+
+
 
 #### `prosequor:increase-freshness`
 
@@ -711,26 +801,32 @@ Known craft attribute keys: `durability`, `warmth`, `cooling`, `protection`, `fr
 
 #### `prosequor:quality`
 
-| Param | |
-| --- | --- |
-| `key` | Attribute key |
-| `op` | Quality op |
-| `table` | Value table |
-| `affixes` / `bonus` / `affixRange` | Optional |
+
+| Param                              |               |
+| ---------------------------------- | ------------- |
+| `key`                              | Attribute key |
+| `op`                               | Quality op    |
+| `table`                            | Value table   |
+| `affixes` / `bonus` / `affixRange` | Optional      |
+
 
 Surface: apply-quality/`attributes`.
 
 #### `prosequor:quality-rank`
 
-| Param | |
-| --- | --- |
-| `key` | `qualityRank` or `rank` |
-| `table` | Rank table |
-| `bonus` | Optional |
+
+| Param   |                         |
+| ------- | ----------------------- |
+| `key`   | `qualityRank` or `rank` |
+| `table` | Rank table              |
+| `bonus` | Optional                |
+
 
 Surface: apply-quality/`attributes`.
 
 ### Contract: stacks
+
+
 
 #### `prosequor:append-from-drop-table`
 
@@ -738,7 +834,7 @@ Optional `table` (pool id); optional `rolls` / `quantity` int-ranges. Surfaces: 
 
 #### `prosequor:replace-from-drop-table`
 
-Same as append + optional `rule` (`first` \| `last` \| `random`, default `first`).
+Same as append + optional `rule` (`first`  `last`  `random`, default `first`).
 
 #### `prosequor:replace-with-variant`
 
@@ -758,10 +854,12 @@ Preserve the outer phase’s contract. Nested `onSuccess` / `onFailure` must bin
 
 #### `prosequor:chance`
 
-| Param | |
-| --- | --- |
-| `chance` | NumberSpec add-only (unit probability), or `{ "percent": N }` / bare 0–100 |
-| `onSuccess` / `onFailure` | Nested `{ "action", "params" }` |
+
+| Param                     |                                                                            |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `chance`                  | NumberSpec add-only (unit probability), or `{ "percent": N }` / bare 0–100 |
+| `onSuccess` / `onFailure` | Nested `{ "action", "params" }`                                            |
+
 
 Surfaces: mutate-drops quantity/stack/stacks (block + item); durability `amount`; consume-bait/`restock`; mutate-process/`stacks`; mutate-output/`refund`; animal-pet/`default`.
 
@@ -775,29 +873,37 @@ Surfaces: mutate-drops quantity/stack/stacks (block + item); durability `amount`
 }
 ```
 
+
+
 #### `prosequor:has-unlock`
 
-| Param | Surfaces |
-| --- | --- |
+
+| Param                                                           | Surfaces                                 |
+| --------------------------------------------------------------- | ---------------------------------------- |
 | `unlock` (node id), optional `skill`, `onSuccess` / `onFailure` | block mutate-drops quantity/stack/stacks |
 
+
 ---
+
+
 
 ## XP rules
 
 Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enclosing skill (or contribution `skill`).
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Rule id (merge key) |
-| `amount` | Discrete grant: number, or number array (measure table) |
-| `rate` | XP per game-second while matched |
-| `pay` | Amount channel only (omit → `flat`) |
-| `include` | Codes / `<collections>` kept for quantity (outputs) or ingredients (inputs); requires `pay: quantity` or `pay: ingredients` |
-| `exclude` | Codes / `<collections>` omitted from quantity; requires `pay: quantity` |
-| `payee` | Who is paid (amount only; omit → `user`) |
-| `when` | Match filter |
-| `priority` | Tie-break after specificity (rule root, not under `when`) |
+
+| Field      | Meaning                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `id`       | Rule id (merge key)                                                                                                         |
+| `amount`   | Discrete grant: number, or number array (measure table)                                                                     |
+| `rate`     | XP per game-second while matched                                                                                            |
+| `pay`      | Amount channel only (omit → `flat`)                                                                                         |
+| `include`  | Codes / `<collections>` kept for quantity (outputs) or ingredients (inputs); requires `pay: quantity` or `pay: ingredients` |
+| `exclude`  | Codes / `<collections>` omitted from quantity; requires `pay: quantity`                                                     |
+| `payee`    | Who is paid (amount only; omit → `user`)                                                                                    |
+| `when`     | Match filter                                                                                                                |
+| `priority` | Tie-break after specificity (rule root, not under `when`)                                                                   |
+
 
 ```json
 {
@@ -820,46 +926,58 @@ Set exactly one of `amount` or `rate`. No `skill` field — ownership is the enc
 
 ### XP `when`
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `activity` | yes | Activity id (bare → `game:`) |
-| `tags` | no | Same criteria language as ability `when.tags` |
+
+| Field      | Required | Meaning                                       |
+| ---------- | -------- | --------------------------------------------- |
+| `activity` | yes      | Activity id (bare → `game:`)                  |
+| `tags`     | no       | Same criteria language as ability `when.tags` |
+
 
 All set conditions AND. Among matching rules for a skill, one winner: identity criteria beat collections; more criteria beat fewer; then `priority`; then source order.
 
 ### Activities
 
-| Activity | Kind | Meaning |
-| --- | --- | --- |
-| `prosequor:effort` | rate | Continuous effort samples |
-| `prosequor:deed` | amount | Discrete completion |
+
+| Activity                    | Kind   | Meaning                                     |
+| --------------------------- | ------ | ------------------------------------------- |
+| `prosequor:effort`          | rate   | Continuous effort samples                   |
+| `prosequor:deed`            | amount | Discrete completion                         |
 | `prosequor:collect-xp-item` | amount | Stamped collectible flush (`pay: quantity`) |
-| `game:…` / `<modid>:…` | either | Other registered activities |
+| `game:…` / `<modid>:…`      | either | Other registered activities                 |
+
+
+
 
 ### `pay` / `payee` / `include` / `exclude`
 
-| `pay` | Effect |
-| --- | --- |
-| `flat` | Pay `amount` once (default) |
-| `resistance` | Lerp `amount` table against a float measure (block resistance, animal weight, or an explicit 0–1 emit range) |
-| `effort` | Alias for `resistance` (same channel) |
-| `voxels` | Lerp `amount` table against voxels-per-unit of the recipe stamped on the subject. The span is that recipe's catalog: clayforming, smithing, or knapping |
-| `quantity` | Multiply by produced units on the emit (drops, crafts, contents, …). Not used for clay-form / smith voxel pulses — those are flat per emit |
-| `ingredients` | Lerp `amount` table against recipe ingredient units (1–40) |
-| `lifetime` | Lerp `amount` table against crop growth days (catalog min–max), then divide by `GrowthStages` |
 
-| `payee` | Who receives the grant |
-| --- | --- |
-| `user` | Emitting / acting player (default) |
-| `maker` | `makerUid` on the emit |
-| `contributor` | `selectedContributorUid` on the emit |
+| `pay`         | Effect                                                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flat`        | Pay `amount` once (default)                                                                                                                             |
+| `resistance`  | Lerp `amount` table against a float measure (block resistance, animal weight, or an explicit 0–1 emit range)                                            |
+| `effort`      | Alias for `resistance` (same channel)                                                                                                                   |
+| `voxels`      | Lerp `amount` table against voxels-per-unit of the recipe stamped on the subject. The span is that recipe's catalog: clayforming, smithing, or knapping |
+| `quantity`    | Multiply by produced units on the emit (drops, crafts, contents, …). Not used for clay-form / smith voxel pulses — those are flat per emit              |
+| `ingredients` | Lerp `amount` table against recipe ingredient units (1–40)                                                                                              |
+| `lifetime`    | Lerp `amount` table against crop growth days (catalog min–max), then divide by `GrowthStages`                                                           |
+
+
+
+| `payee`        | Who receives the grant                  |
+| -------------- | --------------------------------------- |
+| `user`         | Emitting / acting player (default)      |
+| `maker`        | `makerUid` on the emit                  |
+| `contributor`  | `selectedContributorUid` on the emit    |
 | `contributors` | Weighted `contributors` bag on the emit |
+
 
 `include` keeps only matching codes / `<collections>` when summing quantity (output units) or ingredients (input units). `exclude` then omits matching codes from quantity. `when.tags` still match the deed subject and are not used for these list filters.
 
 `pay`, `payee`, `include`, and `exclude` are invalid on rate rules. `include` requires `pay: quantity` or `pay: ingredients`. `exclude` requires `pay: quantity`.
 
 ---
+
+
 
 ## Collections
 
@@ -878,17 +996,21 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 ]
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Collection key (used as `<id>` in `when.tags`) |
-| `dependsOn` | Mod gates: `{ "modid", "invert"? }[]`. Unmet rows are skipped |
-| `includes` | Patterns / codes expanded against all blocks and items |
-| `excludes` | Other collection ids subtracted after includes, before unions |
-| `unions` | Other collection ids copied into this key (multi-pass, after excludes) |
+
+| Field       | Meaning                                                                |
+| ----------- | ---------------------------------------------------------------------- |
+| `id`        | Collection key (used as `<id>` in `when.tags`)                         |
+| `dependsOn` | Mod gates: `{ "modid", "invert"? }[]`. Unmet rows are skipped          |
+| `includes`  | Patterns / codes expanded against all blocks and items                 |
+| `excludes`  | Other collection ids subtracted after includes, before unions          |
+| `unions`    | Other collection ids copied into this key (multi-pass, after excludes) |
+
 
 Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `natural-stone`, `crafted-stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `natural-stone` is loose stone items (path `stone-*`) and stone-material blocks that drop those items or are prospectable rock. `crafted-stone` is every other stone-material block; `daub-block` is excluded. `stone` is the union of `natural-stone` and `crafted-stone`. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
+
+
 
 ## Pools
 
@@ -906,15 +1028,19 @@ Path: `pools.json` or `pools/*.json` (JSON array). Domain of `id` must match the
 ]
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Namespaced pool id (also a collection key) |
-| `entries[].code` | Item code |
-| `entries[].weight` | Pick weight (default `1`) |
+
+| Field              | Meaning                                    |
+| ------------------ | ------------------------------------------ |
+| `id`               | Namespaced pool id (also a collection key) |
+| `entries[].code`   | Item code                                  |
+| `entries[].weight` | Pick weight (default `1`)                  |
+
 
 Used as `params.table` for `append-from-drop-table` / `replace-from-drop-table`. Omit `table` to use the ambient drop table.
 
 ---
+
+
 
 ## Affix lists
 
@@ -931,16 +1057,20 @@ Path: `affixes.json` or `affixes/*.json` (JSON array). Domain of `id` must match
 ]
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Namespaced list id |
-| `entries[].code` | Stamp dedupe key |
-| `entries[].lang` | Lang key |
+
+| Field             | Meaning                 |
+| ----------------- | ----------------------- |
+| `id`              | Namespaced list id      |
+| `entries[].code`  | Stamp dedupe key        |
+| `entries[].lang`  | Lang key                |
 | `entries[].color` | Optional richtext color |
+
 
 `prosequor:add-affix` references with `{ "list": "prosequor:durability", "item": 0 }` or `{ "list": "…", "item": "sturdy" }`.
 
 ---
+
+
 
 ## Attribute stats
 
@@ -966,18 +1096,22 @@ Path: `stats/<id>.json` (one object per file). Same effect envelope as skills, g
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Attribute id (the file defines this attribute; last-win across mods) |
-| `nameLang` | Display name lang key (default `attribute-{id}`) |
-| `descriptionLang` | Tooltip flavor quote lang key (default `attribute-flavor-{id}`) |
-| `icon` | Texture path (default `textures/icons/{id}-attribute.svg`; bare paths resolve under `prosequor:`) |
-| `rules[].id` | Optional rule id |
-| `rules[].minScore` | Inactive below this score (default `0`) |
-| `rules[].maxScore` | Optional inclusive upper gate |
-| `rules[]` effect fields | Same as skill effects (`hook` / `verb` / `phase` / `action` / `when` / `params` / `priority`) |
+
+| Field                   | Meaning                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `id`                    | Attribute id (the file defines this attribute; last-win across mods)                              |
+| `nameLang`              | Display name lang key (default `attribute-{id}`)                                                  |
+| `descriptionLang`       | Tooltip flavor quote lang key (default `attribute-flavor-{id}`)                                   |
+| `icon`                  | Texture path (default `textures/icons/{id}-attribute.svg`; bare paths resolve under `prosequor:`) |
+| `rules[].id`            | Optional rule id                                                                                  |
+| `rules[].minScore`      | Inactive below this score (default `0`)                                                           |
+| `rules[].maxScore`      | Optional inclusive upper gate                                                                     |
+| `rules[]` effect fields | Same as skill effects (`hook` / `verb` / `phase` / `action` / `when` / `params` / `priority`)     |
+
 
 ---
+
+
 
 ## Trait attributes
 
@@ -994,18 +1128,22 @@ baseline without wiping growth.
 ]
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `code` | Vanilla trait code |
-| `attributes` | Map of attribute id → score delta. Empty `{}` = flavor / crafting gate only |
-| `retainTrait` | If `true`, keep the trait on the class and clear only its vanilla `Entity.Stats` bag |
-| `skills` | Optional string array of skill ids added to a class that has this trait. Unknown ids are skipped with a warning. Ids already in the class base are ignored |
+
+| Field         | Meaning                                                                                                                                                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`        | Vanilla trait code                                                                                                                                         |
+| `attributes`  | Map of attribute id → score delta. Empty `{}` = flavor / crafting gate only                                                                                |
+| `retainTrait` | If `true`, keep the trait on the class and clear only its vanilla `Entity.Stats` bag                                                                       |
+| `skills`      | Optional string array of skill ids added to a class that has this trait. Unknown ids are skipped with a warning. Ids already in the class base are ignored |
+
 
 Valid attribute keys: any loaded stat id (`config/prosequor/stats/`). Last-win by `code`.
 
-Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set. A character class [`prosequor.skills`](#character-classes) list is unioned the same way.
+Every character class starts with every non-`optional` skill. Trait `skills` entries that resolve to registered skills are unioned onto that class set. A character class `[prosequor.skills](#character-classes)` list is unioned the same way.
 
 ---
+
+
 
 ## Character classes
 
@@ -1022,16 +1160,20 @@ On each object in `config/characterclasses.json` (any domain), optional object `
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `attributes` | Attribute id → absolute starting score. Omitted ids are `10`. Empty `{}` or a missing `attributes` key is all `10`s. Unknown ids are skipped with a warning |
-| `skills` | Skill ids added to this class's skill set. Unknown ids are skipped with a warning. Ids already in the non-optional base are ignored |
-| `traits` | Trait codes added to this class. A leading `-` removes that trait (`"-claustrophobic"`). Applied in order, before trait-attribute deltas and before mapped traits are taken off the class. Adding a code already on the class does nothing. Removing a code that is not on the class does nothing. Unknown trait codes are skipped with a warning |
-| `unlocks` | Starting nodes, grouped by skill. Each node is owned at tier 1 when the character is created. Does not spend unlock points. Unknown skills, skills outside the class set, and unknown nodes are skipped with a warning. Extra keys on an unlock object are ignored |
+
+| Field        | Meaning                                                                                                                                                                                                                                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attributes` | Attribute id → absolute starting score. Omitted ids are `10`. Empty `{}` or a missing `attributes` key is all `10`s. Unknown ids are skipped with a warning                                                                                                                                                                                       |
+| `skills`     | Skill ids added to this class's skill set. Unknown ids are skipped with a warning. Ids already in the non-optional base are ignored                                                                                                                                                                                                               |
+| `traits`     | Trait codes added to this class. A leading `-` removes that trait (`"-claustrophobic"`). Applied in order, before trait-attribute deltas and before mapped traits are taken off the class. Adding a code already on the class does nothing. Removing a code that is not on the class does nothing. Unknown trait codes are skipped with a warning |
+| `unlocks`    | Starting nodes, grouped by skill. Each node is owned at tier 1 when the character is created. Does not spend unlock points. Unknown skills, skills outside the class set, and unknown nodes are skipped with a warning. Extra keys on an unlock object are ignored                                                                                |
+
 
 Trait-attribute deltas are added to these scores afterward. Each resulting score is clamped to 0–18.
 
 ---
+
+
 
 ## Progression
 
@@ -1054,21 +1196,27 @@ On a player list, an omitted end uses `maxPlayerLevel` from the same file. When 
 
 A listed level grants one point, or one specialization slot, when that level is reached. A new character is already player level 1, so player level 1 in `skillPointsPerPlayerLevel` does not grant at creation.
 
-| Field | Meaning |
-| --- | --- |
-| `maxPlayerLevel` | Player level cap. Whole number ≥ 1. Default 50 |
-| `skillPointsPerPlayerLevel` | Player levels that grant one skill point |
-| `skillPointsPerSkillLevel` | Skill levels that grant one skill point. Hobbies do not use this list |
-| `specializationLevels` | Player levels that grant one specialization slot |
+
+| Field                       | Meaning                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `maxPlayerLevel`            | Player level cap. Whole number ≥ 1. Default 50                        |
+| `skillPointsPerPlayerLevel` | Player levels that grant one skill point                              |
+| `skillPointsPerSkillLevel`  | Skill levels that grant one skill point. Hobbies do not use this list |
+| `specializationLevels`      | Player levels that grant one specialization slot                      |
+
+
+
 
 ### Presets
 
 Path: `presets/<name>.json`. One object. `id` is the preset id. Other keys are the same as `progression.json`, plus `xpGain`. Only keys that are present replace the baseline. Same id: last asset wins, then a file in `ModConfig/prosequor/presets/` wins over assets.
 
-| Field | Meaning |
-| --- | --- |
-| `id` | Preset id. If omitted, the file name is the id |
+
+| Field    | Meaning                                                                                                                                                                                                                                                    |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`     | Preset id. If omitted, the file name is the id                                                                                                                                                                                                             |
 | `xpGain` | Number ≥ 0. Multiplies skill XP earned from play, and multiplies each skill's saturation bucket capacity and idle drain rate by the same amount. Idle drain does not drop below 0.01 fill per game second. Default 1. Admin grant modes are not multiplied |
+
 
 Shipped ids: `prosequor:multiplayer` (no changes), `prosequor:singleplayer` (`xpGain` 2, `skillPointsPerSkillLevel` `"10..100^10"`), `prosequor:mmo` (`specializationLevels` `"20,40"`).
 
@@ -1088,17 +1236,21 @@ File: `ModConfig/prosequor/server.json`. Every progression key is stored.
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `preset` | Preset id. Missing key is read as `prosequor:multiplayer` |
-| other progression keys | The value in effect. A missing key is filled from the selected preset when the file is loaded |
-| `appliedPreset` | Preset id the stored values were last aligned to. Set to the current `preset` when the file is loaded |
+
+| Field                  | Meaning                                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `preset`               | Preset id. Missing key is read as `prosequor:multiplayer`                                             |
+| other progression keys | The value in effect. A missing key is filled from the selected preset when the file is loaded         |
+| `appliedPreset`        | Preset id the stored values were last aligned to. Set to the current `preset` when the file is loaded |
+
 
 When `preset` and `appliedPreset` differ, a stored value that still matches `appliedPreset` is replaced with the new preset's value. A stored value that differs is kept. When `appliedPreset` is missing, values already in the file are treated as written for the current `preset`, and missing keys are filled from that preset.
 
 An unknown preset id keeps the id and uses the baseline table. Keys in the file still apply.
 
 ---
+
+
 
 ## Level-ups
 
@@ -1119,20 +1271,26 @@ Skill points and specialization slots are [progression](#progression) fields. `p
 }
 ```
 
-| Field | Meaning |
-| --- | --- |
-| `rules[].id` | Rule id (merge / disable key) |
-| `rules[].every` | Fire when player level `L % N == 0`. XOR with `levels` |
-| `rules[].levels` | Exact player levels. XOR with `every` |
-| `rules[].action` | Grant action |
-| `rules[].params` | Action params |
-| `rules[].priority` | Order |
 
-| Action | Params |
-| --- | --- |
+| Field              | Meaning                                                |
+| ------------------ | ------------------------------------------------------ |
+| `rules[].id`       | Rule id (merge / disable key)                          |
+| `rules[].every`    | Fire when player level `L % N == 0`. XOR with `levels` |
+| `rules[].levels`   | Exact player levels. XOR with `every`                  |
+| `rules[].action`   | Grant action                                           |
+| `rules[].params`   | Action params                                          |
+| `rules[].priority` | Order                                                  |
+
+
+
+| Action                     | Params                                                                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `prosequor:earn-attribute` | `key`: loaded attribute id → add `value` to growth (effective = class/trait baseline + growth, cap 18); or `key: "buckets"` → soft-reset growth `value` times. Optional `value` (default 1) |
 
+
 ---
+
+
 
 ## Contributions
 
@@ -1143,14 +1301,16 @@ Path: `contributions/<anything>.json` (JSON **array**). Merged in asset order (d
 
 Contributed node ids must be `<yourmodid>:localId`. Prerequisites may reference existing nodes by plain id.
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `skill` | yes* | Target skill id (*optional if the entry is only `levelUps`) |
-| `dependsOn` | no | `{ "modid", "invert"? }[]` — skip whole entry if unmet |
-| `disable` | no | `"all"` to remove the entire skill, or an array of node ids to strip first |
-| `xpRules` | no | XP rules to merge (last-win by rule `id`) |
-| `nodes` | no | Nodes to graft (same shape as skill nodes + optional `replaces`) |
-| `levelUps` | no | `{ "disable"?, "rules"? }` grafts onto level-up rules |
+
+| Field       | Required | Meaning                                                                    |
+| ----------- | -------- | -------------------------------------------------------------------------- |
+| `skill`     | yes*     | Target skill id (*optional if the entry is only `levelUps`)                |
+| `dependsOn` | no       | `{ "modid", "invert"? }[]` — skip whole entry if unmet                     |
+| `disable`   | no       | `"all"` to remove the entire skill, or an array of node ids to strip first |
+| `xpRules`   | no       | XP rules to merge (last-win by rule `id`)                                  |
+| `nodes`     | no       | Nodes to graft (same shape as skill nodes + optional `replaces`)           |
+| `levelUps`  | no       | `{ "disable"?, "rules"? }` grafts onto level-up rules                      |
+
 
 Processing order per entry: `dependsOn` → `disable` → `xpRules` → each `nodes` entry (`replaces` then append). `"disable": "all"` stops further skill ops for that entry.
 
@@ -1205,6 +1365,8 @@ Omit `disable` and `replaces` to append nodes via `requires`. Unmet prerequisite
 
 ---
 
+
+
 ## Options
 
 Path: `options.json` or `options/*.json`. One object per file.
@@ -1213,9 +1375,11 @@ Path: `options.json` or `options/*.json`. One object per file.
 { "traitsTab": true }
 ```
 
-| Field | Meaning |
-| --- | --- |
+
+| Field       | Meaning                                                                                                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `traitsTab` | `true` leaves the vanilla character traits tab visible. Any applied file that sets `true` wins. Omitted or `false` is not a request and does not cancel another file's `true` |
-| `dependsOn` | `{ "modid", "invert"? }[]` — skip the whole file if unmet. A skipped file is not a request |
+| `dependsOn` | `{ "modid", "invert"? }[]` — skip the whole file if unmet. A skipped file is not a request                                                                                    |
+
 
 `ModConfig/prosequor/client.json` key `ShowVanillaTraitsTab` (`true` / `false`, default `false`) also leaves that tab visible. The tab stays visible when the player setting is `true` or any applied options file sets `traitsTab` to `true`. Otherwise the tab button is hidden. Prosequor's Status tab lists traits only while the vanilla traits tab is hidden.
