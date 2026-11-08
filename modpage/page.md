@@ -1,11 +1,7 @@
 ::: lead
-Prosequor adds skills, attributes, and features to the things you already do in Vintage Story.  It is built to feel like a natural extension of the vanilla game: you farm, forge, explore, hunt, and build as usual, only now your character also develops from that work.  It is designed for long-running multiplayer worlds but works in singleplayer too.
-:::
-
-::: notice
 ![Tested with Atlas](https://raw.githubusercontent.com/Pixnop/Atlas/main/docs/assets/badges/tested-with-atlas-seal-sepia.png)
 
-**This is a release candidate.** It is feature complete and should be stable, but balance and compatibility issues are still possible. It can be added to or removed from an in-progress game; see [Removing Prosequor](#removing-prosequor) for caveats.
+Prosequor adds skills, attributes, and features to the things you already do in Vintage Story.  It is built to feel like a natural extension of the vanilla game: you farm, forge, explore, hunt, and build as usual, only now your character also develops from that work.  It is designed for long-running multiplayer worlds but works in singleplayer too.
 :::
 
 ## What changes when I play?

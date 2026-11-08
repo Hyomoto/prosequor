@@ -35,28 +35,39 @@ IMG_P_RE = re.compile(
 )
 
 
-def render_notice(body: str) -> str:
-    """A leading image becomes a seal beside the copy, vertically centered."""
-    html = md_fragment(body).strip()
-    match = IMG_P_RE.match(html)
-    if not match:
-        return f'<div class="notice">\n{unwrap_single_p(html)}\n</div>'
-    img = match.group(1)
+def seal_img(img: str) -> str:
     if re.search(r"\bclass=", img, re.IGNORECASE):
-        img = re.sub(
+        return re.sub(
             r"\bclass=(['\"])",
             r"class=\1atlas-seal ",
             img,
             count=1,
             flags=re.IGNORECASE,
         )
-    else:
-        img = re.sub(r"<img\b", '<img class="atlas-seal"', img, count=1, flags=re.IGNORECASE)
+    return re.sub(r"<img\b", '<img class="atlas-seal"', img, count=1, flags=re.IGNORECASE)
+
+
+def render_row(kind: str, body: str) -> str:
+    """A leading image becomes a seal beside the copy, inside a div.
+
+    A paragraph cannot hold that pair: the following sentence is its own
+    paragraph, and the outer paragraph closes at the first inner one. Lead
+    stays a paragraph only when there is no seal.
+    """
+    html = md_fragment(body).strip()
+    match = IMG_P_RE.match(html)
+    if not match:
+        inner = unwrap_single_p(html)
+        if kind == "lead":
+            return f'<p class="lead">\n{inner}\n</p>'
+        return f'<div class="{kind}">\n{inner}\n</div>'
+    img = seal_img(match.group(1))
     copy = unwrap_single_p(match.group(2).strip())
+    copy_class = "lead-copy" if kind == "lead" else "notice-copy"
     return (
-        '<div class="notice">\n'
+        f'<div class="{kind}">\n'
         f"{img}\n"
-        f'<div class="notice-copy">\n{copy}\n</div>\n'
+        f'<div class="{copy_class}">\n{copy}\n</div>\n'
         "</div>"
     )
 
@@ -107,9 +118,9 @@ def expand_blocks(source: str) -> str:
         header = match.group(2).strip()
         body = match.group(3)
         if kind == "lead":
-            return f'<p class="lead">\n{unwrap_single_p(md_fragment(body))}\n</p>'
+            return render_row("lead", body)
         if kind == "notice":
-            return render_notice(body)
+            return render_row("notice", body)
         if kind == "muted":
             return f'<p class="muted">\n{unwrap_single_p(md_fragment(body))}\n</p>'
         if kind == "details":
