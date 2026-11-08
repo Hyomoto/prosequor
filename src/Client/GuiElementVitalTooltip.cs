@@ -6,8 +6,8 @@ using Vintagestory.API.MathTools;
 namespace Prosequor.Client;
 
 /// <summary>
-/// Follow-mouse tooltip for Stats panel vital cards (health, satiety, temperature).
-/// Calls <see cref="StatsVitalHover.Lines"/> while hovered; empty result draws nothing.
+/// Follow-mouse tooltip for Stats panel vital cards and the attribute-ring hole.
+/// Empty lines draw nothing. The ring slot yields when the pointer is on an attribute plate.
 /// </summary>
 public class GuiElementVitalTooltip : GuiElement
 {
@@ -16,6 +16,7 @@ public class GuiElementVitalTooltip : GuiElement
 
     readonly ICoreClientAPI capi;
     readonly List<VitalHoverRow> rows = new();
+    readonly List<ElementBounds> plateYieldBounds = new();
     readonly CairoFont valueFont = CairoFont.WhiteSmallText()
         .WithStroke(ColorUtil.BlackArgbDouble, 0.75);
     readonly TextBackground background = new()
@@ -42,6 +43,17 @@ public class GuiElementVitalTooltip : GuiElement
     {
         rows.Clear();
         rows.AddRange(next);
+        ClearHover();
+    }
+
+    /// <summary>
+    /// Attribute plate hit regions. While the pointer is inside any of these, the ring
+    /// hover is suppressed so the attribute card wins.
+    /// </summary>
+    public void SetPlateYieldBounds(IReadOnlyList<ElementBounds> plates)
+    {
+        plateYieldBounds.Clear();
+        plateYieldBounds.AddRange(plates);
         ClearHover();
     }
 
@@ -123,11 +135,19 @@ public class GuiElementVitalTooltip : GuiElement
         foreach (VitalHoverRow row in rows)
         {
             row.Bounds.CalcWorldBounds();
-            if (row.Bounds.PointInside(mx, my))
+            if (!row.Bounds.PointInside(mx, my))
             {
-                nextSlot = row.Slot;
-                break;
+                continue;
             }
+
+            if (string.Equals(row.Slot, PhysicalStatHover.Ring, StringComparison.OrdinalIgnoreCase)
+                && IsOverPlate(mx, my))
+            {
+                continue;
+            }
+
+            nextSlot = row.Slot;
+            break;
         }
 
         if (nextSlot == null)
@@ -147,9 +167,30 @@ public class GuiElementVitalTooltip : GuiElement
         EnsureTexture(nextSlot);
     }
 
+    bool IsOverPlate(int mx, int my)
+    {
+        foreach (ElementBounds plate in plateYieldBounds)
+        {
+            try
+            {
+                plate.CalcWorldBounds();
+                if (plate.PointInside(mx, my))
+                {
+                    return true;
+                }
+            }
+            catch (NullReferenceException)
+            {
+                // Bounds not yet in a laid-out parent chain.
+            }
+        }
+
+        return false;
+    }
+
     void EnsureTexture(string slot)
     {
-        string? text = FormatLines(StatsVitalHover.Lines(slot));
+        string? text = FormatLines(PhysicalStatHover.Lines(capi, slot));
         if (string.IsNullOrEmpty(text))
         {
             ClearHover();

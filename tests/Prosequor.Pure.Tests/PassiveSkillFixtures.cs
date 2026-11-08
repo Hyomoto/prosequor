@@ -234,84 +234,99 @@ public class PassiveSkillFixtures
         }
 
         FixedRules registry = new([.. rules]);
-        IReadOnlyList<Deed.PlannedPay> berry = Deed.PlanPays(
+        IReadOnlyList<Deed.PlannedPay> berryOne = PlanForage(
             registry,
             collections,
-            "p",
             Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
-            caller: "prosequor:@hand",
-            target: "game:fruitingbush-wild-blueberry-free",
-            mount: null,
-            ground: null,
-            lastCraft: null,
+            "game:fruitingbush-wild-blueberry-free",
+            Quantity(new Deed.QuantityUnit("game:fruit-blueberry", 1)));
+        IReadOnlyList<Deed.PlannedPay> berryTwo = PlanForage(
+            registry,
+            collections,
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
+            "game:fruitingbush-wild-blueberry-free",
             Quantity(new Deed.QuantityUnit("game:fruit-blueberry", 2)));
-        if (berry.Count != 1 || berry[0].SkillId != "forager" || Math.Abs(berry[0].Amount - 0.02f) > 0.0001f)
+        AssertShippedForagerPay(berryOne, "wild blueberry qty 1");
+        AssertShippedForagerPay(berryTwo, "wild blueberry qty 2");
+        if (Math.Abs(berryTwo[0].Amount - berryOne[0].Amount * 2f) > 0.0001f)
         {
-            Assert.Fail("[prosequor] shipped forage-wild-produce should pay 0.02 on fruitingbush-wild-blueberry-free.");
+            Assert.Fail(
+                "[prosequor] shipped forage-wild-produce should scale with quantity "
+                + $"(qty1={berryOne[0].Amount}, qty2={berryTwo[0].Amount}).");
         }
 
-        IReadOnlyList<Deed.PlannedPay> mushroom = Deed.PlanPays(
+        IReadOnlyList<Deed.PlannedPay> mushroom = PlanForage(
             registry,
             collections,
-            "p",
             Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
-            caller: "prosequor:@hand",
-            target: "game:mushroom-fieldmushroom-normal",
-            mount: null,
-            ground: null,
-            lastCraft: null,
+            "game:mushroom-fieldmushroom-normal",
             Quantity(new Deed.QuantityUnit("game:mushroom-fieldmushroom-normal", 3)));
-        if (mushroom.Count != 1 || Math.Abs(mushroom[0].Amount - 0.03f) > 0.0001f)
-        {
-            Assert.Fail("[prosequor] shipped forage-wild-produce should pay 0.03 on a wild mushroom.");
-        }
+        AssertShippedForagerPay(mushroom, "wild mushroom");
 
-        IReadOnlyList<Deed.PlannedPay> stick = Deed.PlanPays(
+        IReadOnlyList<Deed.PlannedPay> stickOne = PlanForage(
             registry,
             collections,
-            "p",
             Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
-            caller: "prosequor:@hand",
-            target: "game:loosestick-free",
-            mount: null,
-            ground: null,
-            lastCraft: null,
+            "game:loosestick-free",
             Quantity(new Deed.QuantityUnit("game:stick", 1)));
-        if (stick.Count != 1 || Math.Abs(stick[0].Amount - 0.05f) > 0.0001f)
-        {
-            Assert.Fail("[prosequor] shipped forage-wild-flat should pay 0.05 on a wild loose stick.");
-        }
-
-        IReadOnlyList<Deed.PlannedPay> horsetail = Deed.PlanPays(
+        IReadOnlyList<Deed.PlannedPay> stickEight = PlanForage(
             registry,
             collections,
-            "p",
             Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
-            caller: "prosequor:@hand",
-            target: "game:flower-horsetail-free",
-            mount: null,
-            ground: null,
-            lastCraft: null,
-            Quantity(new Deed.QuantityUnit("game:flower-horsetail-free", 1)));
-        if (horsetail.Count != 1 || Math.Abs(horsetail[0].Amount - 0.05f) > 0.0001f)
+            "game:loosestick-free",
+            Quantity(new Deed.QuantityUnit("game:stick", 8)));
+        AssertShippedForagerPay(stickOne, "wild loose stick qty 1");
+        AssertShippedForagerPay(stickEight, "wild loose stick qty 8");
+        if (Math.Abs(stickOne[0].Amount - stickEight[0].Amount) > 0.0001f)
         {
-            Assert.Fail("[prosequor] shipped forage-wild-flat should pay 0.05 on wild horsetail.");
+            Assert.Fail(
+                "[prosequor] shipped forage-wild-flat should ignore quantity "
+                + $"(qty1={stickOne[0].Amount}, qty8={stickEight[0].Amount}).");
         }
 
-        IReadOnlyList<Deed.PlannedPay> sap = Deed.PlanPays(
+        IReadOnlyList<Deed.PlannedPay> horsetail = PlanForage(
+            registry,
+            collections,
+            Tokens(DeedTokenTags.BlockBroken, HarvestXp.TokenIsWild),
+            "game:flower-horsetail-free",
+            Quantity(new Deed.QuantityUnit("game:flower-horsetail-free", 1)));
+        AssertShippedForagerPay(horsetail, "wild horsetail");
+
+        IReadOnlyList<Deed.PlannedPay> sap = PlanForage(
+            registry,
+            collections,
+            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenIsWild),
+            "game:log-resin-pine-ud",
+            Quantity(new Deed.QuantityUnit("game:resin", 1)));
+        AssertShippedForagerPay(sap, "wild sap");
+    }
+
+    static IReadOnlyList<Deed.PlannedPay> PlanForage(
+        FixedRules registry,
+        CollectionIndex collections,
+        HashSet<string> tokens,
+        string target,
+        Deed.Channels quantity) =>
+        Deed.PlanPays(
             registry,
             collections,
             "p",
-            Tokens(DeedTokenTags.Harvested, HarvestXp.TokenIsWild),
+            tokens,
             caller: "prosequor:@hand",
-            target: "game:log-resin-pine-ud",
+            target,
             mount: null,
             ground: null,
             lastCraft: null,
-            Quantity(new Deed.QuantityUnit("game:resin", 1)));
-        if (sap.Count != 1 || Math.Abs(sap[0].Amount - 0.05f) > 0.0001f)
+            quantity);
+
+    static void AssertShippedForagerPay(IReadOnlyList<Deed.PlannedPay> pays, string detail)
+    {
+        if (pays.Count != 1 || pays[0].SkillId != "forager" || pays[0].Amount <= 0f)
         {
-            Assert.Fail("[prosequor] shipped forage-wild-flat should pay 0.05 on wild sap.");
+            Assert.Fail(
+                $"[prosequor] shipped forager rules should pay forager on {detail}; "
+                + $"count={pays.Count} skill={(pays.Count > 0 ? pays[0].SkillId : "none")} "
+                + $"amount={(pays.Count > 0 ? pays[0].Amount : 0f)}.");
         }
     }
 

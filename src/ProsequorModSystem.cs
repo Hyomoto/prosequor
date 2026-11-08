@@ -55,7 +55,6 @@ public class ProsequorModSystem : ModSystem
     public CollectibleVariantTable VariantTable { get; } = new();
     public OutputPoolRegistry OutputPools { get; } = new();
     public AffixListRegistry AffixLists { get; } = new();
-    public OptionsRegistry Options { get; } = new();
     public AbilityPipeline? Pipeline { get; private set; }
     public CraftXpAdapter? CraftXp { get; private set; }
     public VoxelWorkXpAdapter? VoxelWorkXp { get; private set; }
@@ -79,7 +78,6 @@ public class ProsequorModSystem : ModSystem
     ICoreServerAPI? sapi;
     ICoreClientAPI? capi;
     CharacterSkillsTab? skillsTab;
-    CharacterStatusTab? statusTab;
     CharacterStatsPanel? statsPanel;
     CatEyesController? catEyes;
     TrackerOutlineRenderer? trackerOutline;
@@ -211,7 +209,6 @@ public class ProsequorModSystem : ModSystem
         TraitAttributes.LoadFromAssets(api, AttributeStats);
         TraitAttributes.LoadClassProfiles(api, AttributeStats, Registry);
         LevelUps.LoadFromAssets(api, AttributeStats);
-        Options.LoadFromAssets(api);
         AttributeEffects = new AttributeEffectService(AttributeStats.EffectIndex, PhaseRefresh);
         Pipeline = new AbilityPipeline(Actions, Registry, AttributeStats);
         XpRules.LoadFromSkills(api, Registry);
@@ -430,7 +427,6 @@ public class ProsequorModSystem : ModSystem
         levelUpHudHandler = packet => levelUpHud?.Enqueue(packet);
         Network.LevelUpHudReceived += levelUpHudHandler;
         skillsTab = new CharacterSkillsTab(api, Network);
-        statusTab = new CharacterStatusTab(api);
         skillWaitingHud = new SkillWaitingHudController(
             api,
             Network,
@@ -483,9 +479,6 @@ public class ProsequorModSystem : ModSystem
         // Stats compose is a Harmony postfix on Essentials ComposeStatsGui.
         api.Event.BlockTexturesLoaded += () =>
         {
-            bool suppressVanillaTraits = VanillaTraitsTab.ShouldSuppress(api, Options);
-            VanillaTraitsTab.HideIfSuppressed(api, suppressVanillaTraits);
-            statusTab?.Start(CharacterStatusTab.IncludeTraits(suppressVanillaTraits));
             skillsTab?.Start();
             skillWaitingHud?.AttachCharacterDialog(
                 api.Gui.LoadedGuis.Find(g => g is GuiDialogCharacterBase) as GuiDialogCharacterBase);
@@ -550,8 +543,6 @@ public class ProsequorModSystem : ModSystem
         trackerOutline = null;
         skillsTab?.Dispose();
         skillsTab = null;
-        statusTab?.Dispose();
-        statusTab = null;
         statsPanel?.Dispose();
         statsPanel = null;
         if (levelUpHudHandler != null)

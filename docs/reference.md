@@ -1,4 +1,4 @@
-# Skill JSON reference
+﻿# Skill JSON reference
 
 User-facing field catalog for Prosequor JSON. Explains what each key does and, where it matters, what accepted values do. No engine internals or design rationale. To build a skill, fit existing content, or call Prosequor from code, start with [modding.md](modding.md).
 
@@ -63,7 +63,6 @@ excludes  →  who you cannot also own
 - [Progression](#progression)
 - [Level-ups](#level-ups)
 - [Contributions](#contributions)
-- [Options](#options)
 
 ---
 
@@ -1364,24 +1363,3 @@ Removes the named node, rewrites every other node’s `requires` / `excludes` fr
 ```
 
 Omit `disable` and `replaces` to append nodes via `requires`. Unmet prerequisites are deferred across contribution files; still missing after all files → skipped with a warning.
-
----
-
-
-
-## Options
-
-Path: `options.json` or `options/*.json`. One object per file.
-
-```json
-{ "traitsTab": true }
-```
-
-
-| Field       | Meaning                                                                                                                                                                       |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `traitsTab` | `true` leaves the vanilla character traits tab visible. Any applied file that sets `true` wins. Omitted or `false` is not a request and does not cancel another file's `true` |
-| `dependsOn` | `{ "modid", "invert"? }[]` — skip the whole file if unmet. A skipped file is not a request                                                                                    |
-
-
-`ModConfig/prosequor/client.json` key `ShowVanillaTraitsTab` (`true` / `false`, default `false`) also leaves that tab visible. The tab stays visible when the player setting is `true` or any applied options file sets `traitsTab` to `true`. Otherwise the tab button is hidden. Prosequor's Status tab lists traits only while the vanilla traits tab is hidden.

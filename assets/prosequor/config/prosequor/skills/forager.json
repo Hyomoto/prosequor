@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:forage-wild-produce",
-      "amount": 0.01,
+      "amount": 0.1,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
@@ -22,7 +22,7 @@
     },
     {
       "id": "prosequor:forage-wild-produce-interact",
-      "amount": 0.01,
+      "amount": 0.1,
       "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
@@ -31,7 +31,7 @@
     },
     {
       "id": "prosequor:forage-wild-flat",
-      "amount": 0.05,
+      "amount": 0.5,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "block-broken", "is-wild", "target:<reed, stick>" ]
@@ -39,7 +39,7 @@
     },
     {
       "id": "prosequor:forage-wild-flat-interact",
-      "amount": 0.05,
+      "amount": 0.5,
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "harvested", "is-wild", "target:<sap>" ]

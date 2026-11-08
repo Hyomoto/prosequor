@@ -16,7 +16,7 @@ Sourced from ModDB comments around 2026-09-15. Items already shipped or declined
 - [ ] **Yang’s Character Creator.** Class + extra-trait assignment happens outside vanilla `DidSelect`. `TryApplyOnSelection` already folds `extraTraits`, but only once (`prosequorTraitAttributesApplied`). Verify Yang’s apply order; re-run distribution when class/extra traits are assigned after first join.
 - [ ] **Smithing Plus bit-smithing is gated by Bits Forging.** SP’s free bits path is overwritten by the metalworking unlock. Either detect SP and stand down, or document “disable bits in SP”. Metal Recovery also overlaps SP refunds (keep both only if that generosity is intended).
 - [ ] **Toolsmith (mod) tools via toolheads.** Durability folds hook `CollectibleObject.DamageItem`. Confirm whether Toolsmith toolheads still go through that path (speed, care, quality). Add behavioral hooks if it co-opts the pipeline.
-- [ ] **Stats Breakdown (TealSeer).** Traits tab now shows qualitative walk speed / hunger rate / etc. Stats Breakdown still needs a coexistence pass so both can show numbers without fighting the C-menu.
+- [ ] **Stats Breakdown (TealSeer).** Physical percents live on Stats panel tooltips (health / satiety / ring hole). Stats Breakdown still needs a coexistence pass so both can show numbers without fighting the C-menu.
 - [ ] **Hydrate or Diedrate satiety overlay.** HoD draws a second bar that assumes max satiety is a multiple of 100. Prosequor’s constitution satiety breaks the pip math. The calculation bug is in HoD; track until they patch, or document it as known.
 - [ ] **Seraph Levelling.** Traits added after first class apply are not converted to attributes. Confirm the leftover traits still display and stack safely, or document the mismatch.
 - [ ] **Wulks Smithing Addons log T0 anvil.** Anvil XP is wired for `BlockEntityAnvil`. Check whether that anvil uses a different BE and pays nothing.
@@ -49,7 +49,7 @@ Sourced from ModDB comments around 2026-09-15. Items already shipped or declined
 - Existing-world join crash / “what it means to join.” `AdmitInitialized` on init, `PlayerJoin`, `PlayerNowPlaying`, and host catch-up. Class scores apply from the cached profile when `DidSelect` never fires.
 - Gourmand C-menu crash when another mod injects nutrition bars. Stats panel adopts extra `ComposeExtraGuis` bars instead of assuming a fixed nutrition block.
 - Metalworking XP for anvils, crucibles, and molds (`AnvilXpStation`, `MoldCastXpStation`).
-- Walk speed / hunger rate (and a few other blended stats) on the Traits tab as qualitative lines. Precise numeric accounting is still Stats Breakdown, above.
+- Walk speed / hunger rate / healing / ranged percents on Stats panel tooltips. Precise numeric accounting is still Stats Breakdown, above.
 - Attribute leveling is documented in the handbook: work fills buckets; player-level milestones raise the most-exercised attribute. Stats panel ticks show proximity. `/prosequor addbucket` / `setattr` exist for admins.
 - Immersive Mining: Prosequor patches vanilla mining speed; IM turns that into block damage, not animation speed. “Fully compatible” means no conflict, not extra hits on every block.
 - Magic-mod aux trees: no in-house plans; other authors can contribute.

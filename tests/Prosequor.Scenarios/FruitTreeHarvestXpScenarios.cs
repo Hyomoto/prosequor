@@ -2,6 +2,7 @@ using Atlas.Api;
 using Atlas.XUnit;
 using Prosequor.Ability;
 using Prosequor.Player;
+using Prosequor.Xp.Activity;
 using Prosequor.Xp.Adapters;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -12,7 +13,7 @@ namespace Prosequor.Scenarios;
 
 /// <summary>
 /// Planted fruit-tree harvest pays farming XP to the harvester (quantity).
-/// Structural growth batches placements into one flat maker pay (amount 2).
+/// Structural growth batches placements into one flat maker pay.
 /// Domesticated comes from the root cutting planter via RootOff.
 /// </summary>
 public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
@@ -34,6 +35,15 @@ public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
         Assert.True(OwnerCredit.TryResolvePlanter(World.Api.World, branch, pos, out _));
 
         Item fruit = RequireFruitItem();
+        float expected = ScenarioXp.PlannedHarvestInteract(
+            World.Api.World,
+            Farming,
+            harvester.Player.PlayerUID,
+            EventFactBuilder.CodeOf(branch),
+            [new Deed.QuantityUnit(EventFactBuilder.CodeOf(fruit)!, 2)],
+            isWild: false);
+        Assert.True(expected > 0f, "PlanPays should grant farming XP for planted fruit-tree harvest.");
+
         float before = TotalSkillXp(progress);
         HarvestXp.NotifyInteractHarvest(
             World.Api,
@@ -43,7 +53,7 @@ public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
             [new ItemStack(fruit, 2)]);
         float gained = TotalSkillXp(progress) - before;
 
-        Assert.Equal(0.05f, gained, precision: 3);
+        ScenarioXp.AssertPaid(gained, expected, "planted fruit-tree harvest");
         Assert.Equal(0f, TotalSkillXp(RequireBehavior(planter.Player)), precision: 3);
         Assert.NotNull(be);
     }
@@ -80,13 +90,27 @@ public class FruitTreeHarvestXpScenarios : AtlasScenarioBase
         IPlayer player = joined.Player;
         EntityBehaviorProgress progress = RequireBehavior(player);
 
-        (_, _, BlockEntityFruitTreeBranch be) = PlaceCutting(player);
+        (Block branch, _, BlockEntityFruitTreeBranch be) = PlaceCutting(player);
+        float expected = ScenarioXp.PlannedDeed(
+            World.Api.World,
+            Farming,
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Grown },
+            CallerIdentities.Hand,
+            EventFactBuilder.CodeOf(branch),
+            makerUid: player.PlayerUID,
+            emptyActor: true);
+        Assert.True(expected > 0f, "PlanPays should grant farming XP for fruit-tree structural growth.");
+
         float before = TotalSkillXp(progress);
         GrowthXp.NoteFruitTreeBlockGrown(be);
         GrowthXp.NoteFruitTreeBlockGrown(be);
         GrowthXp.NoteFruitTreeBlockGrown(be);
         GrowthXp.FlushFruitTreeStructuralGrowth();
-        Assert.Equal(2f, TotalSkillXp(progress) - before, precision: 3);
+        ScenarioXp.AssertPaid(
+            TotalSkillXp(progress) - before,
+            expected,
+            "fruit-tree structural growth");
     }
 
     [AtlasScenario]

@@ -303,9 +303,29 @@ public class FarmingTillSoilScenarios : AtlasScenarioBase
         ProsequorBlockPedigreeStation.TryAddCareCredit(
             store, player.PlayerUID, FarmlandCareKind.Fertilize);
 
+        Block? bush = World.Api.World.BlockAccessor.GetBlock(store.Pos.UpCopy());
+        string? target = EventFactBuilder.CodeOf(bush);
+        Assert.False(string.IsNullOrWhiteSpace(target));
+        float expected = ScenarioXp.PlannedDeed(
+            World.Api.World,
+            "farming",
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                DeedTokenTags.FertilizerAbsorbed
+            },
+            CallerIdentities.Hand,
+            target,
+            contributors: [new Deed.ContributorShare(player.PlayerUID, 1f)],
+            emptyActor: true);
+        Assert.True(expected > 0f, "PlanPays should grant farming XP for fertilizer absorb.");
+
         float before = TotalFarmingXp(progress);
         Assert.Equal(1, FertilizerAbsorbXp.OnAbsorbed(store, 1f));
-        Assert.Equal(0.01f, TotalFarmingXp(progress) - before, precision: 3);
+        ScenarioXp.AssertPaid(
+            TotalFarmingXp(progress) - before,
+            expected,
+            "bush fertilizer absorb");
     }
 
     [AtlasScenario]

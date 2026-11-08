@@ -470,6 +470,22 @@ public class HusbandryFriendlinessScenarios : AtlasScenarioBase
         Assert.NotNull(progress);
 
         HusbandryFriendliness.Set(animal, 6);
+        float expected = ScenarioXp.PlannedDeed(
+            World.Api.World,
+            Skill,
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                DeedTokenTags.FedAnimal,
+                DeedTokenTags.Friendly
+            },
+            CallerIdentities.Loose,
+            EventFactBuilder.CodeOf(animal),
+            selectedContributorUid: player.PlayerUID,
+            inputs: ["game:grain"],
+            emptyActor: true);
+        Assert.True(expected > 0f, "PlanPays should grant husbandry XP for a friendly feed.");
+
         float before = HusbandryTotal(progress);
         AnimalFeedXp.Emit(
             animal.Api,
@@ -479,9 +495,7 @@ public class HusbandryFriendlinessScenarios : AtlasScenarioBase
             "game:grain",
             position: null);
         float afterFriendly = HusbandryTotal(progress);
-        Assert.True(
-            afterFriendly - before >= 0.099f,
-            $"Expected ~0.1 husbandry XP from a friendly feed, got {afterFriendly - before}.");
+        ScenarioXp.AssertPaid(afterFriendly - before, expected, "friendly feed");
 
         AnimalFeedXp.Emit(
             animal.Api,

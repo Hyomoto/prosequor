@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:swimming-effort",
-      "rate": 0.001,
+      "rate": 0.01,
       "when": {
         "activity": "prosequor:effort",
         "tags": [ "swimming" ]

@@ -40,6 +40,7 @@ public class CharacterStatsPanel
     const double NutritionIconGap = 6;
     const double NutritionTextHeight = 14;
     const float ComfortHighBase = 50f;
+    const double RingHoverSize = 40;
 
     // Vanilla bar keys and Dairy lang stay so ComposeExtraGuis injectors can
     // find the last nutrition row the same way they do on the Essentials panel.
@@ -337,7 +338,6 @@ public class CharacterStatsPanel
         composer.AddAttributeTooltip(attrTip, "prosequor-attr-tooltip");
 
         y += attrsBlock + AttrsToCardsGap;
-        double cardsTop = y;
         double halfW = (PanelInnerWidth - CardGap) / 2;
         ElementBounds healthCard = ElementBounds
             .Fixed(0, y, halfW, CardHeight)
@@ -399,16 +399,30 @@ public class CharacterStatsPanel
                 ElementBounds.Fixed(0, y + CardLabelOffsetY - 10, PanelInnerWidth, 18));
 
         double cardsBlock = CardHeight + SectionGap + TempCardHeight;
+        ElementBounds ringHit = ElementBounds
+            .Fixed(
+                (PanelInnerWidth - RingHoverSize) / 2,
+                (attrsBlock - RingHoverSize) / 2,
+                RingHoverSize,
+                RingHoverSize)
+            .WithParent(attrHost);
         ElementBounds vitalTipHost = ElementBounds
-            .Fixed(0, cardsTop, PanelInnerWidth, cardsBlock)
+            .Fixed(0, ContentTop, PanelInnerWidth, attrsBlock + AttrsToCardsGap + cardsBlock)
             .WithParent(bgBounds);
         GuiElementVitalTooltip vitalTip = new(capi, vitalTipHost);
         vitalTip.SetClipBounds(bgBounds);
+        List<ElementBounds> plateBounds = new(hoverRows.Count);
+        foreach (AttributeHoverRow row in hoverRows)
+        {
+            plateBounds.Add(row.Bounds);
+        }
+
+        vitalTip.SetPlateYieldBounds(plateBounds);
         vitalTip.SetRows(
         [
-            new VitalHoverRow(StatsVitalHover.Health, healthCard),
-            new VitalHoverRow(StatsVitalHover.Satiety, satietyCard),
-            new VitalHoverRow(StatsVitalHover.Temperature, tempCard)
+            new VitalHoverRow(PhysicalStatHover.Health, healthCard),
+            new VitalHoverRow(PhysicalStatHover.Satiety, satietyCard),
+            new VitalHoverRow(PhysicalStatHover.Ring, ringHit)
         ]);
         composer.AddVitalTooltip(vitalTip, "prosequor-vital-tooltip");
 

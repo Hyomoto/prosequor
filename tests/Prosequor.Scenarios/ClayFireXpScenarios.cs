@@ -4,6 +4,7 @@ using Prosequor;
 using Prosequor.Ability;
 using Prosequor.Player;
 using Prosequor.Xp;
+using Prosequor.Xp.Activity;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
@@ -63,6 +64,11 @@ public class ClayFireXpScenarios : AtlasScenarioBase
         CraftAttribution.AddContribution(stack, playerA);
         CraftAttribution.AddContribution(stack, playerB);
         CraftAttribution.AddContribution(stack, playerA);
+        Assert.True(ProsequorStackPedigree.TryGetPrimaryBlob(stack, out ProsequorBlob blob));
+        IReadOnlyList<Deed.ContributorShare> shares = ClayFireXpMath.SharesFromBlob(blob);
+        float expectedA = PlanClayFire(playerA.PlayerUID, stack, shares);
+        float expectedB = PlanClayFire(playerB.PlayerUID, stack, shares);
+        Assert.True(expectedA > 0f && expectedB > 0f, "PlanPays should grant clayforming XP to both kiln contributors.");
 
         float beforeA = TotalSkillXp(progressA);
         float beforeB = TotalSkillXp(progressB);
@@ -75,9 +81,9 @@ public class ClayFireXpScenarios : AtlasScenarioBase
 
         float gainedA = TotalSkillXp(progressA) - beforeA;
         float gainedB = TotalSkillXp(progressB) - beforeB;
-        // Weights 2:1 on table floor amount ~1 → ~0.666 / ~0.333
         Assert.True(gainedA > gainedB, $"Expected A (weight 2) > B (weight 1), got A={gainedA} B={gainedB}.");
-        Assert.True(gainedA + gainedB >= 0.99f, $"Expected combined ~1 XP, got {gainedA + gainedB}.");
+        ScenarioXp.AssertPaid(gainedA, expectedA, "kiln contributor A");
+        ScenarioXp.AssertPaid(gainedB, expectedB, "kiln contributor B");
     }
 
     [AtlasScenario]
@@ -91,6 +97,12 @@ public class ClayFireXpScenarios : AtlasScenarioBase
 
         ItemStack stack = NewStampableStack();
         CraftAttribution.StampFirer(stack, player);
+        Assert.True(ProsequorStackPedigree.TryGetPrimaryBlob(stack, out ProsequorBlob blob));
+        float expected = PlanClayFire(
+            player.PlayerUID,
+            stack,
+            ClayFireXpMath.SharesFromBlob(blob));
+        Assert.True(expected > 0f, "PlanPays should grant clayforming XP for a solo kiln settle.");
 
         float before = TotalSkillXp(progress);
         ClayFireXp.Settle(
@@ -100,7 +112,7 @@ public class ClayFireXpScenarios : AtlasScenarioBase
             stack);
 
         float gained = TotalSkillXp(progress) - before;
-        Assert.True(gained >= 0.99f && gained < 1.5f, $"Expected solo ~1 XP (one emit), got {gained}.");
+        ScenarioXp.AssertPaid(gained, expected, "solo kiln settle");
     }
 
     /// <summary>
@@ -140,6 +152,11 @@ public class ClayFireXpScenarios : AtlasScenarioBase
         Assert.False(kiln.Inventory[0].Itemstack!.Attributes.HasAttribute(CraftAttribution.MakerAttr));
         Assert.False(kiln.Inventory[0].Itemstack!.Attributes.HasAttribute(CraftAttribution.FirerAttr));
 
+        IReadOnlyList<Deed.ContributorShare> pieceShares = ClayFireXpMath.SharesFromBlob(piece);
+        float expectedMakerOne = PlanClayFire(maker.PlayerUID, kiln.Inventory[0].Itemstack!, pieceShares);
+        float expectedFirerOne = PlanClayFire(firer.PlayerUID, kiln.Inventory[0].Itemstack!, pieceShares);
+        Assert.True(expectedMakerOne > 0f && expectedFirerOne > 0f);
+
         float makerBefore = TotalSkillXp(makerProgress);
         float firerBefore = TotalSkillXp(firerProgress);
 
@@ -155,9 +172,28 @@ public class ClayFireXpScenarios : AtlasScenarioBase
 
         float makerGained = TotalSkillXp(makerProgress) - makerBefore;
         float firerGained = TotalSkillXp(firerProgress) - firerBefore;
-        // 2 pieces × ~0.5 each when maker+firer share equally
-        Assert.True(makerGained >= 0.99f, $"Expected maker ~1 XP across 2 pieces, got {makerGained}.");
-        Assert.True(firerGained >= 0.99f, $"Expected firer ~1 XP across 2 pieces, got {firerGained}.");
+        ScenarioXp.AssertPaid(makerGained, expectedMakerOne * 2f, "OnFired maker across 2 pieces");
+        ScenarioXp.AssertPaid(firerGained, expectedFirerOne * 2f, "OnFired firer across 2 pieces");
+    }
+
+    float PlanClayFire(
+        string payeeUid,
+        ItemStack stack,
+        IReadOnlyList<Deed.ContributorShare> shares)
+    {
+        string target = "game:bowl-fired";
+        int count = Math.Max(1, stack.StackSize);
+        return ScenarioXp.PlannedDeed(
+            World.Api.World,
+            Skill,
+            payeeUid,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Crafted },
+            ClayFireXpMath.TokenPitKiln,
+            target,
+            outputs: [new Deed.QuantityUnit(target, count)],
+            contributors: shares,
+            makerUid: CraftAttribution.TryGetMakerUid(stack),
+            emptyActor: true);
     }
 
     static float TotalSkillXp(EntityBehaviorProgress progress)

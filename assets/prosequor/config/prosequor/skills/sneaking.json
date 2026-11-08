@@ -13,7 +13,7 @@
   "xpRules": [
     {
       "id": "prosequor:sneaking-effort",
-      "rate": 0.001,
+      "rate": 0.005,
       "when": {
         "activity": "prosequor:effort",
         "tags": [ "sneaking" ]

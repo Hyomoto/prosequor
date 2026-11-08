@@ -28,7 +28,6 @@ Bare `hook`, `verb`, `action`, and lang keys are prefixed with `prosequor:`. Ico
   - [Add XP or a node to someone else's skill](#add-xp-or-a-node-to-someone-elses-skill)
   - [Only when another mod is loaded](#only-when-another-mod-is-loaded)
   - [A skill only some classes should see](#a-skill-only-some-classes-should-see)
-- [Leave the traits tab up](#leave-the-traits-tab-up)
 - [Call it from a code mod](#call-it-from-a-code-mod)
   - [Report a moment](#report-a-moment)
   - [Read progress](#read-progress)
@@ -254,28 +253,6 @@ Contributed node ids must be `<yourmodid>:<localId>`. `requires` may name a node
   { "code": "forager", "attributes": { "perception": 1 }, "skills": ["fieldcraft"] }
 ]
 ```
-
----
-
-## Leave the traits tab up
-
-Prosequor hides the character screen's traits tab. The tab's compose method stays in place, so another mod can still patch it. To keep the button visible, ship an options file.
-
-`assets/mymod/config/prosequor/options.json`:
-
-```json
-{ "traitsTab": true }
-```
-
-Any file that sets `traitsTab` to true leaves the tab up. `false`, or leaving the key out, does not take it down. `dependsOn` skips that file unless those mods are loaded.
-
-The player can also turn the tab on in `ModConfig/prosequor/client.json`:
-
-```json
-{ "ShowVanillaTraitsTab": true }
-```
-
-The tab stays up when that setting is true or any applied options file sets `traitsTab` to true. Prosequor's own tab is Status. It lists traits only while the vanilla traits tab is hidden.
 
 ---
 

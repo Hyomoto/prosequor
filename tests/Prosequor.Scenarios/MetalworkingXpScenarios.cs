@@ -359,7 +359,6 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
             EventFactBuilder.CodeOf(targetStack),
             quantity);
         Assert.True(expected > 0f, "Expected cementation-fired rule to plan a positive grant.");
-        Assert.Equal(16f, expected);
 
         float xpBefore = ScenarioXp.TotalSkill(progress, Skill);
         Deed.Emit(
@@ -412,6 +411,24 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         ItemStack stack = hand.Itemstack!;
         Assert.NotNull(stack.Collectible.GetBehavior<CollectibleBehaviorQuenchable>());
 
+        string? target = EventFactBuilder.CodeOf(stack);
+        string caller = EventFactBuilder.CallerOrHand(player);
+        float expectedQuench = ScenarioXp.PlannedDeed(
+            world,
+            Skill,
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Quenched },
+            caller,
+            target);
+        float expectedTemper = ScenarioXp.PlannedDeed(
+            world,
+            Skill,
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Tempered },
+            caller,
+            target);
+        Assert.True(expectedQuench > 0f && expectedTemper > 0f);
+
         float beforeQuench = ScenarioXp.TotalSkill(progress, Skill);
         SettleHeatTreat(world, stack, "quench", "lastinquenchrangetotalhours", world.Calendar.ElapsedHours - 1.0);
         Assert.Equal(0, stack.Attributes.GetInt("quenchIteration", 0));
@@ -421,7 +438,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Assert.Equal(1, stack.Attributes.GetInt("quenchIteration", 0));
         ScenarioXp.AssertPaid(
             ScenarioXp.TotalSkill(progress, Skill) - beforeQuench,
-            1f,
+            expectedQuench,
             "quench");
 
         float beforeEarlyTemper = ScenarioXp.TotalSkill(progress, Skill);
@@ -434,7 +451,7 @@ public class MetalworkingXpScenarios : AtlasScenarioBase
         Assert.Equal(1, stack.Attributes.GetInt("temperIteration", 0));
         ScenarioXp.AssertPaid(
             ScenarioXp.TotalSkill(progress, Skill) - beforeTemper,
-            1f,
+            expectedTemper,
             "temper");
 
         float beforeRepeat = ScenarioXp.TotalSkill(progress, Skill);

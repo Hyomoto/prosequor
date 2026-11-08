@@ -224,6 +224,97 @@ static class ScenarioXp
             $"{detail} expected {expected} (from loaded xpRules), got {gained}.");
     }
 
+    /// <summary>
+    /// Plan amount XP for an arbitrary deed/collect fact against loaded rules.
+    /// <paramref name="payeeUid"/> filters planned grants. Pass <paramref name="emptyActor"/>
+    /// when the emit uses a blank player uid and pays via maker/contributors/selected.
+    /// </summary>
+    public static float PlannedDeed(
+        IWorldAccessor world,
+        string skillId,
+        string payeeUid,
+        IReadOnlySet<string> tokens,
+        string? caller,
+        string? target,
+        IReadOnlyList<Deed.QuantityUnit>? outputs = null,
+        IReadOnlyList<Deed.ContributorShare>? contributors = null,
+        string? makerUid = null,
+        string? selectedContributorUid = null,
+        string? activity = null,
+        IReadOnlyList<string>? inputs = null,
+        bool emptyActor = false)
+    {
+        return Sum(
+            Plan(
+                world,
+                emptyActor ? "" : payeeUid,
+                tokens,
+                caller,
+                target,
+                totalUnits: 0,
+                craftCount: 1,
+                quantityUnits: outputs,
+                contributors,
+                makerUid,
+                selectedContributorUid: selectedContributorUid,
+                activity: activity,
+                inputs: inputs),
+            skillId,
+            payeeUid);
+    }
+
+    /// <summary>Wild/domestic harvest break: <c>block-broken</c> (+ optional <c>is-wild</c>) with drop units.</summary>
+    public static float PlannedHarvestBreak(
+        IWorldAccessor world,
+        string skillId,
+        string playerUid,
+        string? target,
+        IReadOnlyList<Deed.QuantityUnit>? outputs,
+        bool isWild,
+        string? caller = null)
+    {
+        HashSet<string> tokens = new(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.BlockBroken };
+        if (isWild)
+        {
+            tokens.Add(DeedTokenTags.IsWild);
+        }
+
+        return PlannedDeed(
+            world,
+            skillId,
+            playerUid,
+            tokens,
+            string.IsNullOrWhiteSpace(caller) ? CallerIdentities.Hand : caller,
+            target,
+            outputs);
+    }
+
+    /// <summary>Interact harvest: <c>harvested</c> (+ optional <c>is-wild</c>) with drop units.</summary>
+    public static float PlannedHarvestInteract(
+        IWorldAccessor world,
+        string skillId,
+        string playerUid,
+        string? target,
+        IReadOnlyList<Deed.QuantityUnit>? outputs,
+        bool isWild,
+        string? caller = null)
+    {
+        HashSet<string> tokens = new(StringComparer.OrdinalIgnoreCase) { DeedTokenTags.Harvested };
+        if (isWild)
+        {
+            tokens.Add(DeedTokenTags.IsWild);
+        }
+
+        return PlannedDeed(
+            world,
+            skillId,
+            playerUid,
+            tokens,
+            string.IsNullOrWhiteSpace(caller) ? CallerIdentities.Hand : caller,
+            target,
+            outputs);
+    }
+
     /// <summary>Same fact <see cref="Prosequor.Xp.Adapters.BlockBreakXpAdapter"/> publishes for mine/dig/chop.</summary>
     public static float PlannedBlockBroken(
         IWorldAccessor world,
@@ -271,7 +362,10 @@ static class ScenarioXp
         IReadOnlyList<Deed.QuantityUnit>? quantityUnits,
         IReadOnlyList<Deed.ContributorShare>? contributors = null,
         string? makerUid = null,
-        string? lastCraft = null)
+        string? lastCraft = null,
+        string? selectedContributorUid = null,
+        string? activity = null,
+        IReadOnlyList<string>? inputs = null)
     {
         ProsequorModSystem? mod = ProsequorModSystem.For(world.Api);
         Assert.NotNull(mod);
@@ -294,7 +388,10 @@ static class ScenarioXp
                 craftCount,
                 quantityUnits,
                 contributors,
-                makerUid));
+                makerUid,
+                selectedContributorUid),
+            activity: activity,
+            inputs: inputs);
     }
 
     static float Sum(IReadOnlyList<Deed.PlannedPay> pays, string skillId, string playerUid)

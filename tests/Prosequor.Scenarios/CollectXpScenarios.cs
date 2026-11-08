@@ -46,10 +46,26 @@ public class CollectXpScenarios : AtlasScenarioBase
             Assert.True(CollectXpStamp.Has(egg), "Leftover units should keep the stamp.");
         }
 
+        string? eggCode = EventFactBuilder.CodeOf(egg) ?? "game:egg-chicken-raw";
+        int pending = Math.Max(
+            buffer.Peek(player.PlayerUID, eggCode),
+            buffer.Peek(player.PlayerUID, "game:egg-chicken-raw"));
+        Assert.True(pending >= 1);
+        float expected = ScenarioXp.PlannedDeed(
+            World.Api.World,
+            Skill,
+            player.PlayerUID,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            CallerIdentities.Hand,
+            eggCode,
+            outputs: [new Deed.QuantityUnit(eggCode, pending)],
+            activity: CollectXpItem.Activity);
+        Assert.True(expected > 0f, "PlanPays should grant husbandry XP for stamped egg collect.");
+
         float before = TotalSkillXp(progress);
         buffer.Flush(World.Api, player.PlayerUID);
         float gained = TotalSkillXp(progress) - before;
-        Assert.True(gained >= 0.09f, $"Expected ~0.1+ husbandry XP from collected eggs, got {gained}.");
+        ScenarioXp.AssertPaid(gained, expected, "collect stamped eggs");
         Assert.False(buffer.HasPending(player.PlayerUID), "Flush should clear the bag.");
     }
 

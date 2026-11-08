@@ -73,7 +73,6 @@ public static class LevelUpAudio
 
             JObject root = loaded?.Token as JObject ?? new JObject();
             bool dirty = Normalize(root, out int percent);
-            dirty |= VanillaTraitsTab.Normalize(root, out _);
             if (loaded == null || dirty)
             {
                 api.StoreModConfig(new JsonObject(root), ConfigFileName);

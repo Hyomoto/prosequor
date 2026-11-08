@@ -79,9 +79,8 @@ Vanilla-style asset patches (`assets/<domain>/patches/*.json`) are separate from
 6. `TraitAttributes.LoadFromAssets`
 7. `TraitAttributes.LoadClassProfiles` — `prosequor` objects on `config/characterclasses` (after skills, so unknown skill ids can be skipped)
 8. `LevelUps.LoadFromAssets` (also reads contribution `levelUps`)
-9. `Options.LoadFromAssets` — UI requests (`traitsTab`); not part of the content fingerprint
-10. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
-11. `ContentFingerprint.Compute`
+9. `AbilityPipeline` constructed; `XpRules.LoadFromSkills` flattens embedded `xpRules`
+10. `ContentFingerprint.Compute`
 
 `StartServerSide` → `GameReady`: collection **membership** (pattern expand, C# fillers, unions), pool index resolve, `TagCriterion.BindAll`, catalogs (clay, block-break hardness). Keys must exist at compile time; item/block codes inside collections are not required until GameReady.
 
@@ -100,7 +99,6 @@ Server also starts XP adapters, effort polls, `FatherXp`, commands, and one acti
 | Trait map | `config/prosequor/trait-attributes.json` | `src/Data/TraitAttributeRegistry.cs` | Vanilla class-trait → attribute mapping; optional `skills` adds registered skill ids to that class set |
 | Class profile | `prosequor` object on `config/characterclasses.json` | `src/Data/ClassProfile.cs` | Absolute starting attributes (omitted ids are 10), optional skill ids, trait add/remove (`-code` removes), and starting node groups `{ skill, nodes }` |
 | Level-ups | `config/prosequor/level-ups.json` | `src/Data/LevelUpRegistry.cs` | Player-level grants; also graftable via contribution `levelUps` |
-| Options | `config/prosequor/options.json` or `options/*.json` | `src/Data/OptionsRegistry.cs` | One object per file. `traitsTab: true` in any applied file leaves the vanilla traits tab visible. Optional engine-style `dependsOn`. Not in the content fingerprint |
 | XP rule | `xpRules` on the **owning skill** (or a contribution) | `src/Xp/XpRuleCompiler.cs` then `XpRuleRegistry` | No `skill` field — ownership is the enclosing skill |
 | Handbook | `assets/prosequor/config/handbook/*.json` | game handbook | Player prose only; not a code hook |
 | Lang / icons | `assets/<domain>/lang/`, texture paths on nodes | — | Required for contributed nodes |

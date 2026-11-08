@@ -4,6 +4,7 @@ using Prosequor;
 using Prosequor.Ability;
 using Prosequor.Ability.Hooks;
 using Prosequor.Player;
+using Prosequor.Xp.Activity;
 using Prosequor.Xp.Adapters;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
@@ -84,12 +85,19 @@ public class ForageXpScenarios : AtlasScenarioBase
         ItemStack[] drops = [new ItemStack(mushroom, 3)];
         HarvestXp.NoteBreakDrops(mushroom, pos, drops);
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(mushroom),
+            [new Deed.QuantityUnit(Code(mushroom), 3)],
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild mushroom {Code(mushroom)}.");
+
         float before = TotalSkillXp(progress, Forager);
         HarvestXp.NotifyBlockBroken(RequireServerApi(), player, mushroom, pos);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.029f,
-            $"Expected ~0.03 forager XP from 3 wild mushrooms (emit), got {gained}. block={Code(mushroom)}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild mushroom emit {Code(mushroom)}");
         Assert.Equal(0f, TotalSkillXp(progress, Farming), 3);
     }
 
@@ -148,12 +156,19 @@ public class ForageXpScenarios : AtlasScenarioBase
         Block stick = RequireLooseStick();
         BlockPos pos = PlaceWild(player, stick);
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(stick),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild stick {Code(stick)}.");
+
         float before = TotalSkillXp(progress, Forager);
         ProsequorModSystem.For(World.Api)!.NotifyBlockBrokenXp(player, stick, pos);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from a wild loose stick (emit), got {gained}. block={Code(stick)}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild stick emit {Code(stick)}");
     }
 
     [AtlasScenario(FreshWorld = true)]
@@ -168,12 +183,19 @@ public class ForageXpScenarios : AtlasScenarioBase
         Block stick = RequireLooseStick();
         BlockPos pos = PlaceWild(player, stick);
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(stick),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild stick {Code(stick)}.");
+
         float before = TotalSkillXp(progress, Forager);
         stick.OnBlockBroken(World.Api.World, pos, player);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from breaking a world-spawned stick, got {gained}. block={Code(stick)} type={stick.GetType().Name}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild stick break {Code(stick)}");
     }
 
     [AtlasScenario]
@@ -188,12 +210,19 @@ public class ForageXpScenarios : AtlasScenarioBase
         Block horsetail = RequireHorsetail();
         BlockPos pos = PlaceWild(player, horsetail);
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(horsetail),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild horsetail {Code(horsetail)}.");
+
         float before = TotalSkillXp(progress, Forager);
         ProsequorModSystem.For(World.Api)!.NotifyBlockBrokenXp(player, horsetail, pos);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from wild horsetail (emit), got {gained}. block={Code(horsetail)} type={horsetail.GetType().Name}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild horsetail emit {Code(horsetail)}");
     }
 
     [AtlasScenario(FreshWorld = true)]
@@ -208,12 +237,19 @@ public class ForageXpScenarios : AtlasScenarioBase
         Block horsetail = RequireHorsetail();
         BlockPos pos = PlaceWild(player, horsetail);
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(horsetail),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild horsetail {Code(horsetail)}.");
+
         float before = TotalSkillXp(progress, Forager);
         horsetail.OnBlockBroken(World.Api.World, pos, player);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from breaking wild horsetail, got {gained}. block={Code(horsetail)} type={horsetail.GetType().Name}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild horsetail break {Code(horsetail)}");
     }
 
     [AtlasScenario]
@@ -237,12 +273,19 @@ public class ForageXpScenarios : AtlasScenarioBase
             Block = sap
         };
 
+        float expected = ScenarioXp.PlannedHarvestInteract(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(sap),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild sap {Code(sap)}.");
+
         float before = TotalSkillXp(progress, Forager);
         sap.OnBlockInteractStop(2f, World.Api.World, player, sel);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from scooping wild sap, got {gained}. block={Code(sap)} type={sap.GetType().Name}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild sap scoop {Code(sap)}");
     }
 
     [AtlasScenario]
@@ -283,6 +326,15 @@ public class ForageXpScenarios : AtlasScenarioBase
             ?? World.Api.World.GetItem(new AssetLocation("game:fruit-redcurrant"));
         Assert.NotNull(fruit);
 
+        float expected = ScenarioXp.PlannedHarvestInteract(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(bush),
+            [new Deed.QuantityUnit(EventFactBuilder.CodeOf(fruit)!, 2)],
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild berry {Code(bush)}.");
+
         float before = TotalSkillXp(progress, Forager);
         HarvestXp.NotifyInteractHarvest(
             World.Api,
@@ -291,9 +343,7 @@ public class ForageXpScenarios : AtlasScenarioBase
             pos,
             [new ItemStack(fruit, 2)]);
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.019f,
-            $"Expected ~0.02 forager XP from unplanted berry harvest (emit), got {gained}. block={Code(bush)}");
+        ScenarioXp.AssertPaid(gained, expected, $"unplanted berry emit {Code(bush)}");
         Assert.Equal(0f, TotalSkillXp(progress, Farming), 3);
     }
 
@@ -391,14 +441,21 @@ public class ForageXpScenarios : AtlasScenarioBase
             HitPosition = new Vec3d(0.5, 0.05, 0.5)
         };
 
+        float expected = ScenarioXp.PlannedHarvestBreak(
+            World.Api.World,
+            Forager,
+            player.PlayerUID,
+            EventFactBuilder.CodeOf(stick),
+            outputs: null,
+            isWild: true);
+        Assert.True(expected > 0f, $"PlanPays should grant forager XP for wild stick {Code(stick)}.");
+
         float before = TotalSkillXp(progress, Forager);
         EnumHandling handling = EnumHandling.PassThrough;
         bool handled = pickup!.OnBlockInteractStart(World.Api.World, player, sel, ref handling);
         Assert.True(handled, $"Expected RightClickPickup to take {Code(stick)}.");
         float gained = TotalSkillXp(progress, Forager) - before;
-        Assert.True(
-            gained >= 0.049f,
-            $"Expected 0.05 forager XP from right-clicking a loose stick, got {gained}. block={Code(stick)}");
+        ScenarioXp.AssertPaid(gained, expected, $"wild stick right-click {Code(stick)}");
     }
 
     [AtlasScenario]
