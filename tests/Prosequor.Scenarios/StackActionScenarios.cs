@@ -206,6 +206,25 @@ public class StackActionScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Action")]
     [Trait("Kind", "Stack")]
+    public void AddCropSeed_Should_LeaveExistingSeed()
+    {
+        Block crop = RequireCropBlock();
+        Item? expectedSeed = AbilityBootstrap.TryResolveCropSeed(WorldAccessor, crop);
+        Assert.NotNull(expectedSeed);
+
+        ItemStack existing = new(expectedSeed!, 1);
+        DropsContext context = MakeDrops(tags: new CollectionIndex(), block: crop);
+        var action = new AddCropSeedAction();
+        var result = ApplyStacks(action, context, ListOf(existing), new object());
+
+        Assert.Equal(1, result.Count);
+        Assert.Same(existing, result[0]);
+        Assert.Equal(1, result[0].StackSize);
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "Stack")]
     public void ReplaceWithVariant_Should_SwapSeededStacksOnly()
     {
         (Item keep, Item match) = RequireTwoItems();

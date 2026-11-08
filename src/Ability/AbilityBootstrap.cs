@@ -22,6 +22,7 @@ public static class AbilityBootstrap
     public const string DirtTag = "dirt";
     public const string SoilTag = "soil";
     public const string NaturalStoneTag = "natural-stone";
+    public const string RockTag = "rock";
     public const string CraftedStoneTag = "crafted-stone";
     public const string StoneTag = "stone";
     public const string OreTag = "ore";
@@ -1063,6 +1064,10 @@ public static class AbilityBootstrap
                 {
                     addBlock(NaturalStoneTag, block);
                     naturalStoneBlocks++;
+                    if (IsRockBlock(block))
+                    {
+                        addBlock(RockTag, block);
+                    }
                 }
                 else
                 {
@@ -1282,6 +1287,13 @@ public static class AbilityBootstrap
 
         return DropsLooseStone(block);
     }
+
+    /// <summary>
+    /// <c>rock</c>: full-block subset of <c>natural-stone</c>. Loose surface stones
+    /// and boulders (<see cref="BlockLooseRock"/>, including <see cref="BlockLooseStones"/>) are excluded.
+    /// </summary>
+    internal static bool IsRockBlock(Block block) =>
+        IsNaturalStoneBlock(block) && block is not BlockLooseRock;
 
     static bool DropsLooseStone(Block block)
     {

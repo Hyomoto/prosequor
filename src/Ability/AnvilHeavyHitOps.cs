@@ -51,19 +51,20 @@ public static class AnvilHeavyHitOps
             moveCount);
     }
 
-    public static void ApplySlagClear(BlockEntityAnvil anvil, IPlayer player, Vec3i voxelPos)
+    /// <summary>Slag voxels cleared, or 0 when the unlock is off or the strike is invalid.</summary>
+    public static int ApplySlagClear(BlockEntityAnvil anvil, IPlayer player, Vec3i voxelPos)
     {
         if (anvil?.Voxels == null || player == null || voxelPos == null)
         {
-            return;
+            return 0;
         }
 
         int slagRadius = AnvilWorkStation.ResolveSlagRadius(player);
         if (slagRadius < 0)
         {
-            return;
+            return 0;
         }
 
-        AnvilVoxelGrid.ClearSlag(anvil.Voxels, voxelPos.X, voxelPos.Y, voxelPos.Z, slagRadius);
+        return AnvilVoxelGrid.ClearSlag(anvil.Voxels, voxelPos.X, voxelPos.Y, voxelPos.Z, slagRadius);
     }
 }

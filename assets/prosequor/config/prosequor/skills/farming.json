@@ -136,7 +136,7 @@
                 "phase": "quantity",
                 "action": "prosequor:number",
                 "when": {
-                  "tags": [ "target:<crop>", "drop:<seed>" ]
+                  "tags": [ "target:<mature-crop>", "drop:<seed>" ]
                 },
                 "params": { "op": "add", "base": 0.05, "perSkillLevel": 0.01, "cap": 0.15 }
               }

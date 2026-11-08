@@ -436,6 +436,8 @@ Custom bare tokens (no `:`) are allowed on effort facts.
 | `cleaver-certain`                         | Animal generation is 3 or higher                                                                                         |
 | `crafted`                                 | Ingredients became products at a grid or station. The caller says which station; omit the caller to match every station. |
 | `voxel-work`                              | Novel voxel edit (clay-form / smith); one flat deed per voxel                                                            |
+| `hammer-slag`                             | One slag voxel cleared on an anvil. The caller is the anvil; the target is the selected smithing recipe output           |
+| `hammer-split`                            | One metal voxel removed by an anvil split. The caller is the anvil; the target is the selected smithing recipe output    |
 | `grown`                                   | Growth stage advanced (legacy alias `crop-grown`)                                                                        |
 | `till-soil`                               | Soil → farmland                                                                                                          |
 | `fertilizer-absorbed`                     | Fertilizer nutrient transfer                                                                                             |
@@ -846,7 +848,7 @@ Same as append + optional `rule` (`first`  `last`  `random`, default `first`).
 
 #### `prosequor:add-crop-seed`
 
-No params. Surface: mutate-drops/`stacks` (block).
+No params. Surface: mutate-drops/`stacks` (block). Appends one seed for the broken crop when that seed is not already in the list.
 
 ### Gates
 
@@ -1006,7 +1008,7 @@ Path: `collections.json` or `collections/*.json` (JSON array).
 | `unions`    | Other collection ids copied into this key (multi-pass, after excludes) |
 
 
-Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `natural-stone`, `crafted-stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `natural-stone` is loose stone items (path `stone-*`) and stone-material blocks that drop those items or are prospectable rock. `crafted-stone` is every other stone-material block; `daub-block` is excluded. `stone` is the union of `natural-stone` and `crafted-stone`. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
+Pool ids share the same key space. Authored rows and pool ids are the membership for code-pattern collections. After patterns expand, classifiers still add to declared ids: `soil`, `dirt`, `wood`, `leaves`, `natural-stone`, `rock`, `crafted-stone`, `crop`, `mature-crop`, `immature-crop`, `small-fish`, `medium-fish`, `large-fish`, `metal-crafts`, `clay-formed`, `smithing-formed`, `kiln` (`pit-kiln`, `beehive-kiln`), and `huntable-animal`. `soil` and `dirt` also receive soil-material and diggable terrain blocks, excluding peat, sand, and gravel. `wood` is wood-material blocks and fellable wood. `leaves` is leaf-material blocks. `natural-stone` is loose stone items (path `stone-*`) and stone-material blocks that drop those items or are prospectable rock. `rock` is the full-block subset of `natural-stone` (not loose surface stones or boulders). `crafted-stone` is every other stone-material block; `daub-block` is excluded. `stone` is the union of `natural-stone` and `crafted-stone`. `crop` is any block with crop properties or a `BlockCrop` type. `mature-crop` is those at stage greater than or equal to growth stages; `immature-crop` is the other crop blocks, including ones whose stage cannot be read. `small-fish`, `medium-fish`, and `large-fish` are fish items by fillet quantity (up to 2, up to 5, above 5). `metal-crafts` is `tool` and `weapon` members whose code contains a survival metal id. `huntable-animal` is loaded entities whose harvest drops are in `meat` or `fat` (weight above zero). Its include patterns, and the include patterns of its exclude collections, are also matched against entity codes, because the shared expander only walks blocks and items. `excludes` run after those adds. `unions` run after excludes, and again after `clay-formed` / `smithing-formed` recipe output is copied in.
 
 ---
 

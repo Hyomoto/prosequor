@@ -54,6 +54,34 @@ public static class AnvilVoxelGrid
         return cleared;
     }
 
+    public static int CountMaterial(byte[,,]? voxels, byte material)
+    {
+        if (voxels == null)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        int xLen = voxels.GetLength(0);
+        int yLen = voxels.GetLength(1);
+        int zLen = voxels.GetLength(2);
+        for (int x = 0; x < xLen; x++)
+        {
+            for (int y = 0; y < yLen; y++)
+            {
+                for (int z = 0; z < zLen; z++)
+                {
+                    if (voxels[x, y, z] == material)
+                    {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
     /// <summary>
     /// Hammer Mastery: of misplaced metal in the vanilla 3×3 hit brush (strike Y),
     /// place up to <paramref name="moveCount"/> into empty recipe cells within

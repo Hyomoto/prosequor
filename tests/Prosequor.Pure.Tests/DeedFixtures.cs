@@ -240,6 +240,12 @@ public static class DeedFixtures
             || DeedToken.Tempered.ToTag() != DeedTokenTags.Tempered
             || !DeedTokenTags.TryParse("tempered", out DeedToken tempered)
             || tempered != DeedToken.Tempered
+            || DeedToken.HammerSlag.ToTag() != DeedTokenTags.HammerSlag
+            || !DeedTokenTags.TryParse("hammer-slag", out DeedToken slag)
+            || slag != DeedToken.HammerSlag
+            || DeedToken.HammerSplit.ToTag() != DeedTokenTags.HammerSplit
+            || !DeedTokenTags.TryParse("hammer-split", out DeedToken split)
+            || split != DeedToken.HammerSplit
             || Deed.Activity != "prosequor:deed")
         {
             Assert.Fail("[prosequor] DeedToken tag map failed.");
@@ -449,6 +455,7 @@ public static class DeedFixtures
     {
         CollectionIndex collections = new();
         collections.EnsureKey("natural-stone");
+        collections.EnsureKey("rock");
         collections.EnsureKey("ore");
         collections.EnsureKey("gemstone");
         collections.EnsureKey("pickaxe");
@@ -463,7 +470,7 @@ public static class DeedFixtures
             3f,
             order: 1,
             collections,
-            tags: ["block-broken", "target:<natural-stone,ore,gemstone>", "caller:<pickaxe,bombs>"]);
+            tags: ["block-broken", "target:<rock,ore,gemstone>", "caller:<pickaxe,bombs>"]);
 
         FixedAmountRules rules = new(mine);
         IReadOnlyList<Deed.PlannedPay> bomb = Deed.PlanPays(

@@ -5,8 +5,9 @@ using Vintagestory.API.Common;
 namespace Prosequor.Ability.Actions;
 
 /// <summary>
-/// Appends one seed stack for the broken crop block. Runs on the stacks phase so the
-/// bonus seed is never seen by quantity or drop-list yield rules (e.g. Demeter's Bless).
+/// Guarantees one seed stack for the broken crop block when that seed is not already
+/// in the list. Runs on the stacks phase so a newly appended seed is never seen by
+/// quantity or drop-list yield rules (e.g. Seed Bank).
 /// </summary>
 public sealed class AddCropSeedAction
     : AbilityActionHandler<DropsContext, IReadOnlyList<ItemStack>, object>
@@ -33,6 +34,15 @@ public sealed class AddCropSeedAction
         if (seed == null)
         {
             return value;
+        }
+
+        for (int i = 0; i < value.Count; i++)
+        {
+            ItemStack? stack = value[i];
+            if (stack?.Item != null && stack.Item.Id == seed.Id)
+            {
+                return value;
+            }
         }
 
         List<ItemStack> next = new(value.Count + 1);

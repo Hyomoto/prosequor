@@ -52,7 +52,8 @@ public static class AnvilOnHitAssistPatch
             return;
         }
 
-        AnvilHeavyHitOps.ApplySlagClear(__instance, player, voxelPos);
+        int slag = AnvilHeavyHitOps.ApplySlagClear(__instance, player, voxelPos);
+        AnvilXpStation.EmitHammerSlag(__instance, player, slag);
         AnvilHeatedStrikesOps.OnStrike(__instance, player);
         AnvilXpStation.TryAwardProgress(__instance, player);
     }
@@ -61,7 +62,7 @@ public static class AnvilOnHitAssistPatch
 /// <summary>
 /// Before vanilla clear: Metal Recovery counts metal splits on the work-item pedigree
 /// and refunds a metal bit when the threshold is reached.
-/// After: Heated Strikes shrinks cooling debt.
+/// After: one <c>hammer-slag</c> or <c>hammer-split</c> deed per voxel removed, then Heated Strikes.
 /// </summary>
 [HarmonyPatch(typeof(BlockEntityAnvil), nameof(BlockEntityAnvil.OnSplit))]
 public static class AnvilOnSplitRecoveryPatch
@@ -69,6 +70,7 @@ public static class AnvilOnSplitRecoveryPatch
     [HarmonyPrefix]
     public static void Prefix(BlockEntityAnvil __instance, Vec3i voxelPos)
     {
+        AnvilXpStation.ArmHammerMaterials(__instance);
         AnvilXpStation.NoteBaseline(__instance);
         IPlayer? player = AnvilHitScope.CurrentPlayer;
         if (player == null)
@@ -83,6 +85,7 @@ public static class AnvilOnSplitRecoveryPatch
     public static void Postfix(BlockEntityAnvil __instance)
     {
         IPlayer? player = AnvilHitScope.CurrentPlayer;
+        AnvilXpStation.EmitHammerMaterials(__instance, player, splits: true);
         if (player == null)
         {
             return;
@@ -91,6 +94,9 @@ public static class AnvilOnSplitRecoveryPatch
         AnvilHeatedStrikesOps.OnStrike(__instance, player);
         AnvilXpStation.TryAwardProgress(__instance, player);
     }
+
+    [HarmonyFinalizer]
+    public static void Finalizer() => AnvilXpStation.DisarmHammerMaterials();
 }
 
 /// <summary>After upset: Heated Strikes shrinks cooling debt; award novel good voxels.</summary>

@@ -114,8 +114,11 @@ public static class KnapsterCompat
         __result = VoxelWorkStation.ResolveVoxelRefill(byPlayer);
     }
 
-    public static void ProcessMovePrefix(BlockEntityAnvil anvil) =>
+    public static void ProcessMovePrefix(BlockEntityAnvil anvil)
+    {
+        AnvilXpStation.ArmHammerMaterials(anvil);
         AnvilXpStation.NoteBaseline(anvil);
+    }
 
     public static void ProcessMovePostfix(
         BlockEntityAnvil anvil,
@@ -130,10 +133,14 @@ public static class KnapsterCompat
             new Vec3i(x, y, z),
             applyMastery: true,
             applySlag: true);
+        AnvilXpStation.EmitHammerMaterials(anvil, byPlayer, splits: false);
     }
 
-    public static void ProcessRemoveSlagPrefix(BlockEntityAnvil anvil) =>
+    public static void ProcessRemoveSlagPrefix(BlockEntityAnvil anvil)
+    {
+        AnvilXpStation.ArmHammerMaterials(anvil);
         AnvilXpStation.NoteBaseline(anvil);
+    }
 
     public static void ProcessRemoveSlagPostfix(
         BlockEntityAnvil anvil,
@@ -148,6 +155,7 @@ public static class KnapsterCompat
             new Vec3i(x, y, z),
             applyMastery: false,
             applySlag: true);
+        AnvilXpStation.EmitHammerMaterials(anvil, byPlayer, splits: false);
     }
 
     public static void ProcessSplitPrefix(
@@ -155,6 +163,7 @@ public static class KnapsterCompat
         IPlayer byPlayer,
         Vec3i usableMetalVoxel)
     {
+        AnvilXpStation.ArmHammerMaterials(anvil);
         AnvilXpStation.NoteBaseline(anvil);
         if (byPlayer == null || usableMetalVoxel == null)
         {
@@ -172,6 +181,7 @@ public static class KnapsterCompat
             usableMetalVoxel,
             applyMastery: false,
             applySlag: false);
+        AnvilXpStation.EmitHammerMaterials(anvil, byPlayer, splits: true);
     }
 
     static void AfterKnapsterHit(

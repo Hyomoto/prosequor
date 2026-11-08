@@ -103,12 +103,33 @@ public class MiningXpScenarios : AtlasScenarioBase
         Assert.Equal(BlockBreakClassification.TokenMine, BlockBreakClassification.ClassifyToken(rock));
         Assert.Equal(BlockBreakClassification.TokenMine, BlockBreakClassification.ClassifyToken(cobble));
 
+        Block cracked = RequireBlock(world, "game:crackedrock-conglomerate");
+        Block boulders = RequireBlock(world, "game:looseboulders-conglomerate-free");
+        Block stones = RequireBlock(world, "game:loosestones-conglomerate-free");
+        Assert.True(AbilityBootstrap.IsRockBlock(rock), Code(rock));
+        Assert.True(AbilityBootstrap.IsRockBlock(cracked), Code(cracked));
+        Assert.False(AbilityBootstrap.IsRockBlock(boulders), Code(boulders));
+        Assert.False(AbilityBootstrap.IsRockBlock(stones), Code(stones));
+        Assert.False(AbilityBootstrap.IsRockBlock(cobble), Code(cobble));
+
         string rockCode = Code(rock);
+        string crackedCode = Code(cracked);
+        string boulderCode = Code(boulders);
+        string stonesCode = Code(stones);
         string cobbleCode = Code(cobble);
         Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, rockCode));
+        Assert.True(collections.Contains(AbilityBootstrap.RockTag, rockCode));
         Assert.False(collections.Contains(AbilityBootstrap.CraftedStoneTag, rockCode));
         Assert.True(collections.Contains(AbilityBootstrap.StoneTag, rockCode));
+        Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, crackedCode));
+        Assert.True(collections.Contains(AbilityBootstrap.RockTag, crackedCode));
+        Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, boulderCode));
+        Assert.False(collections.Contains(AbilityBootstrap.RockTag, boulderCode));
+        Assert.True(collections.Contains(AbilityBootstrap.StoneTag, boulderCode));
+        Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, stonesCode));
+        Assert.False(collections.Contains(AbilityBootstrap.RockTag, stonesCode));
         Assert.False(collections.Contains(AbilityBootstrap.NaturalStoneTag, cobbleCode));
+        Assert.False(collections.Contains(AbilityBootstrap.RockTag, cobbleCode));
         Assert.True(collections.Contains(AbilityBootstrap.CraftedStoneTag, cobbleCode));
         Assert.True(collections.Contains(AbilityBootstrap.StoneTag, cobbleCode));
 
@@ -117,6 +138,7 @@ public class MiningXpScenarios : AtlasScenarioBase
         Assert.NotEqual(0, loose!.Id);
         string looseCode = loose.Code.ToString();
         Assert.True(collections.Contains(AbilityBootstrap.NaturalStoneTag, looseCode));
+        Assert.False(collections.Contains(AbilityBootstrap.RockTag, looseCode));
         Assert.False(collections.Contains(AbilityBootstrap.CraftedStoneTag, looseCode));
         Assert.True(collections.Contains(AbilityBootstrap.StoneTag, looseCode));
 
@@ -130,11 +152,12 @@ public class MiningXpScenarios : AtlasScenarioBase
 
             string code = Code(block);
             bool natural = collections.Contains(AbilityBootstrap.NaturalStoneTag, code);
+            bool rockMember = collections.Contains(AbilityBootstrap.RockTag, code);
             bool crafted = collections.Contains(AbilityBootstrap.CraftedStoneTag, code);
             bool stone = collections.Contains(AbilityBootstrap.StoneTag, code);
             if (block.BlockMaterial != EnumBlockMaterial.Stone)
             {
-                if (natural || crafted || stone)
+                if (natural || rockMember || crafted || stone)
                 {
                     problems.Add($"{code} is {block.BlockMaterial} but is in a stone collection");
                 }
@@ -144,7 +167,7 @@ public class MiningXpScenarios : AtlasScenarioBase
 
             if (collections.Contains("daub-block", code))
             {
-                if (natural || crafted || stone)
+                if (natural || rockMember || crafted || stone)
                 {
                     problems.Add($"{code} is daub and must stay out of stone");
                 }
@@ -164,6 +187,10 @@ public class MiningXpScenarios : AtlasScenarioBase
             {
                 problems.Add($"{code} natural membership does not match the classifier");
             }
+            else if (rockMember != AbilityBootstrap.IsRockBlock(block))
+            {
+                problems.Add($"{code} rock membership does not match the classifier");
+            }
         }
 
         foreach (Item item in world.Items)
@@ -176,9 +203,10 @@ public class MiningXpScenarios : AtlasScenarioBase
             string code = item.Code.ToString();
             if (!collections.Contains(AbilityBootstrap.NaturalStoneTag, code)
                 || !collections.Contains(AbilityBootstrap.StoneTag, code)
-                || collections.Contains(AbilityBootstrap.CraftedStoneTag, code))
+                || collections.Contains(AbilityBootstrap.CraftedStoneTag, code)
+                || collections.Contains(AbilityBootstrap.RockTag, code))
             {
-                problems.Add($"{code} loose stone item must be in natural-stone and stone");
+                problems.Add($"{code} loose stone item must be in natural-stone and stone, and not in rock");
             }
         }
 

@@ -190,6 +190,7 @@
       "*:creature-fish-saltwater-*"
     ]
   },
+  // Also filled at GameReady: soil-material and diggable terrain blocks, excluding peat, sand, and gravel.
   {
     "id": "dirt",
     "includes": [
@@ -525,10 +526,6 @@
     "includes": ["*:seeds-*"]
   },
   {
-    "id": "crop",
-    "includes": ["*:crop-*"]
-  },
-  {
     "id": "pine",
     "includes": ["*:log-*-pine-*"]
   },
@@ -622,11 +619,19 @@
     "id": "juvenile",
     "includes": ["*:fishraw-*-juvenile", "*:creature-fish-*-juvenile"]
   },
+  // Soil-material and diggable terrain blocks, excluding peat, sand, and gravel.
   { "id": "soil" },
+  // Entities whose harvest drops are in meat or fat and whose weight is above zero.
   { "id": "huntable-animal" },
+  // Wood-material blocks and fellable wood.
   { "id": "wood" },
+  // Leaf-material blocks.
   { "id": "leaves" },
+  // stone-* items, plus natural stone blocks (loose stones and prospectable rock).
   { "id": "natural-stone" },
+  // Full-block subset of natural-stone (not loose surface stones or boulders).
+  { "id": "rock" },
+  // Other stone-material blocks; daub-block is excluded.
   {
     "id": "crafted-stone",
     "excludes": ["daub-block"]
@@ -635,14 +640,23 @@
     "id": "stone",
     "unions": ["natural-stone", "crafted-stone"]
   },
+  // Any block with crop properties or a BlockCrop type, any domain.
+  { "id": "crop" },
+  // Crop blocks at stage >= growth stages.
   { "id": "mature-crop" },
+  // Other crop blocks, including ones whose stage cannot be read.
   { "id": "immature-crop" },
+  // Fish items by fillet quantity: up to 2, up to 5, above 5.
   { "id": "small-fish" },
   { "id": "medium-fish" },
   { "id": "large-fish" },
+  // tool and weapon members whose code contains a survival metal id.
   { "id": "metal-crafts" },
+  // Clayforming recipe outputs.
   { "id": "clay-formed" },
+  // Smithing recipe outputs.
   { "id": "smithing-formed" },
+  // Synthetic caller ids pit-kiln and beehive-kiln, not blocks.
   { "id": "kiln" },
   { "id": "liquid" },
   { "id": "graft" },

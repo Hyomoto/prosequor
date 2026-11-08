@@ -62,7 +62,13 @@ public enum DeedToken
     Quenched,
 
     /// <summary>Temper stats were applied to a quenchable metal item.</summary>
-    Tempered
+    Tempered,
+
+    /// <summary>One slag voxel cleared on an anvil.</summary>
+    HammerSlag,
+
+    /// <summary>One metal voxel removed by an anvil split.</summary>
+    HammerSplit
 }
 
 /// <summary>String forms for <see cref="DeedToken"/> (JSON <c>when.tags</c> / fact tokens).</summary>
@@ -166,6 +172,12 @@ public static class DeedTokenTags
     /// <summary>Temper stats were applied to a quenchable metal item.</summary>
     public const string Tempered = "tempered";
 
+    /// <summary>One slag voxel cleared on an anvil.</summary>
+    public const string HammerSlag = "hammer-slag";
+
+    /// <summary>One metal voxel removed by an anvil split.</summary>
+    public const string HammerSplit = "hammer-split";
+
     /// <summary>Caller identity for pit kilns.</summary>
     public const string PitKiln = "pit-kiln";
 
@@ -202,6 +214,8 @@ public static class DeedTokenTags
         DeedToken.Panned => Panned,
         DeedToken.Quenched => Quenched,
         DeedToken.Tempered => Tempered,
+        DeedToken.HammerSlag => HammerSlag,
+        DeedToken.HammerSplit => HammerSplit,
         _ => token.ToString().ToLowerInvariant()
     };
 
@@ -381,6 +395,18 @@ public static class DeedTokenTags
         if (t.Equals(Tempered, StringComparison.OrdinalIgnoreCase))
         {
             token = DeedToken.Tempered;
+            return true;
+        }
+
+        if (t.Equals(HammerSlag, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.HammerSlag;
+            return true;
+        }
+
+        if (t.Equals(HammerSplit, StringComparison.OrdinalIgnoreCase))
+        {
+            token = DeedToken.HammerSplit;
             return true;
         }
 

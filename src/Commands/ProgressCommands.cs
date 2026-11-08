@@ -235,7 +235,7 @@ public static class ProgressCommands
 
         if (!TrySplitTrailingInt(args[1] as string, out string target, out int level))
         {
-            return TextCommandResult.Error("Expected <skill name|player> <level>.");
+            return TextCommandResult.Error("Expected &lt;skill name|player&gt; &lt;level&gt;.");
         }
 
         if (IsPlayerTrack(target))
@@ -269,7 +269,7 @@ public static class ProgressCommands
 
         if (!TryParseAddXpTail(args[1] as string, out string target, out float amount, out XpAwardMode mode, out string? parseError))
         {
-            return TextCommandResult.Error(parseError ?? "Expected <skill name|player> <amount> [nb|fb].");
+            return TextCommandResult.Error(parseError ?? "Expected &lt;skill name|player&gt; &lt;amount&gt; [nb|fb].");
         }
 
         string modeNote = mode switch
@@ -312,7 +312,7 @@ public static class ProgressCommands
         string value = text?.Trim() ?? "";
         if (value.Length == 0)
         {
-            error = "Expected <skill name|player> <amount> [nb|fb].";
+            error = "Expected &lt;skill name|player&gt; &lt;amount&gt; [nb|fb].";
             return false;
         }
 
@@ -330,7 +330,7 @@ public static class ProgressCommands
 
         if (parts.Count < 2)
         {
-            error = "Expected <skill name|player> <amount> [nb|fb].";
+            error = "Expected &lt;skill name|player&gt; &lt;amount&gt; [nb|fb].";
             return false;
         }
 
@@ -338,7 +338,7 @@ public static class ProgressCommands
         if (!float.TryParse(amountRaw, NumberStyles.Float, CultureInfo.InvariantCulture, out amount)
             && !float.TryParse(amountRaw, NumberStyles.Float, CultureInfo.CurrentCulture, out amount))
         {
-            error = "Expected <skill name|player> <amount> [nb|fb].";
+            error = "Expected &lt;skill name|player&gt; &lt;amount&gt; [nb|fb].";
             return false;
         }
 
@@ -707,7 +707,7 @@ public static class ProgressCommands
 
         if (!TrySplitTrailingWord(args[1] as string, out string target, out string code))
         {
-            return TextCommandResult.Error("Expected <skill name> <code>.");
+            return TextCommandResult.Error("Expected &lt;skill name&gt; &lt;code&gt;.");
         }
 
         if (!TryResolveSkill(api, args, target, out SkillDef skill, out string skillError))
