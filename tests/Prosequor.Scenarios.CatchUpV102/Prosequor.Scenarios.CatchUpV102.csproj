@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Separate process/project from Prosequor.Scenarios: Atlas can bind only one build of
+    assembly 'prosequor' per test host. This project stages dist/prosequor-v1.0.2.zip and
+    must not ProjectReference the live mod (see Atlas Mod Staging wiki).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Prosequor.Scenarios.CatchUpV102</RootNamespace>
+    <ProsequorRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..'))</ProsequorRepoRoot>
+    <ProsequorV102Zip>$(ProsequorRepoRoot)\dist\prosequor-v1.0.2.zip</ProsequorV102Zip>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Pixnop.Atlas.XUnit" Version="0.16.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VINTAGE_STORY)\VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib">
+      <HintPath>$(VINTAGE_STORY)\VintagestoryLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSSurvivalMod">
+      <HintPath>$(VINTAGE_STORY)\Mods\VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSEssentials">
+      <HintPath>$(VINTAGE_STORY)\Mods\VSEssentials.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="StageProsequorV102ForAtlas" AfterTargets="CopyFilesToOutputDirectory">
+    <PropertyGroup>
+      <AtlasStagedV102Dir>$(TargetDir)staged-prosequor-v102</AtlasStagedV102Dir>
+    </PropertyGroup>
+    <Error
+      Condition="!Exists('$(ProsequorV102Zip)')"
+      Text="Prosequor 1.0.2 zip not found at $(ProsequorV102Zip)." />
+    <RemoveDir Directories="$(AtlasStagedV102Dir)" Condition="Exists('$(AtlasStagedV102Dir)')" />
+    <Exec
+      Command="powershell -NoProfile -Command &quot;Expand-Archive -LiteralPath '$(ProsequorV102Zip)' -DestinationPath '$(AtlasStagedV102Dir)' -Force&quot;" />
+  </Target>
+</Project>

@@ -5,8 +5,10 @@ using Prosequor;
 using Prosequor.Ability;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
+using Vintagestory.Server;
 using Xunit;
 
 namespace Prosequor.Pure.Tests;
@@ -1105,6 +1107,44 @@ public class HarmonyPatchAllSmokeTests
             Assert.True(
                 findInfo!.Postfixes.Count > 0,
                 "Expected ItemAxe.FindTree tree-fell postfix.");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeServerChunkPedigreeFlush()
+    {
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.chunkpedigree.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+
+            MethodInfo? toBytes = AccessTools.Method(
+                typeof(ServerChunk),
+                nameof(ServerChunk.ToBytes),
+                [typeof(FastMemoryStream)]);
+            MethodInfo? toPacket = AccessTools.Method(typeof(ServerChunk), "ToPacket");
+            Assert.NotNull(toBytes);
+            Assert.NotNull(toPacket);
+
+            Patches patchInfo = Harmony.GetPatchInfo(toBytes);
+            Patches packetInfo = Harmony.GetPatchInfo(toPacket);
+            Assert.NotNull(patchInfo);
+            Assert.NotNull(packetInfo);
+            Assert.True(
+                patchInfo!.Prefixes.Count > 0,
+                "Expected ServerChunk.ToBytes(FastMemoryStream) pedigree flush prefix.");
+            Assert.True(
+                packetInfo!.Prefixes.Count > 0,
+                "Expected ServerChunk.ToPacket pedigree flush prefix.");
         }
         finally
         {

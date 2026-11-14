@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
@@ -7,8 +8,9 @@ namespace Prosequor.Ability;
 /// <summary>
 /// Sparse block-entity pedigree on chunk moddata. Only positions that were
 /// stamped get an entry; overwrite replaces; remove clears. Same local pack
-/// as <see cref="ForagePlayerPlaced"/>. Live blob is the unit; other keys on
-/// the same entry are host process / farmland / plant / anti-replay state.
+/// as <see cref="ForagePlayerPlaced"/>. Live entries stay in memory while the
+/// chunk is loaded; the blob is the save record. Live blob is the unit; other
+/// keys on the same entry are host process / farmland / plant / anti-replay state.
 /// </summary>
 public static class ProsequorChunkPedigree
 {
@@ -377,43 +379,62 @@ public static class ProsequorChunkPedigree
     public static int Pack(BlockPos pos) =>
         ((pos.Y & 0xFFFF) << 16) | ((pos.Z & 31) << 8) | (pos.X & 31);
 
+    /// <summary>
+    /// Live entries for a loaded chunk. The blob under <see cref="ModDataKey"/> is the
+    /// save record only: parsed once on first touch, encoded once on snapshot.
+    /// Not stored on <see cref="IWorldChunk.LiveModData"/> — the game protobuf-writes
+    /// that dictionary back over moddata on save.
+    /// </summary>
+    sealed class ChunkEntries
+    {
+        public readonly Dictionary<int, Box> Boxes = new();
+
+        public byte[]? Raw;
+
+        public bool Loaded;
+
+        public bool Dirty;
+    }
+
+    static readonly ConditionalWeakTable<IWorldChunk, ChunkEntries> Live = new();
+
+    static readonly object DirtyGate = new();
+
+    static readonly List<WeakReference<IWorldChunk>> DirtyChunks = new();
+
+    static ChunkEntries CacheOf(IWorldChunk chunk) =>
+        Live.GetValue(chunk, static _ => new ChunkEntries());
+
     public static bool TryGet(IWorldAccessor? world, BlockPos? pos, out Box box)
     {
-        box = new Box();
-        if (world?.BlockAccessor == null || pos == null)
+        if (world?.BlockAccessor != null && pos != null)
         {
-            return false;
+            IWorldChunk? chunk = world.BlockAccessor.GetChunkAtBlockPos(pos);
+            if (chunk != null)
+            {
+                return TryGetFromChunk(chunk, pos, out box);
+            }
         }
 
-        IWorldChunk? chunk = world.BlockAccessor.GetChunkAtBlockPos(pos);
-        return chunk != null && TryGetFromChunk(chunk, pos, out box);
+        box = new Box();
+        return false;
     }
 
     /// <summary>Read an entry from a chunk that already holds moddata (e.g. after FromBytes).</summary>
     public static bool TryGetFromChunk(IWorldChunk? chunk, BlockPos? pos, out Box box)
     {
+        if (chunk != null && pos != null)
+        {
+            ChunkEntries entries = Ensure(chunk);
+            if (entries.Boxes.TryGetValue(Pack(pos), out Box? stored) && stored != null)
+            {
+                box = stored;
+                return true;
+            }
+        }
+
         box = new Box();
-        if (chunk == null || pos == null)
-        {
-            return false;
-        }
-
-        byte[]? raw = chunk.GetModdata(ModDataKey);
-        if (raw == null || raw.Length == 0)
-        {
-            return false;
-        }
-
-        TreeAttribute root = new();
-        root.FromBytes(raw);
-        ITreeAttribute? entry = root.GetTreeAttribute(PackKey(Pack(pos)));
-        if (entry == null)
-        {
-            return false;
-        }
-
-        box.ReadFrom(entry);
-        return box.HasPersistable;
+        return false;
     }
 
     public static Box GetOrCreate(IWorldAccessor world, BlockPos pos)
@@ -439,16 +460,15 @@ public static class ProsequorChunkPedigree
             return;
         }
 
-        if (!TryGetRoot(world, pos, out TreeAttribute? root, out IWorldChunk? chunk) || chunk == null)
+        IWorldChunk? chunk = world.BlockAccessor.GetChunkAtBlockPos(pos);
+        if (chunk == null)
         {
             return;
         }
 
-        root ??= new TreeAttribute();
-        TreeAttribute entry = new();
-        box.WriteTo(entry);
-        root[PackKey(Pack(pos))] = entry;
-        WriteRoot(chunk, root);
+        ChunkEntries entries = Ensure(chunk);
+        entries.Boxes[Pack(pos)] = box;
+        MarkDirty(chunk, entries);
     }
 
     public static void Clear(IWorldAccessor? world, BlockPos? pos)
@@ -458,61 +478,143 @@ public static class ProsequorChunkPedigree
             return;
         }
 
-        if (!TryGetRoot(world, pos, out TreeAttribute? root, out IWorldChunk? chunk)
-            || chunk == null
-            || root == null)
-        {
-            return;
-        }
-
-        string key = PackKey(Pack(pos));
-        if (!root.HasAttribute(key))
-        {
-            return;
-        }
-
-        root.RemoveAttribute(key);
-        WriteRoot(chunk, root);
-    }
-
-    static string PackKey(int packed) => packed.ToString("X");
-
-    static bool TryGetRoot(
-        IWorldAccessor world,
-        BlockPos pos,
-        out TreeAttribute? root,
-        out IWorldChunk? chunk)
-    {
-        root = null;
-        chunk = world.BlockAccessor.GetChunkAtBlockPos(pos);
+        IWorldChunk? chunk = world.BlockAccessor.GetChunkAtBlockPos(pos);
         if (chunk == null)
         {
-            return false;
+            return;
         }
 
-        byte[]? raw = chunk.GetModdata(ModDataKey);
-        if (raw == null || raw.Length == 0)
+        ChunkEntries entries = Ensure(chunk);
+        if (!entries.Boxes.Remove(Pack(pos)))
         {
-            root = null;
-            return true;
+            return;
         }
 
-        root = new TreeAttribute();
-        root.FromBytes(raw);
-        return true;
+        MarkDirty(chunk, entries);
     }
 
-    static void WriteRoot(IWorldChunk chunk, TreeAttribute root)
+    /// <summary>
+    /// Encode every dirty live map into chunk moddata. Runs on world save (before the
+    /// engine copies moddata) and again from dispose so an unpatch cannot skip the write.
+    /// </summary>
+    public static void FlushAllDirty()
     {
-        if (root.Count == 0)
+        lock (DirtyGate)
+        {
+            for (int i = 0; i < DirtyChunks.Count; i++)
+            {
+                if (DirtyChunks[i].TryGetTarget(out IWorldChunk? chunk) && chunk != null)
+                {
+                    FlushIfDirty(chunk);
+                }
+            }
+
+            DirtyChunks.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Encode dirty live entries into <see cref="ModDataKey"/> before the game copies
+    /// chunk moddata (save, pack, or client packet). No-op when clean or untouched.
+    /// </summary>
+    public static void FlushIfDirty(IWorldChunk? chunk)
+    {
+        if (chunk == null || !Live.TryGetValue(chunk, out ChunkEntries? entries) || entries == null || !entries.Dirty)
+        {
+            return;
+        }
+
+        if (entries.Boxes.Count == 0)
         {
             chunk.RemoveModdata(ModDataKey);
+            entries.Raw = null;
         }
         else
         {
-            chunk.SetModdata(ModDataKey, root.ToBytes());
+            TreeAttribute root = new();
+            foreach (KeyValuePair<int, Box> kv in entries.Boxes)
+            {
+                TreeAttribute entry = new();
+                kv.Value.WriteTo(entry);
+                root[PackKey(kv.Key)] = entry;
+            }
+
+            byte[] raw = root.ToBytes();
+            chunk.SetModdata(ModDataKey, raw);
+            entries.Raw = raw;
         }
 
+        entries.Loaded = true;
+        entries.Dirty = false;
+    }
+
+    static void MarkDirty(IWorldChunk chunk, ChunkEntries entries)
+    {
+        if (!entries.Dirty)
+        {
+            lock (DirtyGate)
+            {
+                DirtyChunks.Add(new WeakReference<IWorldChunk>(chunk));
+            }
+        }
+
+        entries.Dirty = true;
         chunk.MarkModified();
     }
+
+    static ChunkEntries Ensure(IWorldChunk chunk)
+    {
+        ChunkEntries entries = CacheOf(chunk);
+        if (entries.Dirty)
+        {
+            return entries;
+        }
+
+        byte[]? raw = chunk.GetModdata(ModDataKey);
+        if (entries.Loaded && ReferenceEquals(entries.Raw, raw))
+        {
+            return entries;
+        }
+
+        entries.Boxes.Clear();
+        entries.Raw = raw;
+        entries.Loaded = true;
+        entries.Dirty = false;
+
+        if (raw == null || raw.Length == 0)
+        {
+            return entries;
+        }
+
+        TreeAttribute root = new();
+        root.FromBytes(raw);
+        foreach (KeyValuePair<string, IAttribute> kv in root)
+        {
+            if (!int.TryParse(
+                    kv.Key,
+                    System.Globalization.NumberStyles.HexNumber,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out int packed))
+            {
+                continue;
+            }
+
+            ITreeAttribute? entry = root.GetTreeAttribute(kv.Key);
+            if (entry == null)
+            {
+                continue;
+            }
+
+            Box box = new();
+            box.ReadFrom(entry);
+            if (box.HasPersistable)
+            {
+                entries.Boxes[packed] = box;
+            }
+        }
+
+        return entries;
+    }
+
+    static string PackKey(int packed) => packed.ToString("X");
 }
