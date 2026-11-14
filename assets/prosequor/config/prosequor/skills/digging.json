@@ -78,20 +78,20 @@
             ]
           },
           {
+            "minSkillLevel": 20,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "perSkillLevel": 0.0025 },
-                "minSkillLevel": 20
+                "params": { "perSkillLevel": 0.0025 }
               }
             ]
           },
           {
+            "minSkillLevel": 50,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "perSkillLevel": 0.004 },
-                "minSkillLevel": 50
+                "params": { "perSkillLevel": 0.004 }
               }
             ]
           }
@@ -130,20 +130,20 @@
             ]
           },
           {
+            "minSkillLevel": 25,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "base": 0.1, "perSkillLevel": 0.03, "cap": 0.6 },
-                "minSkillLevel": 25
+                "params": { "base": 0.1, "perSkillLevel": 0.03, "cap": 0.6 }
               }
             ]
           },
           {
+            "minSkillLevel": 40,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.8 },
-                "minSkillLevel": 40
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.8 }
               }
             ]
           }
@@ -181,20 +181,20 @@
             ]
           },
           {
+            "minSkillLevel": 25,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
-                "minSkillLevel": 25
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
               }
             ]
           },
           {
+            "minSkillLevel": 40,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "cap": 1.0 },
-                "minSkillLevel": 40
+                "params": { "cap": 1.0 }
               }
             ]
           }
@@ -233,20 +233,20 @@
             ]
           },
           {
+            "minSkillLevel": 25,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
-                "minSkillLevel": 25
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
               }
             ]
           },
           {
+            "minSkillLevel": 40,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "cap": 1.0 },
-                "minSkillLevel": 40
+                "params": { "cap": 1.0 }
               }
             ]
           }
@@ -317,20 +317,20 @@
             ]
           },
           {
+            "minSkillLevel": 35,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 },
-                "minSkillLevel": 35
+                "params": { "base": 0.2, "perSkillLevel": 0.04, "cap": 0.6 }
               }
             ]
           },
           {
+            "minSkillLevel": 50,
             "effects": [
               {
                 "replicate": 0,
-                "params": { "cap": 1.0 },
-                "minSkillLevel": 50
+                "params": { "cap": 1.0 }
               }
             ]
           }
@@ -369,13 +369,13 @@
             ]
           },
           {
+            "minSkillLevel": 60,
             "effects": [
               {
                 "replicate": 0,
                 "params": {
                   "chance": { "percent": 100 }
-                },
-                "minSkillLevel": 60
+                }
               }
             ]
           }
@@ -416,24 +416,24 @@
             ]
           },
           {
+            "minSkillLevel": 50,
             "effects": [
               {
                 "replicate": 0,
                 "params": {
                   "chance": { "perSkillLevel": 0.02, "cap": 0.25 }
-                },
-                "minSkillLevel": 50
+                }
               }
             ]
           },
           {
+            "minSkillLevel": 70,
             "effects": [
               {
                 "replicate": 0,
                 "params": {
                   "chance": { "cap": 0.45 }
-                },
-                "minSkillLevel": 70
+                }
               }
             ]
           }
