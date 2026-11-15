@@ -1,5 +1,6 @@
 using Prosequor.Ability;
 using Vintagestory.API.Common;
+using Vintagestory.API.Datastructures;
 using Xunit;
 
 namespace Prosequor.Pure.Tests;
@@ -25,6 +26,7 @@ public static class ProsequorLiquidPedigreeFixtures
         VerifyHashEqualIsIdentity();
         VerifyCollapseGroupsMatchesPairwise();
         VerifyApplyMergeWritePath();
+        VerifyLargeStackStampMakerOnce();
     }
 
     static void VerifySamePrestigeRequiresMakerAndAffixes()
@@ -353,6 +355,41 @@ public static class ProsequorLiquidPedigreeFixtures
             || Math.Abs(FindMod(kept.Mods, "intoxication") - 1.25f) > 0.0001f)
         {
             Assert.Fail("[prosequor] ApplyMerge prestige-match write should keep labels.");
+        }
+    }
+
+    /// <summary>
+    /// Fruit-press juice sentinel is StackSize 999,999. StampMaker must rewrite one
+    /// frozen group, not expand to one entry per unit.
+    /// </summary>
+    static void VerifyLargeStackStampMakerOnce()
+    {
+        const int size = 100_000;
+        ItemStack stack = new() { StackSize = size };
+        stack.Attributes = new TreeAttribute();
+        ProsequorStackPedigree.StampMaker(stack, "alice");
+
+        IReadOnlyList<ProsequorStackPedigree.FrozenGroup> groups =
+            ProsequorStackPedigree.ReadFrozenGroups(stack);
+        if (groups.Count != 1
+            || groups[0].Qty != size
+            || groups[0].Blob.MakerUid != "alice"
+            || !ProsequorStackPedigree.IsHomogeneous(stack)
+            || CraftAttribution.TryGetMakerUid(stack) != "alice")
+        {
+            Assert.Fail(
+                $"[prosequor] Large-stack StampMaker should write one frozen group × {size}. " +
+                $"groups={groups.Count} qty={(groups.Count > 0 ? groups[0].Qty : 0)}.");
+        }
+
+        ProsequorStackPedigree.StampMaker(stack, "alice");
+        IReadOnlyList<ProsequorStackPedigree.FrozenGroup> again =
+            ProsequorStackPedigree.ReadFrozenGroups(stack);
+        if (again.Count != 1
+            || again[0].Qty != size
+            || again[0].Blob.MakerUid != "alice")
+        {
+            Assert.Fail("[prosequor] Restamping the same maker must stay one frozen group.");
         }
     }
 

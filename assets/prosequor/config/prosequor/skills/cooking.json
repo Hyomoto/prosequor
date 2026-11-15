@@ -29,9 +29,27 @@
       }
     },
     {
-      "id": "prosequor:bake-oven-cooking",
+      "id": "prosequor:craft-dough-cooking",
       "amount": [0.1, 12],
       "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:@grid", "target:<dough>" ]
+      }
+    },
+    {
+      "id": "prosequor:assemble-pie-cooking",
+      "amount": [0.1, 12],
+      "pay": "ingredients",
+      "when": {
+        "activity": "prosequor:deed",
+        "tags": [ "crafted", "caller:game:pie-raw" ]
+      }
+    },
+    {
+      "id": "prosequor:bake-oven-cooking",
+      "amount": 0.5,
+      "pay": "quantity",
       "when": {
         "activity": "prosequor:deed",
         "tags": [ "crafted", "caller:<oven>", "target:<oven-baked>" ]

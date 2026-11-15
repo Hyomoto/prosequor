@@ -29,7 +29,6 @@ public static class CookQualityPatches
         public sealed class BakeState
         {
             public AssetLocation? BeforeCode;
-            public int BeforeSize;
             public int SlotIndex;
             public string? VesselMaker;
         }
@@ -40,7 +39,6 @@ public static class CookQualityPatches
             __state = new BakeState { SlotIndex = slotIndex };
             ItemSlot? slot = __instance.Inventory?[slotIndex];
             __state.BeforeCode = slot?.Itemstack?.Collectible?.Code;
-            __state.BeforeSize = Math.Max(0, slot?.Itemstack?.StackSize ?? 0);
             __state.VesselMaker = CraftAttribution.TryGetMakerUid(slot?.Itemstack);
         }
 
@@ -66,7 +64,7 @@ public static class CookQualityPatches
             }
 
             CookQualityStation.NoteBakeVesselMaker(__state.VesselMaker);
-            CookQualityStation.OnAfterOvenBake(__instance, after, __state.BeforeSize);
+            CookQualityStation.OnAfterOvenBake(__instance, after);
         }
     }
 

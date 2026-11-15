@@ -158,6 +158,16 @@ public static class FruitPressMutateProcessPatches
                 return;
             }
 
+            // Vanilla pours from a shared 999,999 sentinel; skip a rewrite when it
+            // already carries this presser's maker from an earlier drip.
+            if (string.Equals(
+                    CraftAttribution.TryGetMakerUid(liquidStack),
+                    juiceMakerUid,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
+
             CraftAttribution.StampMakerUid(liquidStack, juiceMakerUid);
         }
 

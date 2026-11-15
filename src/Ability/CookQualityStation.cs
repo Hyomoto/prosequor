@@ -125,9 +125,8 @@ public static class CookQualityStation
 
     /// <summary>
     /// After an oven slot's item code changes. Quantity is the stack that came out.
-    /// Ingredients are the stack that went in.
     /// </summary>
-    public static void OnAfterOvenBake(BlockEntityOven oven, ItemStack? baked, int beforeSize)
+    public static void OnAfterOvenBake(BlockEntityOven oven, ItemStack? baked)
     {
         if (oven?.Api?.World?.Side != EnumAppSide.Server || baked?.Collectible == null)
         {
@@ -152,8 +151,7 @@ public static class CookQualityStation
                 cookerUid,
                 baked,
                 quantity,
-                caller,
-                ingredients: Math.Max(0, beforeSize));
+                caller);
         }
         finally
         {

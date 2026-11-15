@@ -206,7 +206,7 @@
             ]
           },
           {
-            "minSkillLevel": 60,
+            "minSkillLevel": 50,
             "effects": [
               {
                 "replicate": 0,

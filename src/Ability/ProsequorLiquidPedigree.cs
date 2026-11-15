@@ -336,6 +336,11 @@ public static class ProsequorLiquidPedigree
         _ = ProsequorStackPedigree.TryGetPrimaryBlob(sinkPortion, out sinkBlob);
 
         ProsequorBlob merged = MergeBlobs(sinkBlob, sinkQtyBefore, sourceBlob, movedQty);
+        if (string.Equals(merged.ContentHash, sinkBlob.ContentHash, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         WriteFullBlob(sinkPortion, merged);
     }
 

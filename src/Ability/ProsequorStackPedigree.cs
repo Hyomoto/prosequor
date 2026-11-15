@@ -1261,7 +1261,7 @@ public static class ProsequorStackPedigree
             return;
         }
 
-        // Multi: expand to per-unit, mutate each, re-coalesce.
+        // Multi: mutate each frozen group once (callers pass pure blob transforms).
         if (HasLive(stack))
         {
             FreezeLive(stack);
@@ -1278,16 +1278,19 @@ public static class ProsequorStackPedigree
             groups = PeelMinFragment(groups, size, out _);
         }
 
-        List<FrozenGroup> expanded = new(size);
-        foreach (FrozenGroup g in groups)
+        List<FrozenGroup> mutated = new(groups.Count);
+        for (int i = 0; i < groups.Count; i++)
         {
-            for (int i = 0; i < g.Qty; i++)
+            FrozenGroup g = groups[i];
+            if (g.Qty <= 0)
             {
-                expanded.Add(new FrozenGroup(mutate(g.Blob), 1));
+                continue;
             }
+
+            mutated.Add(new FrozenGroup(mutate(g.Blob), g.Qty));
         }
 
-        WriteFrozenGroups(stack, Coalesce(expanded));
+        WriteFrozenGroups(stack, Coalesce(mutated));
         ClearLive(stack);
         MaterializePrimarySurface(stack);
     }

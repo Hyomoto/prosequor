@@ -125,6 +125,12 @@
     ]
   },
   {
+    "id": "dough",
+    "includes": [
+      "game:dough-*"
+    ]
+  },
+  {
     "id": "cooking-vessel",
     "includes": [
       "game:claypot-*-fired"
