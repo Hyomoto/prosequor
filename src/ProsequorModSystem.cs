@@ -597,6 +597,7 @@ public class ProsequorModSystem : ModSystem
         capi = null;
         sapi = null;
 
+        Ability.ProsequorChunkPedigree.FlushAllDirty();
         ReleasePatches();
     }
 
@@ -649,7 +650,12 @@ public class ProsequorModSystem : ModSystem
         }
     }
 
-    void OnFatherXpWorldSave() => FatherXp?.Save();
+    void OnFatherXpWorldSave()
+    {
+        // Before LoadAndSaveGame copies chunk moddata (we register earlier than that system).
+        Ability.ProsequorChunkPedigree.FlushAllDirty();
+        FatherXp?.Save();
+    }
 
     void OnPlayerJoin(IServerPlayer byPlayer)
     {

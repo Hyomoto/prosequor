@@ -233,9 +233,9 @@ public static class ProsequorBlockPedigreeStation
 
     public static bool TryGetBox(BlockEntity? be, out ProsequorChunkPedigree.Box box)
     {
-        box = new ProsequorChunkPedigree.Box();
         if (be == null)
         {
+            box = new ProsequorChunkPedigree.Box();
             return false;
         }
 
@@ -248,6 +248,7 @@ public static class ProsequorBlockPedigreeStation
 
         if (!TryWorld(be, out IWorldAccessor world))
         {
+            box = new ProsequorChunkPedigree.Box();
             return false;
         }
 
