@@ -137,7 +137,7 @@ public static class HuntXp
             return true;
         }
 
-        return ForeignProjectileResolver.TryResolve(damageSource, out player, out caller);
+        return false;
     }
 }
 
