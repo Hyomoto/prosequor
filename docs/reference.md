@@ -1148,7 +1148,7 @@ Every character class starts with every non-`optional` skill. Trait `skills` ent
 
 ## Character classes
 
-On each object in `config/characterclasses.json` (any domain), optional object `prosequor`. Omitted means no class profile. `enabled: false` skips that class. Last-win by class `code` (asset domain, then path). An entry with no `prosequor` key does not clear a profile already stored for that code.
+On each object in `config/characterclasses.json` (any domain), optional object `prosequor`. Omitted means no class profile. `enabled: false` skips that class. Last-win by class `code` (asset domain, then path). A repeated class `code` keeps the later class (domain, then path); the class picker shows that class. An entry with no `prosequor` key does not clear a profile already stored for that code.
 
 ```json
 "prosequor": {

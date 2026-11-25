@@ -11,7 +11,7 @@ Server console / in-game chat. Requires `controlserver`. Online players only (na
 | `/prosequor addbucket <player> <attribute> <amount>` | player + attribute + float | Add growth credit to an attribute bucket (any loaded stat id) |
 | `/prosequor setattr <player> <attribute> <value>` | player + attribute + int | Set attribute score (clamped 0–18); refreshes that attribute’s player-interaction effects |
 | `/prosequor unlock <player> <skill> <code>` | player + skill + node id | Grant a tree unlock (costs points / respects purchase rules when a tree exists) |
-| `/prosequor revoke <player> <skill> <code>` | player + skill + node id | Revoke an unlock and refund 1 point |
+| `/prosequor revoke <player> <skill> [code]` | player + skill + optional node id | With a node id: revoke that unlock and refund 1 point. With only a skill: clear every owned unlock on that skill, refund authored tier costs (hobbies refund none to the global pool), restore class starting nodes to tier 1, and keep skill level / XP |
 | `/prosequor clear [player]` | optional player | Full reset: levels, XP, unlocks, attribute scores/buckets |
 | `/prosequor emptybuckets [player]` | optional player | Zero XP saturation buckets and pending accrued XP only |
 | `/prosequor setfriendliness <value> [entityId]` | looked-at entity or id | Replace friendliness score (admin Set; sentinel contributor) |

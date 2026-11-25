@@ -64,6 +64,7 @@ public static class AbilityFixtures
         AttributeStatFixtures.VerifyAll();
         TraitAttributeFixtures.VerifyAll();
         SkillAccessFixtures.VerifyAll();
+        SkillTreeResetFixtures.VerifyAll();
         CreateCharacterClassFixtures.VerifyAll();
         HobbySkillFixtures.VerifyAll();
         CollectXpFixtures.VerifyAll();

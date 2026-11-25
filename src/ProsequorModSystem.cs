@@ -167,6 +167,7 @@ public class ProsequorModSystem : ModSystem
                 CementationAbilityPatches.TryPatchOptionalIgniters(sharedHarmony);
                 PlayerModelLibCompat.TryPatch(sharedHarmony);
                 KnapsterCompat.TryPatch(sharedHarmony);
+                CombatOverhaulCompat.TryPatch(sharedHarmony);
                 VoxelFinishScope.TryPatchSpawn(sharedHarmony);
                 ProsequorStackPedigree.EnsurePedigreeIgnoredForMerge();
             }

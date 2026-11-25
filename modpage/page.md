@@ -107,6 +107,15 @@ by Stoon
 Rift Traveler
 https://mods.vintagestory.at/rifttraveler
 by T0xx
+
+Licantropomorphia
+https://mods.vintagestory.at/show/mod/77756
+by BobyCraft7002, Tanuke
+
+Arcadia (various)
+https://mods.vintagestory.at/arcadiaclassbridge
+https://mods.vintagestory.at/arcadiaworkingclasses
+by TheKnightOwl, AzureTai
 :::
 
 ::: mods Incompatible - Mods with known issues that can't be resolved
@@ -116,6 +125,9 @@ https://mods.vintagestory.at/show/mod/36975
 :::
 
 ::: mods Known Issues - Minor issues with workarounds
+Combat Overhaul Fork
+— Overrides a lot of base game stats including fall damage, and is hit or miss with XP and attribute pipelines.  Prosequor Plus for fixes.
+
 Floral Zones (various)
 — many plants trigger skills and earn xp, but some do not. Partial compatibility.
 
@@ -138,14 +150,6 @@ https://mods.vintagestory.at/toolsmith
 SmithingPlusPlus
 https://mods.vintagestory.at/smithingplusplus
 — bit smithing, bit recovery (turn off in config), other conflicts under investigation; both target forging at the anvil.
-
-Hydrate or Diedrate
-https://mods.vintagestory.at/hydrateordiedrate
-— draws a satiety overlay, but is disjoint with satiety values that aren't multiples of 100. Visual bug, but annoying.
-
-Seraph Levelling
-https://mods.vintagestory.at/show/mod/65408
-— replaces Prosequor's traits screen; otherwise should be compatible.
 :::
 
 ## AI Disclosure

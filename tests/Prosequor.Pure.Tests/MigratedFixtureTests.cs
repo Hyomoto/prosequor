@@ -152,6 +152,9 @@ public class MigratedFixtureTests
     public void SkillAccessFixtures_Should_Pass() => SkillAccessFixtures.VerifyAll();
 
     [Fact]
+    public void SkillTreeResetFixtures_Should_Pass() => SkillTreeResetFixtures.VerifyAll();
+
+    [Fact]
     public void SkillEffectTotalFixtures_Should_Pass() => SkillEffectTotalFixtures.VerifyAll();
 
     [Fact]

@@ -82,10 +82,10 @@ public static class ProgressCommands
                 .HandleWith(args => OnUnlock(api, args, grant: true))
             .EndSubCommand()
             .BeginSubCommand("revoke")
-                .WithDescription("Revoke an unlock code (refunds 1 point)")
+                .WithDescription("Revoke one unlock (refunds 1 point), or omit the node to reset a whole skill tree")
                 .WithArgs(
                     api.ChatCommands.Parsers.Word("player"),
-                    api.ChatCommands.Parsers.All("skill and code"))
+                    api.ChatCommands.Parsers.All("skill [code]"))
                 .HandleWith(args => OnUnlock(api, args, grant: false))
             .EndSubCommand()
             .BeginSubCommand("clear")
@@ -705,9 +705,28 @@ public static class ProgressCommands
             return TextCommandResult.Error("No prosequor progress behavior.");
         }
 
-        if (!TrySplitTrailingWord(args[1] as string, out string target, out string code))
+        string remainder = (args[1] as string)?.Trim() ?? "";
+        if (remainder.Length == 0)
         {
-            return TextCommandResult.Error("Expected &lt;skill name&gt; &lt;code&gt;.");
+            return TextCommandResult.Error(grant
+                ? "Expected &lt;skill name&gt; &lt;code&gt;."
+                : "Expected &lt;skill name&gt; [code].");
+        }
+
+        if (!grant && TryResolveSkill(api, args, remainder, out SkillDef wholeSkill, out _))
+        {
+            SkillTreeReset.Result reset = progress.ResetSkillTree(wholeSkill.Id);
+            return TextCommandResult.Success(
+                $"Reset {DisplayNameForCaller(args, wholeSkill)} for {player.PlayerName}: " +
+                $"{reset.NodesCleared} node(s), refunded {reset.PointsRefunded}. " +
+                $"Points {progress.UnlockPoints}.");
+        }
+
+        if (!TrySplitTrailingWord(remainder, out string target, out string code))
+        {
+            return TextCommandResult.Error(grant
+                ? "Expected &lt;skill name&gt; &lt;code&gt;."
+                : "Expected &lt;skill name&gt; [code].");
         }
 
         if (!TryResolveSkill(api, args, target, out SkillDef skill, out string skillError))

@@ -50,6 +50,19 @@ public static class CreateCharacterClassPatches
             return true;
         }
 
+        ICoreClientAPI capi = Traverse.Create((GuiDialog)__instance).Field<ICoreClientAPI>("capi").Value;
+        CharacterSystem? modSys = t.Field<CharacterSystem>("modSys").Value;
+        if (capi != null
+            && modSys?.characterClasses is { Count: > 0 }
+            && !CharacterTraitAttributePatches.IsPrepared(capi))
+        {
+            ProsequorModSystem? mod = ProsequorModSystem.For(capi);
+            if (mod != null)
+            {
+                CharacterTraitAttributePatches.PrepareCharacterClasses(capi, mod, modSys);
+            }
+        }
+
         ComposeClassTab(__instance, t);
         return false;
     }

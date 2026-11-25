@@ -20,6 +20,7 @@ public static class TraitAttributeFixtures
         VerifyClassProfileScores();
         VerifyClassProfileSkills();
         VerifyClassProfileTraits();
+        VerifyDuplicateClassLastWins();
     }
 
     static void VerifyResolveScoresMath()
@@ -443,6 +444,63 @@ public static class TraitAttributeFixtures
             Assert.Fail(string.Format(
                 "[prosequor] Hunter leftover traits expected [tinkerer], got [{0}].",
                 string.Join(", ", leftover)));
+        }
+    }
+
+    static void VerifyDuplicateClassLastWins()
+    {
+        CharacterClass first = new()
+        {
+            Code = "hunter",
+            Traits = ["focused", "resourceful", "fleetfooted", "bowyer", "farsighted", "claustrophobic"]
+        };
+        CharacterClass second = new()
+        {
+            Code = "hunter",
+            Traits = ["soldier", "bowyer"]
+        };
+        CharacterClass unique = new()
+        {
+            Code = "commoner",
+            Traits = Array.Empty<string>()
+        };
+
+        CharacterSystem fake = new();
+        fake.characterClasses.Add(first);
+        fake.characterClasses.Add(unique);
+        fake.characterClasses.Add(second);
+        fake.characterClassesByCode["hunter"] = first;
+        fake.characterClassesByCode["commoner"] = unique;
+
+        int removed = CharacterTraitAttributePatches.CollapseDuplicateClasses(fake);
+        if (removed != 1)
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Duplicate class collapse expected to remove 1 entry, removed {0}.",
+                removed));
+        }
+
+        if (fake.characterClasses.Count != 2
+            || !ReferenceEquals(fake.characterClasses[0], unique)
+            || !ReferenceEquals(fake.characterClasses[1], second))
+        {
+            Assert.Fail("[prosequor] Duplicate class collapse must keep the last hunter and leave unique codes in place.");
+        }
+
+        if (!fake.characterClassesByCode.TryGetValue("hunter", out CharacterClass? byCode)
+            || !ReferenceEquals(byCode, second))
+        {
+            Assert.Fail("[prosequor] characterClassesByCode must point at the last hunter.");
+        }
+
+        string[] traits = second.Traits ?? Array.Empty<string>();
+        if (traits.Length != 2
+            || traits[0] != "soldier"
+            || traits[1] != "bowyer")
+        {
+            Assert.Fail(string.Format(
+                "[prosequor] Winning hunter traits expected [soldier, bowyer], got [{0}].",
+                string.Join(", ", traits)));
         }
     }
 

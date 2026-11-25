@@ -1613,6 +1613,78 @@ public class EntityBehaviorProgress : EntityBehavior, IPlayerProgress, IAbilityC
         return true;
     }
 
+    /// <summary>
+    /// Clear every owned unlock on a skill, refund authored tier costs, and restore
+    /// class starting nodes to tier 1. Keeps skill level and XP.
+    /// </summary>
+    public SkillTreeReset.Result ResetSkillTree(string skillId)
+    {
+        EnsureServer();
+        SkillDef registered = RequireRegisteredSkill(skillId);
+        IReadOnlyList<string> starting = StartingNodesForSkill(registered.Id);
+        SkillTreeReset.Result result = SkillTreeReset.ClearTree(state, registered, starting);
+
+        RefreshSkillCap(registered.Id);
+        RebuildAbilityCache();
+        BumpProgressRevision();
+
+        if (result.ClearedNodeIds.Count == 0 && result.PointsRefunded == 0)
+        {
+            return result;
+        }
+
+        foreach (string nodeId in result.ClearedNodeIds)
+        {
+            pending.Accumulate(VisibleProgressChange.Unlock(registered.Id, nodeId));
+            RefreshOpenCraftGrid(registered.Id, nodeId);
+        }
+
+        if (result.ClearedNodeIds.Count == 0)
+        {
+            pending.Accumulate(VisibleProgressChange.PlayerTrack());
+        }
+
+        MarkPersistDirty();
+        FlushPendingWire(forceChannelSnapshot: false);
+        Changed?.Invoke();
+        return result;
+    }
+
+    IReadOnlyList<string> StartingNodesForSkill(string skillId)
+    {
+        string? classCode = state.CharacterClass
+            ?? entity.WatchedAttributes?.GetString("characterClass");
+        if (string.IsNullOrWhiteSpace(classCode))
+        {
+            return Array.Empty<string>();
+        }
+
+        ITraitAttributeRegistry? traits = ProsequorModSystem.For(entity.Api)?.TraitAttributes;
+        if (traits == null || !traits.TryGetClassProfile(classCode, out ClassProfile profile))
+        {
+            return Array.Empty<string>();
+        }
+
+        List<string> nodes = new();
+        foreach (ClassUnlockGroup group in profile.Unlocks)
+        {
+            if (!string.Equals(group.Skill, skillId, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (string nodeId in group.Nodes)
+            {
+                if (!string.IsNullOrWhiteSpace(nodeId))
+                {
+                    nodes.Add(nodeId);
+                }
+            }
+        }
+
+        return nodes;
+    }
+
     void RefreshOpenCraftGrid(string skillId, string nodeId)
     {
         if (entity is EntityPlayer eplr && eplr.Player != null)

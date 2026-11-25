@@ -36,6 +36,10 @@
       <HintPath>$(VINTAGE_STORY)\Mods\VSEssentials.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(VINTAGE_STORY)\Lib\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <Target Name="StageProsequorForAtlas" AfterTargets="CopyFilesToOutputDirectory">
@@ -43,8 +47,18 @@
       <AtlasStagedModDir>$(TargetDir)staged-mod</AtlasStagedModDir>
       <AtlasStagedHorDir>$(TargetDir)staged-hor</AtlasStagedHorDir>
       <AtlasStagedIwDir>$(TargetDir)staged-iw</AtlasStagedIwDir>
+      <AtlasStagedButcheringDir>$(TargetDir)staged-butchering</AtlasStagedButcheringDir>
+      <AtlasStagedCoLegacyDir>$(TargetDir)staged-co-legacy</AtlasStagedCoLegacyDir>
+      <AtlasStagedCoForkDir>$(TargetDir)staged-co-fork</AtlasStagedCoForkDir>
+      <AtlasStagedJsonPatchesDir>$(TargetDir)staged-jsonpatches</AtlasStagedJsonPatchesDir>
+      <AtlasStagedVsImGuiDir>$(TargetDir)staged-vsimgui</AtlasStagedVsImGuiDir>
       <HorModSourceDir>$(MSBuildThisFileDirectory)third-party\horperformanceoptimizer</HorModSourceDir>
       <IwModSourceDir>$(ProsequorRepoRoot)\..\compat_folder\immersivewoodworking_1.3.13</IwModSourceDir>
+      <ButcheringModSourceDir>$(ProsequorRepoRoot)\..\compat_folder\butchering_1.14.3</ButcheringModSourceDir>
+      <CoLegacyModSourceDir>$(ProsequorRepoRoot)\..\compat_folder\overhaulliblegacycompat_1.2.5</CoLegacyModSourceDir>
+      <CoForkModSourceDir>$(ProsequorRepoRoot)\..\compat_folder\combatoverhaulfork_0.18.9</CoForkModSourceDir>
+      <JsonPatchesModSourceDir>$(ProsequorRepoRoot)\..\compat_folder\jsonpatcheslib_1.5.9</JsonPatchesModSourceDir>
+      <VsImGuiModSourceDir>$(ProsequorRepoRoot)\..\vsimgui_1.2.7</VsImGuiModSourceDir>
     </PropertyGroup>
     <Error
       Condition="!Exists('$(ProsequorDll)')"
@@ -87,6 +101,52 @@
     <Copy
       SourceFiles="@(_IwModFiles)"
       DestinationFiles="@(_IwModFiles->'$(AtlasStagedIwDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <!-- Bone-arrow hunt scenario loads Butchering 1.14.3 beside Prosequor. -->
+    <Error
+      Condition="!Exists('$(ButcheringModSourceDir)\modinfo.json')"
+      Text="Butchering 1.14.3 not found at $(ButcheringModSourceDir)." />
+    <ItemGroup>
+      <_ButcheringModFiles Include="$(ButcheringModSourceDir)\**\*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(_ButcheringModFiles)"
+      DestinationFiles="@(_ButcheringModFiles->'$(AtlasStagedButcheringDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <!-- Combat Overhaul kill/stat scenarios: fork + legacy runtime + declared deps. -->
+    <Error
+      Condition="!Exists('$(CoLegacyModSourceDir)\modinfo.json')"
+      Text="Overhaul lib legacy compat 1.2.5 not found at $(CoLegacyModSourceDir)." />
+    <Error
+      Condition="!Exists('$(CoForkModSourceDir)\modinfo.json')"
+      Text="Combat Overhaul fork 0.18.9 not found at $(CoForkModSourceDir)." />
+    <Error
+      Condition="!Exists('$(JsonPatchesModSourceDir)\modinfo.json')"
+      Text="JSON Patches lib not found at $(JsonPatchesModSourceDir)." />
+    <Error
+      Condition="!Exists('$(VsImGuiModSourceDir)\modinfo.json')"
+      Text="VSImGui 1.2.7 not found at $(VsImGuiModSourceDir)." />
+    <ItemGroup>
+      <_CoLegacyModFiles Include="$(CoLegacyModSourceDir)\**\*" />
+      <_CoForkModFiles Include="$(CoForkModSourceDir)\**\*" />
+      <_JsonPatchesModFiles Include="$(JsonPatchesModSourceDir)\**\*" />
+      <_VsImGuiModFiles Include="$(VsImGuiModSourceDir)\**\*" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(_CoLegacyModFiles)"
+      DestinationFiles="@(_CoLegacyModFiles->'$(AtlasStagedCoLegacyDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_CoForkModFiles)"
+      DestinationFiles="@(_CoForkModFiles->'$(AtlasStagedCoForkDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_JsonPatchesModFiles)"
+      DestinationFiles="@(_JsonPatchesModFiles->'$(AtlasStagedJsonPatchesDir)\%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+    <Copy
+      SourceFiles="@(_VsImGuiModFiles)"
+      DestinationFiles="@(_VsImGuiModFiles->'$(AtlasStagedVsImGuiDir)\%(RecursiveDir)%(Filename)%(Extension)')"
       SkipUnchangedFiles="true" />
   </Target>
 </Project>

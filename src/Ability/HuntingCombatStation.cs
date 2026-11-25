@@ -204,7 +204,7 @@ public static class HeartseekerStation
         }
     }
 
-    static IPlayer? ResolveAttackingPlayer(DamageSource damageSource)
+    internal static IPlayer? ResolveAttackingPlayer(DamageSource damageSource)
     {
         Entity? source = damageSource.SourceEntity ?? damageSource.CauseEntity;
         if (source is EntityPlayer ep)
@@ -218,7 +218,7 @@ public static class HeartseekerStation
             return fired.Player;
         }
 
-        return null;
+        return ForeignProjectileResolver.TryResolvePlayer(damageSource);
     }
 }
 
