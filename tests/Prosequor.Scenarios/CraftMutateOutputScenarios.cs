@@ -55,6 +55,10 @@ public class CraftMutateOutputScenarios : AtlasScenarioBase
         (Item axe, Block log, InventoryCraftingGrid craft, _) = SetupFirewoodRecipe(player);
         ItemStack? preview = craft[craft.Count - 1].Itemstack;
         Assert.Equal(player.PlayerUID, CraftAttribution.TryGetMakerUid(preview));
+        Assert.False(
+            ItemAffixes.TryGetQuality(preview, out _),
+            "Firewood is a block craft; the match preview must not carry a quality grade.");
+        Assert.Empty(CraftAttributeMods.GetAll(preview));
 
         ItemSlot sink = new DummySlot();
         ItemStackMoveOperation op = new(
@@ -181,6 +185,227 @@ public class CraftMutateOutputScenarios : AtlasScenarioBase
             CraftMutateOutputStation.TryGetRecipeBase(after, out _),
             "Lumberjack is mutate-drops only; firewood craft output must not rematch.");
         Assert.Equal(vanillaSize, after!.StackSize);
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "CraftMutateOutput")]
+    public async Task TwineCraft_Should_KeepRecipeBase_AcrossRematch()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CraftQtyTwine");
+        IPlayer player = joined.Player;
+        IPlayerProgress progress = RequireProgress(player);
+        progress.AddUnlockPoints(5);
+        progress.SetSkillLevel("tailoring", 1);
+        Assert.True(progress.GrantUnlock("tailoring", "threadmaker"));
+
+        InventoryCraftingGrid craft = SetupTwineRecipe(player);
+        ItemStack? preview = craft[craft.Count - 1].Itemstack;
+        Assert.NotNull(preview);
+        Assert.True(
+            CraftMutateOutputStation.TryGetRecipeBase(preview, out int recipeBase),
+            "Expected threadmaker to stamp the vanilla output count.");
+        Assert.Equal(1, recipeBase);
+        float qty = CraftMutateOutputStation.ResolveQuantity(player, preview, recipeBase);
+        Assert.Equal(CraftMutateOutputStation.FloorQuantity(qty), preview!.StackSize);
+        Assert.Equal(player.PlayerUID, CraftAttribution.TryGetMakerUid(preview));
+        Assert.False(ItemAffixes.TryGetQuality(preview, out _));
+        Assert.Empty(CraftAttributeMods.GetAll(preview));
+
+        craft.OnItemSlotModified(craft[0]);
+        ItemStack? rematch = craft[craft.Count - 1].Itemstack;
+        Assert.NotNull(rematch);
+        Assert.True(CraftMutateOutputStation.TryGetRecipeBase(rematch, out int rematchBase));
+        Assert.Equal(recipeBase, rematchBase);
+        Assert.Equal(preview.StackSize, rematch!.StackSize);
+        Assert.Equal(player.PlayerUID, CraftAttribution.TryGetMakerUid(rematch));
+        Assert.False(ItemAffixes.TryGetQuality(rematch, out _));
+        Assert.Empty(CraftAttributeMods.GetAll(rematch));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "CraftMutateOutput")]
+    public async Task GenerateOutputStack_Should_NotStamp_When_OutputIsDummySlot()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CraftQtyDummy");
+        IPlayer player = joined.Player;
+        _ = RequireProgress(player);
+
+        GridRecipe recipe = RequireRecipe(player, "flaxtwine");
+        ItemStack resolved = recipe.Output!.ResolvedItemStack!;
+        DummySlot output = new();
+        ItemSlot[] inputs = new ItemSlot[9];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            inputs[i] = new DummySlot();
+        }
+
+        recipe.GenerateOutputStack(inputs, output);
+
+        Assert.Equal("flaxtwine", output.Itemstack?.Collectible?.Code?.Path);
+        Assert.Equal(resolved.StackSize, output.Itemstack!.StackSize);
+        Assert.False(CraftMutateOutputStation.TryGetRecipeBase(output.Itemstack, out _));
+        Assert.Null(CraftAttribution.TryGetMakerUid(output.Itemstack));
+        Assert.False(ItemAffixes.TryGetQuality(output.Itemstack, out _));
+        Assert.Empty(CraftAttributeMods.GetAll(output.Itemstack));
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "CraftMutateOutput")]
+    public async Task LeatherHelmet_Should_StampQualityOnce()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CraftQtyHelmet");
+        IPlayer player = joined.Player;
+        IPlayerProgress progress = RequireProgress(player);
+        GrantTailoringQuality(progress);
+
+        InventoryCraftingGrid craft = SetupLeatherHelmetRecipe(player);
+        AssertPreviewQuality(player, craft[craft.Count - 1].Itemstack);
+
+        craft.OnItemSlotModified(craft[0]);
+        AssertPreviewQuality(player, craft[craft.Count - 1].Itemstack);
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "CraftMutateOutput")]
+    public async Task LeatherHelmetRepair_Should_StampMakerWithoutQuality()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CraftQtyRepair");
+        IPlayer player = joined.Player;
+        IPlayerProgress progress = RequireProgress(player);
+        GrantTailoringQuality(progress);
+
+        Item? helmet = player.Entity.World.GetItem(new AssetLocation("game:armor-head-sewn-leather"));
+        Item? leather = player.Entity.World.GetItem(new AssetLocation("game:leather-normal-plain"));
+        Assert.NotNull(helmet);
+        Assert.NotNull(leather);
+
+        InventoryCraftingGrid craft = RequireCraftGrid(player);
+        craft[0].Itemstack = new ItemStack(helmet, 1);
+        craft[1].Itemstack = new ItemStack(leather, 1);
+        craft.OnItemSlotModified(craft[0]);
+        craft.OnItemSlotModified(craft[1]);
+
+        ItemStack? preview = craft[craft.Count - 1].Itemstack;
+        Assert.Equal("armor-head-sewn-leather", preview?.Collectible?.Code?.Path);
+        string? recipePath = craft.MatchingRecipe?.Name?.Path;
+        Assert.NotNull(recipePath);
+        Assert.Contains("repair", recipePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(player.PlayerUID, CraftAttribution.TryGetMakerUid(preview));
+        Assert.False(
+            CraftMutateOutputStation.TryGetRecipeBase(preview, out _),
+            "Repair output quantity is unchanged, so the preview must not stamp a craft base.");
+        Assert.False(
+            ItemAffixes.TryGetQuality(preview, out _),
+            "A repair recipe must skip the attribute pass.");
+        Assert.Empty(CraftAttributeMods.GetAll(preview));
+        Assert.Equal(1f, CraftAttributeMods.GetFactor(preview, "durability"));
+    }
+
+    static void AssertPreviewQuality(IPlayer player, ItemStack? preview)
+    {
+        Assert.NotNull(preview);
+        Assert.Equal("armor-head-sewn-leather", preview!.Collectible?.Code?.Path);
+        Assert.Equal(player.PlayerUID, CraftAttribution.TryGetMakerUid(preview));
+        Assert.False(CraftMutateOutputStation.TryGetRecipeBase(preview, out _));
+        Assert.True(
+            ItemAffixes.TryGetQuality(preview, out _),
+            "Expected one quality grade on the armor preview.");
+        Assert.Equal(1, CountAffix(preview, ItemAffixes.QualityCode));
+        Assert.True(
+            CraftAttributeMods.GetFactor(preview, "durability") > 1f,
+            "Expected a single durability mod from clothing proficiency.");
+        Assert.Single(CraftAttributeMods.GetAll(preview));
+    }
+
+    static int CountAffix(ItemStack stack, string code)
+    {
+        int count = 0;
+        foreach (ItemAffixEntry affix in ItemAffixes.GetAll(stack))
+        {
+            if (string.Equals(affix.Code, code, StringComparison.OrdinalIgnoreCase))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    static void GrantTailoringQuality(IPlayerProgress progress)
+    {
+        progress.AddUnlockPoints(30);
+        progress.SetPlayerLevel(50);
+        progress.SetSkillLevel("tailoring", 100);
+        Assert.True(progress.GrantUnlock("tailoring", "threadmaker"));
+        Assert.True(progress.GrantUnlock("tailoring", "textile-laborer"));
+        Assert.True(progress.GrantUnlock("tailoring", "clothesmending"));
+        Assert.True(progress.GrantUnlock("tailoring", "tailor"));
+        Assert.True(progress.GrantUnlock("tailoring", "clothingproficiency"));
+        Assert.True(progress.GrantUnlock("tailoring", "clothingproficiency"));
+        Assert.True(progress.GrantUnlock("tailoring", "clothingproficiency"));
+        Assert.Equal(3, progress.GetUnlockTier("tailoring", "clothingproficiency"));
+    }
+
+    static InventoryCraftingGrid SetupTwineRecipe(IPlayer player)
+    {
+        Item? fibers = player.Entity.World.GetItem(new AssetLocation("game:flaxfibers"));
+        Assert.NotNull(fibers);
+        InventoryCraftingGrid craft = RequireCraftGrid(player);
+        craft[0].Itemstack = new ItemStack(fibers, 1);
+        craft[1].Itemstack = new ItemStack(fibers, 1);
+        craft[3].Itemstack = new ItemStack(fibers, 1);
+        craft[4].Itemstack = new ItemStack(fibers, 1);
+        craft.OnItemSlotModified(craft[0]);
+        ItemSlot output = craft[craft.Count - 1];
+        Assert.Equal("flaxtwine", output.Itemstack?.Collectible?.Code?.Path);
+        return craft;
+    }
+
+    static InventoryCraftingGrid SetupLeatherHelmetRecipe(IPlayer player)
+    {
+        Item? leather = player.Entity.World.GetItem(new AssetLocation("game:leather-normal-plain"));
+        Assert.NotNull(leather);
+        InventoryCraftingGrid craft = RequireCraftGrid(player);
+        // L K L / K _ K — shaped leather helmet, not the repair recipe.
+        craft[0].Itemstack = new ItemStack(leather, 2);
+        craft[1].Itemstack = new ItemStack(leather, 1);
+        craft[2].Itemstack = new ItemStack(leather, 2);
+        craft[3].Itemstack = new ItemStack(leather, 1);
+        craft[5].Itemstack = new ItemStack(leather, 1);
+        craft.OnItemSlotModified(craft[0]);
+        ItemSlot output = craft[craft.Count - 1];
+        Assert.Equal("armor-head-sewn-leather", output.Itemstack?.Collectible?.Code?.Path);
+        string? recipePath = craft.MatchingRecipe?.Name?.Path;
+        Assert.NotNull(recipePath);
+        Assert.DoesNotContain("repair", recipePath, StringComparison.OrdinalIgnoreCase);
+        return craft;
+    }
+
+    static InventoryCraftingGrid RequireCraftGrid(IPlayer player)
+    {
+        IInventory? raw = player.InventoryManager.GetOwnInventory(GlobalConstants.craftingInvClassName);
+        Assert.NotNull(raw);
+        Assert.True(raw is InventoryCraftingGrid, $"Expected InventoryCraftingGrid, got {raw.GetType().Name}");
+        return (InventoryCraftingGrid)raw;
+    }
+
+    static GridRecipe RequireRecipe(IPlayer player, string outputPath)
+    {
+        foreach (GridRecipe recipe in player.Entity.World.GridRecipes)
+        {
+            string? path = recipe.Output?.ResolvedItemStack?.Collectible?.Code?.Path;
+            if (string.Equals(path, outputPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return recipe;
+            }
+        }
+
+        Assert.Fail($"Expected a resolved grid recipe for {outputPath}.");
+        return null!;
     }
 
     static void GrantCleanSplitterMax(IPlayerProgress progress)

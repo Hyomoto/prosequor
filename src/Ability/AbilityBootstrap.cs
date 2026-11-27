@@ -903,6 +903,7 @@ public static class AbilityBootstrap
             });
 
         FillMetalCraftsCollection(api, index);
+        FillMoldCollection(api, index);
 
         // Membership filled at GameReady from clayforming / smithing recipe outputs.
         index.EnsureKey("clay-formed");
@@ -916,6 +917,40 @@ public static class AbilityBootstrap
         // Entity codes. The shared expander only walks blocks and items.
         Prosequor.Xp.AnimalWeightCatalog.FillHuntableAnimals(api, index);
     }
+
+    /// <summary>
+    /// Pourable molds, any code. <see cref="BlockToolMold"/> and <see cref="BlockIngotMold"/>,
+    /// plus blocks whose entity class is the vanilla <c>ToolMold</c> / <c>IngotMold</c> registry name.
+    /// </summary>
+    static void FillMoldCollection(ICoreAPI api, CollectionIndex index)
+    {
+        const string id = "mold";
+        index.EnsureKey(id);
+
+        int count = 0;
+        foreach (Block block in api.World.Blocks)
+        {
+            if (block?.Code == null || block.Id == 0 || !IsPourableMold(block))
+            {
+                continue;
+            }
+
+            index.AddCode(id, block.Code.ToString());
+            count++;
+        }
+
+        api.Logger.Notification(
+            "[prosequor] Mold collection: {0} pourable mold block(s).",
+            count);
+    }
+
+    /// <summary>
+    /// Fired tool and ingot molds. Raw clay pieces stay out: they are plain blocks
+    /// and do not use the <c>ToolMold</c> / <c>IngotMold</c> entity class.
+    /// </summary>
+    internal static bool IsPourableMold(Block? block) =>
+        block is BlockToolMold or BlockIngotMold
+        || block?.EntityClass is "ToolMold" or "IngotMold";
 
     /// <summary>
     /// <c>tool</c> ∪ <c>weapon</c> whose path contains a known metal code

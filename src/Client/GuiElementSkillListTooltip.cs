@@ -32,6 +32,7 @@ public class GuiElementSkillListTooltip : GuiElement
     string? hoveredProgressKey;
     LoadedTexture? nameTexture;
     LoadedTexture? descTexture;
+    LoadedTexture? trainsTexture;
     LoadedTexture? cardBackground;
     int cardBgW;
     int cardBgH;
@@ -155,6 +156,22 @@ public class GuiElementSkillListTooltip : GuiElement
                 descTexture.Width,
                 descTexture.Height,
                 92);
+            textY += descTexture.Height;
+            if (trainsTexture != null)
+            {
+                textY += 4;
+            }
+        }
+
+        if (trainsTexture != null && trainsTexture.TextureId > 0)
+        {
+            api.Render.Render2DTexturePremultipliedAlpha(
+                trainsTexture.TextureId,
+                x + (width - trainsTexture.Width) / 2,
+                textY,
+                trainsTexture.Width,
+                trainsTexture.Height,
+                92);
         }
     }
 
@@ -216,6 +233,9 @@ public class GuiElementSkillListTooltip : GuiElement
             .WithOrientation(EnumTextOrientation.Center);
         CairoFont descFont = CairoFont.WhiteDetailText()
             .WithOrientation(EnumTextOrientation.Left);
+        CairoFont trainsFont = CairoFont.WhiteDetailText()
+            .WithColor((double[])TrainsColor.Clone())
+            .WithOrientation(EnumTextOrientation.Left);
 
         string name = SkillRegistry.DisplayName(skill);
         string desc = SkillRegistry.Description(skill, progress);
@@ -225,6 +245,13 @@ public class GuiElementSkillListTooltip : GuiElement
         {
             string wrapped = WrapText(desc, DescWrapChars);
             descTexture = capi.Gui.TextTexture.GenTextTexture(wrapped, descFont);
+        }
+
+        string? trains = FormatTrainsLine(skill);
+        if (trains != null)
+        {
+            string wrapped = WrapText(trains, DescWrapChars);
+            trainsTexture = capi.Gui.TextTexture.GenTextTexture(wrapped, trainsFont);
         }
 
         double textW = 0;
@@ -238,6 +265,11 @@ public class GuiElementSkillListTooltip : GuiElement
             textW = Math.Max(textW, descTexture.Width);
         }
 
+        if (trainsTexture != null)
+        {
+            textW = Math.Max(textW, trainsTexture.Width);
+        }
+
         cardWidth = Math.Max(MinCardWidth, Math.Max(IconSize + Pad * 2, textW + Pad * 2));
 
         double h = Pad + IconSize + Gap;
@@ -249,10 +281,49 @@ public class GuiElementSkillListTooltip : GuiElement
         if (descTexture != null)
         {
             h += descTexture.Height;
+            if (trainsTexture != null)
+            {
+                h += 4;
+            }
+        }
+
+        if (trainsTexture != null)
+        {
+            h += trainsTexture.Height;
         }
 
         h += Pad;
         cardHeight = h;
+    }
+
+    string? FormatTrainsLine(SkillDef skill)
+    {
+        IReadOnlyList<AttributeScoreEntry> scores = skill.AttributeScores;
+        if (scores == null || scores.Count == 0)
+        {
+            return null;
+        }
+
+        // Catalog order is already compiled into AttributeScores; keep it on ties.
+        int[] order = new int[scores.Count];
+        for (int i = 0; i < order.Length; i++)
+        {
+            order[i] = i;
+        }
+
+        Array.Sort(order, (ia, ib) =>
+        {
+            int byValue = scores[ib].Value.CompareTo(scores[ia].Value);
+            return byValue != 0 ? byValue : ia.CompareTo(ib);
+        });
+
+        List<string> names = new(order.Length);
+        for (int i = 0; i < order.Length; i++)
+        {
+            names.Add(AttributeLayout.ResolveAttributeName(capi, scores[order[i]].Id));
+        }
+
+        return Lang.Get("prosequor:skill-trains", string.Join(", ", names));
     }
 
     void ClearHover()
@@ -309,11 +380,15 @@ public class GuiElementSkillListTooltip : GuiElement
     {
         nameTexture?.Dispose();
         descTexture?.Dispose();
+        trainsTexture?.Dispose();
         nameTexture = null;
         descTexture = null;
+        trainsTexture = null;
         cardWidth = MinCardWidth;
         cardHeight = 0;
     }
+
+    static readonly double[] TrainsColor = [0.76, 0.64, 0.36, 1];
 
     static string WrapText(string text, int maxChars)
     {

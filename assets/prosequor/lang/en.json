@@ -86,6 +86,7 @@
   "stats-temperature": "Temperature",
 
   // --- Skills — catalog ---
+  "skill-trains": "Trains: {0}",
   "skill-digging": "Digging",
   "skilldesc-digging": "Excavate soil, clay, peat, charcoal, and saltpeter more effectively. Shovel digging speed +{0} per Digging level.",
   "skill-farming": "Farming",

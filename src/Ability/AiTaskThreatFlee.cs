@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
+using Vintagestory.API.MathTools;
 using Vintagestory.GameContent;
 
 namespace Prosequor.Ability;
@@ -15,7 +16,20 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
 {
     public const string TaskCode = "prosequorthreatflee";
 
+    static readonly FieldInfo? TargetPosField =
+        HarmonyLib.AccessTools.Field(typeof(AiTaskFleeEntity), "targetPos");
+    static readonly FieldInfo? FleeingDistanceField =
+        HarmonyLib.AccessTools.Field(typeof(AiTaskFleeEntity), "fleeingDistance");
+    static readonly FieldInfo? NowFleeingDistanceField =
+        HarmonyLib.AccessTools.Field(typeof(AiTaskFleeEntity), "nowFleeingDistance");
+
     long lastRestartMs;
+
+    /// <summary>
+    /// Fish keep a land flop task. Their flee is a water behavior, so this
+    /// replacement must not take the slot while they are out of the water.
+    /// </summary>
+    bool onlyWhileSwimming;
 
     public AiTaskThreatFlee(EntityAgent entity, JsonObject taskConfig, JsonObject aiConfig)
         : base(entity, taskConfig, aiConfig)
@@ -33,12 +47,6 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
             {
                 moveSpeed = s;
             }
-
-            object? anim = AccessToolsAnimation(styleFrom);
-            if (anim is string named && named.Length > 0)
-            {
-                animation = named;
-            }
         }
 
         JObject config = new()
@@ -54,7 +62,15 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
             ["animationSpeed"] = 2f,
             ["entityCodes"] = new JArray("player")
         };
+
         AiTaskThreatFlee task = new(agent, new JsonObject(config), new JsonObject(new JObject()));
+        task.onlyWhileSwimming = HostFlopsOnLand(agent);
+        if (!string.IsNullOrEmpty(styleFrom?.animMeta?.Code))
+        {
+            // The source flee already resolved its clip. Mods rename that clip
+            // (swimfast, gallop, and so on); the replacement has to play that one.
+            task.animMeta = styleFrom!.animMeta.Clone();
+        }
         HarmonyLib.AccessTools.Field(typeof(AiTaskBase), "priority")?.SetValue(task, 3f);
         PropertyInfo? slot = HarmonyLib.AccessTools.Property(typeof(AiTaskBase), "Slot");
         if (slot?.CanWrite == true)
@@ -73,7 +89,7 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
 
     public override bool ShouldExecute()
     {
-        if (!TryReadyTarget(out Entity target))
+        if (!WaterGateAllows() || !TryReadyTarget(out Entity target))
         {
             return false;
         }
@@ -89,13 +105,16 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
             targetEntity = target;
         }
 
+        // Vanilla writes the away-point and the leg length in ShouldExecute.
+        // The walk reads both, and this override is the method that used to write them.
+        AimFleeLeg();
         lastRestartMs = entity.World.ElapsedMilliseconds;
         base.StartExecute();
     }
 
     public override bool ContinueExecute(float dt)
     {
-        if (!TryReadyTarget(out Entity target))
+        if (!WaterGateAllows() || !TryReadyTarget(out Entity target))
         {
             return false;
         }
@@ -106,12 +125,27 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
             long now = entity.World.ElapsedMilliseconds;
             if (now - lastRestartMs > 250)
             {
-                lastRestartMs = now;
-                base.StartExecute();
+                StartExecute();
             }
         }
 
         return true;
+    }
+
+    void AimFleeLeg()
+    {
+        if (targetEntity == null || TargetPosField?.GetValue(this) is not Vec3d point)
+        {
+            return;
+        }
+
+        float yaw = (float)Math.Atan2(
+            targetEntity.Pos.X - entity.Pos.X,
+            targetEntity.Pos.Z - entity.Pos.Z);
+        updateTargetPosFleeMode(point, yaw);
+
+        float leg = FleeingDistanceField?.GetValue(this) is float fleeing && fleeing > 0f ? fleeing : 45f;
+        NowFleeingDistanceField?.SetValue(this, leg);
     }
 
     bool TryReadyTarget(out Entity target)
@@ -132,7 +166,24 @@ public sealed class AiTaskThreatFlee : AiTaskFleeEntity
     static object? AccessToolsMoveSpeed(AiTaskFleeEntity flee) =>
         HarmonyLib.AccessTools.Field(typeof(AiTaskFleeEntity), "moveSpeed")?.GetValue(flee);
 
-    static object? AccessToolsAnimation(AiTaskFleeEntity flee) =>
-        HarmonyLib.AccessTools.Field(typeof(AiTaskBase), "animation")?.GetValue(flee)
-        ?? HarmonyLib.AccessTools.Field(typeof(AiTaskBase), "animCode")?.GetValue(flee);
+    bool WaterGateAllows() => !onlyWhileSwimming || entity.Swimming;
+
+    static bool HostFlopsOnLand(EntityAgent agent)
+    {
+        EntityBehaviorTaskAI? taskAi = agent.GetBehavior<EntityBehaviorTaskAI>();
+        if (taskAi?.TaskManager == null)
+        {
+            return false;
+        }
+
+        foreach (IAiTask task in taskAi.TaskManager.AllTasks)
+        {
+            if (task is AiTaskFishOutOfWater)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

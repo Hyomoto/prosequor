@@ -1,3 +1,4 @@
+using System.Reflection;
 using Atlas.Api;
 using Atlas.XUnit;
 using Prosequor.Ability;
@@ -141,6 +142,68 @@ public class AnimalAlertScenarios : AtlasScenarioBase
         await World.Ticks(1);
     }
 
+    /// <summary>
+    /// Fish flee is swimming-gated. On land the owned task must stay idle so
+    /// fishoutofwater can flop.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task BeachedFish_Should_FlopInsteadOfThreatFlee()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertFishLand");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        BlockPos pad = joined.Position.AddCopy(3, 0, 0);
+        IWorldAccessor world = player.Entity.World;
+        Block? dirt = world.GetBlock(new AssetLocation("game:soil-low-none"))
+            ?? world.GetBlock(new AssetLocation("game:dirt"));
+        Assert.NotNull(dirt);
+        world.BlockAccessor.SetBlock(dirt!.BlockId, pad);
+        BlockPos stand = pad.UpCopy();
+        world.BlockAccessor.SetBlock(0, stand);
+        world.BlockAccessor.SetBlock(0, stand.UpCopy());
+
+        Entity fish = SpawnPreyNear(joined, PreyFishCodes, stand);
+        EnsureTracked(fish);
+        AssertSensesPlayers(fish);
+        AssertThreatFleeCopiesSourceClip(fish);
+
+        for (int i = 0; i < 30 && !fish.OnGround; i++)
+        {
+            await World.Ticks(1);
+        }
+
+        AnimalAlertService.ForcePanicForTests(fish, player.Entity);
+        Assert.True(AnimalAlertService.IsCommitted(fish), "Beached fish should still be panicked.");
+        Assert.False(fish.Swimming, "Beached fish should not be swimming.");
+
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(fish);
+        Assert.NotNull(threat);
+        Assert.False(threat!.ShouldExecute(), "Swimming-gated threat flee must not run on land.");
+        Assert.False(threat.ContinueExecute(0.05f), "A land flee must release the slot.");
+
+        EntityBehaviorTaskAI? taskAi = fish.GetBehavior<EntityBehaviorTaskAI>();
+        Assert.NotNull(taskAi?.TaskManager);
+        bool flopReady = false;
+        foreach (IAiTask task in taskAi!.TaskManager.AllTasks)
+        {
+            if (task is AiTaskFishOutOfWater flop && flop.ShouldExecute())
+            {
+                flopReady = true;
+                break;
+            }
+        }
+
+        Assert.True(fish.OnGround, "Beached fish should be on the ground.");
+        Assert.True(flopReady, "fishoutofwater should be ready once the fish is on the ground.");
+    }
+
     [AtlasScenario(FreshWorld = true)]
     [Trait("Layer", "Action")]
     [Trait("Kind", "AnimalAlert")]
@@ -160,6 +223,56 @@ public class AnimalAlertScenarios : AtlasScenarioBase
 
         AnimalAlertService.ForcePanicForTests(hare, player.Entity);
         AssertOwnedFleeArmed(hare, "Hare");
+        await World.Ticks(1);
+    }
+
+    /// <summary>
+    /// Starting the walk must aim the vanilla flee point and give that leg a distance.
+    /// </summary>
+    [AtlasScenario(FreshWorld = true)]
+    [Trait("Layer", "Action")]
+    [Trait("Kind", "AnimalAlert")]
+    public async Task PanickedHare_Should_AimFleePointWhenWalkStarts()
+    {
+        AnimalAlertService.ClearTrackingForTests();
+
+        ITestPlayer joined = await World.JoinPlayer("AlertHareAim");
+        IPlayer player = joined.Player;
+        Assert.NotNull(player.WorldData);
+        player.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        await World.Ticks(2);
+
+        Entity hare = SpawnPreyNear(joined, PreyHareCodes);
+        EnsureTracked(hare);
+        AnimalAlertService.ForcePanicForTests(hare, player.Entity);
+
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(hare);
+        Assert.NotNull(threat);
+        Assert.True(threat!.ShouldExecute());
+        threat.StartExecute();
+
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        object? pointValue = typeof(AiTaskFleeEntity).GetField("targetPos", flags)?.GetValue(threat);
+        object? legValue = typeof(AiTaskFleeEntity).GetField("nowFleeingDistance", flags)?.GetValue(threat);
+        object? configuredValue = typeof(AiTaskFleeEntity).GetField("fleeingDistance", flags)?.GetValue(threat);
+        Assert.True(pointValue is Vec3d);
+        Assert.True(legValue is float leg && configuredValue is float configured && leg > 0f && leg == configured);
+
+        Vec3d point = (Vec3d)pointValue;
+        double dx = point.X - hare.Pos.X;
+        double dz = point.Z - hare.Pos.Z;
+        double horizontal = Math.Sqrt((dx * dx) + (dz * dz));
+        Assert.InRange(horizontal, 8d, 14d);
+
+        double animalToPlayer = Math.Sqrt(
+            Math.Pow(hare.Pos.X - player.Entity.Pos.X, 2)
+            + Math.Pow(hare.Pos.Z - player.Entity.Pos.Z, 2));
+        double pointToPlayer = Math.Sqrt(
+            Math.Pow(point.X - player.Entity.Pos.X, 2)
+            + Math.Pow(point.Z - player.Entity.Pos.Z, 2));
+        Assert.True(
+            pointToPlayer > animalToPlayer,
+            $"Flee point should be farther from the player. animal={animalToPlayer:0.##} point={pointToPlayer:0.##}");
         await World.Ticks(1);
     }
 
@@ -307,6 +420,30 @@ public class AnimalAlertScenarios : AtlasScenarioBase
         await World.Ticks(1);
     }
 
+    static void AssertThreatFleeCopiesSourceClip(Entity animal)
+    {
+        AiTaskFleeEntity? source = null;
+        EntityBehaviorTaskAI? taskAi = animal.GetBehavior<EntityBehaviorTaskAI>();
+        Assert.NotNull(taskAi?.TaskManager);
+        foreach (IAiTask task in taskAi!.TaskManager.AllTasks)
+        {
+            if (task is AiTaskFleeEntity flee && task is not AiTaskThreatFlee)
+            {
+                source = flee;
+                break;
+            }
+        }
+
+        AiTaskThreatFlee? threat = AnimalAlertService.FindThreatFlee(animal);
+        Assert.NotNull(source?.animMeta);
+        Assert.NotNull(threat?.animMeta);
+        Assert.False(
+            string.Equals(source!.animMeta.Code, "run", StringComparison.OrdinalIgnoreCase),
+            "Fish flee should not be the vanilla run clip.");
+        Assert.Equal(source.animMeta.Code, threat!.animMeta.Code);
+        Assert.Equal(source.animMeta.AnimationSpeed, threat.animMeta.AnimationSpeed);
+    }
+
     static void AssertOwnedFleeArmed(Entity animal, string label)
     {
         Assert.True(AnimalAlertService.IsCommitted(animal), label + " should be panicked.");
@@ -333,11 +470,20 @@ public class AnimalAlertScenarios : AtlasScenarioBase
         "game:chicken-rooster"
     ];
 
+    static readonly string[] PreyFishCodes =
+    [
+        "game:fish-freshwater-perch-european-adult",
+        "game:fish-freshwater-bass-largemouth-adult",
+        "game:fish-freshwater-salmon-coho-adult"
+    ];
+
     Entity SpawnHareNear(ITestPlayer joined) => SpawnPreyNear(joined, PreyHareCodes);
 
-    Entity SpawnPreyNear(ITestPlayer joined, string[] codes)
+    Entity SpawnPreyNear(ITestPlayer joined, string[] codes) =>
+        SpawnPreyNear(joined, codes, joined.Position.AddCopy(2, 0, 0));
+
+    Entity SpawnPreyNear(ITestPlayer joined, string[] codes, BlockPos animalPos)
     {
-        BlockPos animalPos = joined.Position.AddCopy(2, 0, 0);
         Exception? last = null;
         foreach (string code in codes)
         {

@@ -7,6 +7,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
+using Vintagestory.Common;
 using Vintagestory.GameContent;
 using Vintagestory.Server;
 using Xunit;
@@ -74,6 +75,45 @@ public class HarmonyPatchAllSmokeTests
             Assert.True(
                 info!.Prefixes.Count > 0 && info.Postfixes.Count > 0,
                 $"Expected ComposeStatsGui prefix+postfix; prefixes={info.Prefixes.Count}, postfixes={info.Postfixes.Count}");
+        }
+        finally
+        {
+            harmony.UnpatchAll(harmonyId);
+        }
+    }
+
+    /// <summary>
+    /// Quantity preview and maker stamp retargeted from FoundMatch onto GenerateOutputStack
+    /// so grid optimizers that skip FoundMatch still stamp the preview.
+    /// </summary>
+    [Fact]
+    [Trait("Layer", "Harmony")]
+    [Trait("Kind", "PatchAll")]
+    public void PatchAll_Should_IncludeGenerateOutputStack_And_NotFoundMatch()
+    {
+        MethodInfo? generate = AccessTools.Method(
+            typeof(RecipeBase),
+            nameof(RecipeBase.GenerateOutputStack),
+            [typeof(ItemSlot[]), typeof(ItemSlot)]);
+        Assert.NotNull(generate);
+
+        MethodInfo? foundMatch = AccessTools.DeclaredMethod(typeof(InventoryCraftingGrid), "FoundMatch");
+        Assert.NotNull(foundMatch);
+
+        Assembly mod = typeof(ProsequorModSystem).Assembly;
+        string harmonyId = $"{ProsequorModSystem.ModId}.test.genoutput.{Guid.NewGuid():N}";
+        Harmony harmony = new(harmonyId);
+
+        try
+        {
+            harmony.PatchAll(mod);
+            Assert.Contains(generate, harmony.GetPatchedMethods());
+            Assert.DoesNotContain(foundMatch, harmony.GetPatchedMethods());
+            Patches? info = Harmony.GetPatchInfo(generate);
+            Assert.NotNull(info);
+            Assert.True(
+                info!.Postfixes.Count > 0,
+                "Expected GenerateOutputStack quantity/maker postfix.");
         }
         finally
         {

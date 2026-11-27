@@ -13,42 +13,33 @@ namespace Prosequor.Ability;
 public static class CraftMutateOutputAttributePatches
 {
     /// <summary>
-    /// After vanilla fills the output slot from a match — apply floor(qty) on client + server.
+    /// After a recipe fills the output slot — apply floor(qty) and stamp the maker.
+    /// Covers vanilla FoundMatch and grid optimizers that call GenerateOutputStack directly.
     /// </summary>
-    [HarmonyPatch(typeof(InventoryCraftingGrid), "FoundMatch")]
-    public static class InventoryCraftingGridFoundMatchQuantityPatch
+    [HarmonyPatch(typeof(RecipeBase), nameof(RecipeBase.GenerateOutputStack))]
+    public static class RecipeBaseGenerateOutputStackQuantityPatch
     {
         [HarmonyPostfix]
-        public static void Postfix(InventoryCraftingGrid __instance)
+        public static void Postfix(ItemSlot[] inputSlots, ItemSlot outputSlot)
         {
-            if (__instance == null || __instance.Count <= 0)
-            {
-                return;
-            }
-
-            ItemSlot outputSlot = __instance[__instance.Count - 1];
             if (outputSlot is DummySlot || outputSlot?.Itemstack?.Collectible == null)
             {
                 return;
             }
 
-            if (__instance is not InventoryBasePlayer playerInv || playerInv.Player?.Entity == null)
+            if (outputSlot.Inventory is not InventoryBasePlayer playerInv
+                || playerInv.Player?.Entity == null)
             {
                 return;
             }
 
-            ItemSlot[] inputs = new ItemSlot[Math.Max(0, __instance.Count - 1)];
-            for (int i = 0; i < inputs.Length; i++)
-            {
-                inputs[i] = __instance[i];
-            }
+            IPlayer player = playerInv.Player;
+            CraftMutateOutputStation.ApplyQuantityPreview(player, outputSlot, inputSlots);
 
-            CraftMutateOutputStation.ApplyQuantityPreview(playerInv.Player, outputSlot, inputs);
-
-            if (__instance.Api?.Side == EnumAppSide.Server
-                || __instance.Api?.World?.Side == EnumAppSide.Server)
+            if (player.Entity.World?.Side == EnumAppSide.Server
+                || player.Entity.Api?.Side == EnumAppSide.Server)
             {
-                CraftMutateOutputStation.StampCraftMaker(playerInv.Player, outputSlot.Itemstack);
+                CraftMutateOutputStation.StampCraftMaker(player, outputSlot.Itemstack);
             }
         }
     }
@@ -78,7 +69,9 @@ public static class CraftMutateOutputAttributePatches
 
             IPlayer player = playerInv.Player;
 
-            // Also apply here so non-grid create paths stay covered; FoundMatch covers the grid UI.
+            // Quantity preview and maker stamp live on GenerateOutputStack; this pass still
+            // covers the floor for any create path that reaches OnCreatedByCrafting, then
+            // owns mutate-output attributes, quality, and the repair skip above.
             CraftMutateOutputStation.ApplyQuantityPreview(player, outputSlot, allInputSlots);
 
             if (player.Entity.World?.Side != EnumAppSide.Server

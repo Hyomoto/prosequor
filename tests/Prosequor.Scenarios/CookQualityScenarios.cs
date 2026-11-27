@@ -703,6 +703,77 @@ public class CookQualityScenarios : AtlasScenarioBase
     [AtlasScenario]
     [Trait("Layer", "Xp")]
     [Trait("Kind", "CookQuality")]
+    public async Task PieBuild_Should_PayWhenFormedOnATable()
+    {
+        ITestPlayer joined = await World.JoinPlayer("CookPieTable");
+        IPlayer cook = joined.Player;
+        cook.WorldData.CurrentGameMode = EnumGameMode.Survival;
+        GrantCookQuality(RequireProgress(cook));
+        AssertServer();
+
+        IWorldAccessor world = World.Api.World;
+        BlockPos tablePos = cook.Entity.Pos.AsBlockPos.AddCopy(nextOffset, 0, 0);
+        nextOffset += 3;
+        EnsureFloor(tablePos);
+        Block table = RequireBlock("game:table-normal", "table-normal");
+        world.BlockAccessor.SetBlock(0, tablePos);
+        world.BlockAccessor.SetBlock(table.BlockId, tablePos);
+
+        Item dough = RequireItem("game:dough-spelt", "dough-spelt");
+        ItemSlot hand = cook.InventoryManager.ActiveHotbarSlot;
+        hand.Itemstack = new ItemStack(dough, 8);
+        hand.MarkDirty();
+        cook.Entity.Controls.ShiftKey = true;
+
+        float before = TotalCookingXp(cook);
+        EnumHandHandling handling = EnumHandHandling.NotHandled;
+        dough.OnHeldInteractStart(
+            hand,
+            cook.Entity,
+            new BlockSelection
+            {
+                Position = tablePos,
+                Face = BlockFacing.UP,
+                HitPosition = new Vec3d(0.5, 1, 0.5)
+            },
+            null,
+            true,
+            ref handling);
+
+        BlockPos piePos = tablePos.UpCopy();
+        Block pieBlock = world.BlockAccessor.GetBlock(piePos);
+        Assert.Equal("pie-raw", pieBlock.Code?.Path);
+        int taken = 8 - (hand.Itemstack?.StackSize ?? 0);
+        Assert.True(taken > 0, "Forming the crust should take dough from the hotbar.");
+        string? caller = EventFactBuilder.CodeOf(pieBlock);
+        float crustPay = PayForAdded(cook, new ItemStack(dough, taken), taken, caller);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - before, crustPay, "table crust");
+
+        Item apple = RequireItem("game:fruit-redapple", "fruit-redapple");
+        hand.Itemstack = new ItemStack(apple, 8);
+        hand.MarkDirty();
+        cook.Entity.Controls.ShiftKey = false;
+        int appleBefore = hand.Itemstack.StackSize;
+        float filledBefore = TotalCookingXp(cook);
+        bool added = pieBlock.OnBlockInteractStart(
+            world,
+            cook,
+            new BlockSelection
+            {
+                Position = piePos,
+                Face = BlockFacing.UP,
+                HitPosition = new Vec3d(0.5, 0.5, 0.5)
+            });
+        Assert.True(added, "Right-clicking the pie should add a filling.");
+        int appleTaken = appleBefore - (hand.Itemstack?.StackSize ?? 0);
+        Assert.True(appleTaken > 0, "The filling should leave the hotbar.");
+        float fillPay = PayForAdded(cook, new ItemStack(apple, appleTaken), appleTaken, caller);
+        ScenarioXp.AssertPaid(TotalCookingXp(cook) - filledBefore, fillPay, "table filling");
+    }
+
+    [AtlasScenario]
+    [Trait("Layer", "Xp")]
+    [Trait("Kind", "CookQuality")]
     public async Task FruitPress_Should_PayNewJuice_NotTheBucket()
     {
         ITestPlayer joined = await World.JoinPlayer("CookPress");

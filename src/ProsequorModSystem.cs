@@ -87,6 +87,8 @@ public class ProsequorModSystem : ModSystem
     HudElementSkillWaiting? skillWaitingHudElement;
     AnimalAlertOverlayRenderer? animalAlertOverlay;
     Action<LevelUpHudPacket>? levelUpHudHandler;
+    Action? levelUpClientReadyHandler;
+    Action? levelUpClientLeftHandler;
     Action? skillWaitingDumpHandler;
     Action<ContentFingerprintMismatchPacket>? contentMismatchHandler;
     Action? progressionProfileHandler;
@@ -98,6 +100,8 @@ public class ProsequorModSystem : ModSystem
     long activityWatchListenerId;
     long progressFlushListenerId;
     long animalAlertListenerId;
+    const int FatherXpCollectDelayMs = 3000;
+    readonly Dictionary<string, long> fatherXpCollectCallback = new(StringComparer.Ordinal);
     bool holdsPatches;
 
     public ProsequorModSystem()
@@ -400,6 +404,10 @@ public class ProsequorModSystem : ModSystem
             }
 
             PushProgression(player);
+            if (player.ConnectionState is EnumClientState.Connected or EnumClientState.Playing)
+            {
+                ScheduleFatherXpCollect(player);
+            }
         }
 
         activityWatchListenerId = api.Event.RegisterGameTickListener(
@@ -426,6 +434,14 @@ public class ProsequorModSystem : ModSystem
         levelUpHudElement = new HudElementLevelUp(api, levelUpHud);
         levelUpHudHandler = packet => levelUpHud?.Enqueue(packet);
         Network.LevelUpHudReceived += levelUpHudHandler;
+        // Join catch-up can deliver level-ups while the connecting screen is still
+        // dispatching packets. Soundconfig exists only after level finalize, and
+        // the banner itself waits until the in-game HUD is drawing.
+        levelUpClientReadyHandler = () => levelUpHud?.OnClientReady();
+        levelUpClientLeftHandler = () => levelUpHud?.OnClientLeft();
+        api.Event.LevelFinalize += levelUpClientReadyHandler;
+        api.Event.LeaveWorld += levelUpClientLeftHandler;
+        api.Event.LeftWorld += levelUpClientLeftHandler;
         skillsTab = new CharacterSkillsTab(api, Network);
         skillWaitingHud = new SkillWaitingHudController(
             api,
@@ -492,6 +508,7 @@ public class ProsequorModSystem : ModSystem
         {
             sapi.Event.SaveGameLoaded -= OnSaveGameLoaded;
             sapi.Event.GameWorldSave -= OnFatherXpWorldSave;
+            CancelFatherXpCollect();
             FatherXp?.Save();
             FatherXp = null;
             ProgressPark?.Clear();
@@ -549,6 +566,19 @@ public class ProsequorModSystem : ModSystem
         {
             Network.LevelUpHudReceived -= levelUpHudHandler;
             levelUpHudHandler = null;
+        }
+
+        if (capi != null && levelUpClientReadyHandler != null)
+        {
+            capi.Event.LevelFinalize -= levelUpClientReadyHandler;
+            levelUpClientReadyHandler = null;
+        }
+
+        if (capi != null && levelUpClientLeftHandler != null)
+        {
+            capi.Event.LeaveWorld -= levelUpClientLeftHandler;
+            capi.Event.LeftWorld -= levelUpClientLeftHandler;
+            levelUpClientLeftHandler = null;
         }
 
         if (skillWaitingDumpHandler != null)
@@ -661,13 +691,11 @@ public class ProsequorModSystem : ModSystem
     {
         ProgressPark?.Evict(byPlayer.PlayerUID);
         // Reconnect can reuse an entity that already ran AfterInitialized (and was forgotten on leave).
-        // Enroll before mailbox flush so Collect pays a loaded player, not a half-ready one.
+        // Offline XP waits until NowPlaying — the client is still loading here.
         if (TryGetLiveProgress(byPlayer) is EntityBehaviorProgress progress)
         {
             AdmitInitialized(byPlayer, progress);
         }
-
-        FatherXp?.Collect(byPlayer);
     }
 
     void OnPlayerNowPlaying(IServerPlayer byPlayer)
@@ -678,6 +706,60 @@ public class ProsequorModSystem : ModSystem
         }
 
         PushProgression(byPlayer);
+        ScheduleFatherXpCollect(byPlayer);
+    }
+
+    /// <summary>
+    /// NowPlaying means the client has finished loading. Wait a few seconds, then
+    /// drain offline XP so the level-up lands after the player is actually in.
+    /// </summary>
+    void ScheduleFatherXpCollect(IServerPlayer player)
+    {
+        if (sapi == null || string.IsNullOrEmpty(player.PlayerUID))
+        {
+            return;
+        }
+
+        string uid = player.PlayerUID;
+        CancelFatherXpCollect(uid);
+        long id = sapi.Event.RegisterCallback(
+            _ =>
+            {
+                fatherXpCollectCallback.Remove(uid);
+                if (sapi.World.PlayerByUid(uid) is IServerPlayer still)
+                {
+                    FatherXp?.Collect(still);
+                }
+            },
+            FatherXpCollectDelayMs,
+            permittedWhilePaused: true);
+        fatherXpCollectCallback[uid] = id;
+    }
+
+    void CancelFatherXpCollect(string playerUid)
+    {
+        if (sapi == null || !fatherXpCollectCallback.Remove(playerUid, out long id))
+        {
+            return;
+        }
+
+        sapi.Event.UnregisterCallback(id);
+    }
+
+    void CancelFatherXpCollect()
+    {
+        if (sapi == null)
+        {
+            fatherXpCollectCallback.Clear();
+            return;
+        }
+
+        foreach (long id in fatherXpCollectCallback.Values)
+        {
+            sapi.Event.UnregisterCallback(id);
+        }
+
+        fatherXpCollectCallback.Clear();
     }
 
     void OnImmServerConfig(string eventName, ref EnumHandling handling, IAttribute data)
@@ -713,6 +795,7 @@ public class ProsequorModSystem : ModSystem
 
     void OnPlayerDisconnect(IServerPlayer byPlayer)
     {
+        CancelFatherXpCollect(byPlayer.PlayerUID);
         ActivityWatch?.ForgetPlayer(byPlayer.PlayerUID);
         EntityBehaviorProgress? progress = TryGetLiveProgress(byPlayer);
         progress?.FlushSave();

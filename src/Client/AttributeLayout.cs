@@ -197,7 +197,6 @@ public static class AttributeLayout
         IReadOnlyList<string> catalog,
         ElementBounds host,
         System.Func<string, int> scoreOf,
-        float?[] ticks,
         ref LoadedTexture? watermark,
         ref LoadedTexture? backplate)
     {

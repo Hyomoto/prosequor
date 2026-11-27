@@ -2,6 +2,7 @@ using System.Text;
 using Cairo;
 using Prosequor.Data;
 using Prosequor.Network;
+using Prosequor.Progress;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -10,7 +11,12 @@ using Vintagestory.API.Util;
 
 namespace Prosequor.Client;
 
-/// <summary>Queues level-up HUD packets and drives animation timing.</summary>
+/// <summary>
+/// Queues level-up HUD packets and drives animation timing.
+/// Playback waits until the client has received level finalize: join catch-up
+/// can deliver packets while the connecting screen is still up, and playing a
+/// sound before then throws because soundconfig is not loaded.
+/// </summary>
 public sealed class LevelUpHudController
 {
     public const float FadeInRowDuration = 0.3f;
@@ -30,7 +36,8 @@ public sealed class LevelUpHudController
     static readonly AssetLocation PlayerLevelUpSound = new(ProsequorModSystem.ModId, "sounds/level_up.ogg");
 
     readonly ICoreClientAPI capi;
-    readonly Queue<LevelUpHudPacket> pending = new();
+    readonly List<PendingLevelUp> waiting = new();
+    bool clientReady;
     LevelUpHudPacket? active;
     float timer;
     string headline = "";
@@ -50,20 +57,38 @@ public sealed class LevelUpHudController
         this.capi = capi;
     }
 
+    /// <summary>Level finalize has been received; sounds and the in-game HUD may run.</summary>
+    public void OnClientReady()
+    {
+        clientReady = true;
+    }
+
+    /// <summary>Left the world. Drop anything still queued so the next join waits again.</summary>
+    public void OnClientLeft()
+    {
+        clientReady = false;
+        waiting.Clear();
+        active = null;
+        timer = 0f;
+        DisposeTextures();
+    }
+
     public void Enqueue(LevelUpHudPacket packet)
     {
-        pending.Enqueue(packet);
-        if (active == null)
-        {
-            StartNext();
-        }
+        // Fold only a pile that arrived before any of it started. Packets that
+        // show up while a banner is already playing stay in arrival order.
+        waiting.Add(new PendingLevelUp(packet, fold: active == null));
     }
 
     public void Tick(float deltaTime)
     {
         if (active == null)
         {
-            return;
+            TryStart();
+            if (active == null)
+            {
+                return;
+            }
         }
 
         timer += deltaTime;
@@ -73,7 +98,7 @@ public sealed class LevelUpHudController
             DisposeTextures();
             active = null;
             timer = 0f;
-            StartNext();
+            TryStart();
         }
     }
 
@@ -452,14 +477,51 @@ public sealed class LevelUpHudController
         return end;
     }
 
-    void StartNext()
+    void TryStart()
     {
-        DisposeTextures();
-        if (!pending.TryDequeue(out LevelUpHudPacket? packet))
+        if (!clientReady || active != null || waiting.Count == 0)
         {
             return;
         }
 
+        FoldLeadingBurst();
+        StartNext();
+    }
+
+    void FoldLeadingBurst()
+    {
+        int count = 0;
+        while (count < waiting.Count && waiting[count].Fold)
+        {
+            count++;
+        }
+
+        if (count <= 1)
+        {
+            return;
+        }
+
+        LevelUpHudPacket[] pile = new LevelUpHudPacket[count];
+        for (int i = 0; i < count; i++)
+        {
+            pile[i] = waiting[i].Packet;
+        }
+
+        List<LevelUpHudPacket> folded = LevelUpHudBurst.Compact(pile);
+        waiting.RemoveRange(0, count);
+        waiting.InsertRange(0, folded.Select(packet => new PendingLevelUp(packet, fold: false)));
+    }
+
+    void StartNext()
+    {
+        DisposeTextures();
+        if (waiting.Count == 0)
+        {
+            return;
+        }
+
+        LevelUpHudPacket packet = waiting[0].Packet;
+        waiting.RemoveAt(0);
         active = packet;
         timer = 0f;
         renderedPlayerLevel = int.MinValue;
@@ -475,7 +537,19 @@ public sealed class LevelUpHudController
         }
 
         AssetLocation sound = packet.PlayerLeveledUp ? PlayerLevelUpSound : SkillUpSound;
-        capi.Gui.PlaySound(sound, randomizePitch: false, volume);
+        try
+        {
+            capi.Gui.PlaySound(sound, randomizePitch: false, volume);
+        }
+        catch (Exception ex)
+        {
+            // ResolveSoundPath throws if soundconfig is still missing. A stinger
+            // must not take the client down; the banner still plays.
+            capi.Logger.Warning(
+                "[prosequor] Level-up sound skipped ({0}): {1}",
+                sound,
+                ex.Message);
+        }
     }
 
     void EnsureTextures(ICoreClientAPI capi)
@@ -653,8 +727,9 @@ public sealed class LevelUpHudController
 
     public void Dispose()
     {
-        pending.Clear();
+        waiting.Clear();
         active = null;
+        clientReady = false;
         DisposeTextures();
     }
 
@@ -666,5 +741,17 @@ public sealed class LevelUpHudController
     {
         public LoadedTexture? Texture { get; init; }
         public double OffsetX { get; init; }
+    }
+
+    readonly struct PendingLevelUp
+    {
+        public PendingLevelUp(LevelUpHudPacket packet, bool fold)
+        {
+            Packet = packet;
+            Fold = fold;
+        }
+
+        public LevelUpHudPacket Packet { get; }
+        public bool Fold { get; }
     }
 }

@@ -1,3 +1,5 @@
+using Vintagestory.API.Common;
+using Vintagestory.GameContent;
 using Xunit;
 
 namespace Prosequor.Ability;
@@ -11,6 +13,7 @@ public static class MoldCastXpFixtures
         VerifyRisingEdgePaysOnce();
         VerifyEmptyPourerPaysNothing();
         VerifyEmptiedClearsPaid();
+        VerifyPourableMoldClassifier();
     }
 
     static void VerifyIngredientsFromFill()
@@ -98,6 +101,24 @@ public static class MoldCastXpFixtures
             || !paid)
         {
             Assert.Fail("[prosequor] MoldCast XP fixture failed (re-pour after empty must pay).");
+        }
+    }
+
+    static void VerifyPourableMoldClassifier()
+    {
+        Block plain = new();
+        Block rack = new() { EntityClass = "MoldRack" };
+        Block toolEntity = new() { EntityClass = "ToolMold" };
+        Block ingotEntity = new() { EntityClass = "IngotMold" };
+        if (AbilityBootstrap.IsPourableMold(null)
+            || AbilityBootstrap.IsPourableMold(plain)
+            || AbilityBootstrap.IsPourableMold(rack)
+            || !AbilityBootstrap.IsPourableMold(toolEntity)
+            || !AbilityBootstrap.IsPourableMold(ingotEntity)
+            || !AbilityBootstrap.IsPourableMold(new BlockToolMold())
+            || !AbilityBootstrap.IsPourableMold(new BlockIngotMold()))
+        {
+            Assert.Fail("[prosequor] MoldCast XP fixture failed (pourable mold classifier).");
         }
     }
 }

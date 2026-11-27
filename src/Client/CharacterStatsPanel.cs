@@ -41,6 +41,7 @@ public class CharacterStatsPanel
     const double NutritionTextHeight = 14;
     const float ComfortHighBase = 50f;
     const double RingHoverSize = 40;
+    const string GrowthRingKey = "prosequor-attr-growth-ring";
 
     // Vanilla bar keys and Dairy lang stay so ComposeExtraGuis injectors can
     // find the last nutrition row the same way they do on the Essentials panel.
@@ -323,9 +324,11 @@ public class CharacterStatsPanel
             attributeCatalog,
             attrHost,
             attrId => progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore,
-            ticks,
             ref attributeWatermark,
             ref attributeBackplate);
+        GuiElementAttributeGrowthRing growthRing = new(capi, attrHost.FlatCopy(), attributeCatalog.Count);
+        growthRing.SetFractions(ticks);
+        composer.AddAttributeGrowthRing(growthRing, GrowthRingKey);
 
         ElementBounds tipHost = ElementBounds
             .Fixed(0, 0, PanelInnerWidth, attrsBlock)
@@ -517,9 +520,9 @@ public class CharacterStatsPanel
             int score = progress?.GetAttribute(attrId) ?? AttributeGrowth.DefaultScore;
             composer.GetDynamicText(AttributeLayout.ValueKey(attrId))
                 ?.SetNewText(score.ToString());
-            composer.GetRoundedInsetTick(AttributeLayout.TickKey(attrId))
-                ?.SetTick(i < ticks.Length ? ticks[i] : null);
         }
+
+        composer.GetAttributeGrowthRing(GrowthRingKey)?.SetFractions(ticks);
 
         GuiElementAttributeTooltip? tip =
             composer.GetElement("prosequor-attr-tooltip") as GuiElementAttributeTooltip;

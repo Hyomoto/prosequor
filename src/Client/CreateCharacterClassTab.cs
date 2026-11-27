@@ -170,7 +170,6 @@ public sealed class CreateCharacterClassTab : IDisposable
             attrId => previewScores.TryGetValue(attrId, out int s)
                 ? s
                 : AttributeGrowth.DefaultScore,
-            ticks: [],
             ref attributeWatermark,
             ref attributeBackplate);
 

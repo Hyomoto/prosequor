@@ -265,13 +265,6 @@
     ]
   },
   {
-    "id": "mold",
-    "includes": [
-      "*:toolmold-*-fired-*",
-      "*:ingotmold-*-fired"
-    ]
-  },
-  {
     "id": "cementation",
     "includes": [
       "*:stonecoffinsection-*"
@@ -658,6 +651,8 @@
   { "id": "large-fish" },
   // tool and weapon members whose code contains a survival metal id.
   { "id": "metal-crafts" },
+  // Pourable molds: BlockToolMold / BlockIngotMold, or entity class ToolMold / IngotMold.
+  { "id": "mold" },
   // Clayforming recipe outputs.
   { "id": "clay-formed" },
   // Smithing recipe outputs.
